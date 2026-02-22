@@ -1,8 +1,23 @@
 [project]
 name = "jobbing"
-version = "1.0.0"
+version = "2.0.0"
 description = "AI-assisted job application workflow: tailored CVs, cover letters, and Notion tracking"
 requires-python = ">=3.10"
 dependencies = [
     "reportlab>=4.0",
+    "langchain-core>=0.3",
+    "langchain-anthropic>=0.3",
+    "langgraph>=0.2",
+    "langsmith>=0.2",
+    "apscheduler>=3.10",
 ]
+
+[project.scripts]
+jobbing = "jobbing.cli:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
