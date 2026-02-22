@@ -271,6 +271,7 @@ def _args_to_application(args: argparse.Namespace) -> Application:
         linkedin=linkedin,
         conclusion=getattr(args, "conclusion", "") or "",
         highlights=getattr(args, "highlights", []) or [],
+        job_description=getattr(args, "job_description", "") or "",
     )
 
 
@@ -297,6 +298,8 @@ def _preview_application(app: Application) -> dict:
         d["mission"] = app.mission
     if app.highlights:
         d["highlights"] = app.highlights
+    if app.job_description:
+        d["job_description"] = app.job_description[:100] + "..." if len(app.job_description) > 100 else app.job_description
     return d
 
 
@@ -331,6 +334,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_create.add_argument("--linkedin", choices=VALID_LINKEDIN, help="LinkedIn status")
     p_create.add_argument("--conclusion", help="Conclusion notes")
     p_create.add_argument("--highlights", nargs="+", help="Experience to Highlight")
+    p_create.add_argument("--job-description", dest="job_description", help="Full job posting text")
     p_create.add_argument("--dry-run", action="store_true", dest="dry_run")
 
     # track update

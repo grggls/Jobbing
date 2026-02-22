@@ -1,4 +1,9 @@
-# /track — Tracker Operations
+---
+name: track
+description: Manage the Notion job application tracker. Status updates, research, highlights, conclusions, and other tracker operations outside the main /analyze and /apply flow.
+---
+
+# Tracker Operations
 
 Manage the Notion job application tracker. Use this for status updates, adding research, updating highlights, or any tracker operations outside the main `/analyze` → `/apply` flow.
 
@@ -50,6 +55,33 @@ Replace the Experience to Highlight bullets:
 
 Or: `jobbing track highlights --page-id "PAGE_ID" --highlights "Bullet 1" "Bullet 2"`
 
+### Update Interview Questions
+
+Replace the "Questions I Might Get Asked" section (Q as bullet, A as nested sub-bullet):
+
+```json
+{
+  "command": "interview_questions",
+  "name": "CompanyName",
+  "questions": [
+    {"question": "Tell me about scaling a DevOps team?", "answer": "At Mobimeo, scaled from 8 to 23..."},
+    {"question": "How do you handle incident response?", "answer": "Blameless postmortems, standardized on-call..."}
+  ]
+}
+```
+
+### Update Questions To Ask
+
+Replace the "Questions To Ask In An Interview" section:
+
+```json
+{
+  "command": "questions_to_ask",
+  "name": "CompanyName",
+  "questions": ["What does the on-call rotation look like?", "How is the platform team structured?"]
+}
+```
+
 ## How to Find a Page ID
 
 - Use Notion MCP read tools: `notion-search` to find by company name
@@ -59,9 +91,18 @@ Or: `jobbing track highlights --page-id "PAGE_ID" --highlights "Bullet 1" "Bulle
 ## Rules
 
 - **Status updates are Greg's decision.** Never auto-mark "Applied" or any other status.
-- **Queue-only for writes.** Write JSON to `notion_queue/` — the launchd agent processes it. Do not use Notion MCP write tools.
+- **Queue for all Notion writes.** Write JSON to `notion_queue/`, the launchd agent processes it. Do not use any Notion MCP write tools (Zod serialization bugs).
 - **Notion MCP reads work fine.** Use `notion-fetch` and `notion-search` for verification and lookups.
 - All `--dry-run` flags are available on CLI commands for previewing.
+
+## Do Not
+- Change any Notion status without Greg's explicit instruction — never auto-mark "Applied", "Done", or any other status
+- Use any Notion MCP write tools (`update-page`, `create-pages`) — they have Zod serialization bugs. Use the queue for all writes.
+- Guess at a page ID — look it up via `notion-search` or ask Greg
+- Write a conclusion without Greg's input — conclusions capture Greg's assessment, not Claude's
+- Overwrite existing highlights or research without confirming — these operations replace the entire section
+- Create duplicate tracker entries — check if one already exists before creating
+- Modify status to "Done" without a conclusion — always include the outcome text
 
 ## CLI Reference
 

@@ -21,14 +21,14 @@ AI-assisted job application workflow. Greg pastes a job posting, Claude analyzes
 
 **Be helpful.** When Greg decides to proceed, execute the full workflow autonomously: analysis → Notion entry → JSON → PDFs → tracker update. Don't stop to ask unless something is genuinely ambiguous.
 
-## Skills (Slash Commands)
+## Skills
 
-These are project-level Claude Code skills in `.claude/skills/`. Use them as slash commands:
+Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analyze`, `/apply`, etc. In Cowork, skills load as background context — use natural language ("analyze this job posting", "help me apply").
 
-- **`/analyze`** — Fit assessment. Paste a job posting, get score, green/red flags, gaps, salary read, company intel, Experience to Highlight bullets. Always start here.
-- **`/apply`** — Full application workflow. Notion entry → tailored JSON → PDFs → ATS check. Run after `/analyze` and Greg's go decision.
-- **`/outreach`** — LinkedIn contact research. Drafts connection request messages. Run after applying.
-- **`/track`** — Tracker operations. Status updates, research, highlights, conclusions.
+- **analyze** — Fit assessment. Paste a job posting, get score, green/red flags, gaps, salary read, company intel, Experience to Highlight bullets. Always start here.
+- **apply** — Full application workflow. Notion entry → tailored JSON → PDFs → ATS check. Run after analyze and Greg's go decision.
+- **outreach** — LinkedIn contact research. Drafts connection request messages. Run after applying.
+- **track** — Tracker operations. Status updates, research, highlights, conclusions.
 
 ## Project Structure
 
@@ -51,10 +51,10 @@ Jobbing/
 │       └── json_file.py   ← JSON file tracker (portable fallback)
 │
 ├── .claude/skills/        ← Claude Code slash commands
-│   ├── analyze.md         ← /analyze — fit assessment
-│   ├── apply.md           ← /apply — full application workflow
-│   ├── outreach.md        ← /outreach — LinkedIn contact research
-│   └── track.md           ← /track — tracker operations
+│   ├── analyze/SKILL.md   ← /analyze — fit assessment
+│   ├── apply/SKILL.md     ← /apply — full application workflow
+│   ├── outreach/SKILL.md  ← /outreach — LinkedIn contact research
+│   └── track/SKILL.md     ← /track — tracker operations
 │
 ├── pyproject.toml         ← Package metadata, deps, CLI entry point
 ├── .env                   ← API keys (gitignored)
@@ -103,15 +103,19 @@ Full details in WORKFLOW.md. The short version:
 
 ### Notion writes — queue only
 
-The queue is the only reliable write path. Write JSON to `notion_queue/` and the launchd agent on Greg's Mac processes it automatically. Do not attempt Notion MCP writes or direct CLI calls from Cowork.
+The queue is the only reliable write path. Write JSON to `notion_queue/` and the launchd agent on Greg's Mac processes it automatically. Do not attempt Notion MCP writes — known Zod serialization bugs on every write tool.
+
+The queue `create` command builds template-like scaffolding automatically (heading_2 sections for "Experience to highlight" and "Questions to ask during an interview"). It does NOT create the sub-document page or inline interview database — those require the real Notion template, which Greg can apply manually if needed.
 
 ```json
-{"command": "create", "name": "Company", "position": "Role", "date": "2026-02-20", ...}
+{"command": "create", "name": "Company", "position": "Role", "date": "2026-02-20", "job_description": "Full posting text...", ...}
 {"command": "update", "page_id": "PAGE_ID", "status": "Applied"}
 {"command": "update", "page_id": "PAGE_ID", "status": "Done", "conclusion": "Outcome text"}
 {"command": "highlights", "page_id": "PAGE_ID", "highlights": ["Bullet 1", "Bullet 2"]}
 {"command": "research", "name": "Company", "research": ["Finding 1", "Finding 2"]}
-{"command": "outreach", "name": "Company", "contacts": [{"name": "Jane Smith", "title": "VP Eng", "linkedin": "https://...", "note": "Leads Platform org, ex-Google SRE", "message": "Hi Jane — I applied for the Platform Lead role at Company. I built an IDP at 1KOMMA5° and led 23 eng at Mobimeo. Would love to connect."}]}
+{"command": "outreach", "name": "Company", "contacts": [{"name": "Jane Smith", "title": "VP Eng", "linkedin": "https://...", "note": "Leads Platform org, ex-Google SRE", "message": "Hi Jane — ..."}]}
+{"command": "interview_questions", "name": "Company", "questions": [{"question": "Q1?", "answer": "A1"}]}
+{"command": "questions_to_ask", "name": "Company", "questions": ["Q1?", "Q2?"]}
 ```
 
 **Status updates are Greg's decision.** Do not auto-mark "Applied" or any other status. Greg will explicitly ask for status changes.
@@ -145,10 +149,10 @@ All track commands support `--dry-run` for previewing without sending.
 - **Notion is the single source of truth** for all application tracking, company research, and outreach contacts.
 - **Writes**: Queue-based only. Write JSON to `notion_queue/`, launchd picks it up.
 - **Reads**: Notion MCP tools (`notion-fetch`, `notion-search`) work for verification.
-- **DON'T USE NOTION MCP FOR WRITES — IT IS BUGGY AS HELL.** Known Zod serialization bug on every write tool (`update-page`, `create-pages`). Both fail with "Expected object, received string" regardless of payload format. Do not attempt. Use the queue system for all writes.
+- **DON'T USE NOTION MCP FOR WRITES.** Known Zod serialization bug on every write tool (`update-page`, `create-pages`). Both fail with "Expected object, received string" regardless of payload format. Use the queue system for all writes.
 - **File uploads**: Not supported by Notion API for internal integrations. Greg uploads PDFs manually.
 - **Database ID**: `734d746c43b149298993464f5ccc23e7`
-- **Page body sections**: "Experience to Highlight", "Company Research", and "Outreach Contacts" are managed as heading_3 + bullet blocks. Each command replaces the existing section — safe to re-run.
+- **Page body sections**: Five heading_3 sections managed by the queue system: "Job Description" (toggle/collapsible), "Experience to Highlight", "Company Research", "Questions I Might Get Asked", "Questions To Ask In An Interview", plus "Outreach Contacts". Each command replaces the existing section — safe to re-run. Section matching is case-insensitive and handles both heading_2 and heading_3 for backward compatibility.
 
 ## Location Logic
 
@@ -158,10 +162,51 @@ All track commands support `--dry-run` for previewing without sending.
 
 ## Do Not
 
+### Process
+- Skip `/analyze` and go straight to document generation — analysis is always step one
+- Skip the Experience to Highlight checkpoint — present bullets to Greg and wait for feedback
+- Skip the tailoring plan checkpoint in `/apply` — present the strategy and wait for approval
+- Generate the JSON before Greg approves the tailoring plan
+- Auto-mark "Applied" or any other Notion status — status updates are Greg's decision
+- Proceed without reading WORKFLOW.md and CONTEXT.md at the start of each session
+- Proceed without reading `companies/dash0/dash0.json` as the structural template before generating JSON
+- Inflate fit scores to be encouraging — be honest, a skip is better than a wasted application
+- Guess at company info (headcount, funding, culture) — web search or say "not found"
+
+### Writing — CV and Cover Letter
+- Use AI tells or summative self-congratulatory language. Banned phrases include:
+  - "aligns perfectly", "uniquely positioned", "proven track record"
+  - "passionate about", "thrilled to", "excited to bring"
+  - "This maps directly to...", "My experience is directly applicable..."
+  - "...making me an ideal candidate for this role"
+  - Any sentence whose purpose is to restate the obvious connection between Greg's experience and the role — the reader can connect the dots
+- Use marketing superlatives: "blazingly fast", "world-class", "cutting-edge", "unparalleled"
+- Invent metrics, percentages, time savings, or impact numbers not in CONTEXT.md
+- Write "6+ years of people management" — it's 8+ years (started mid-2017)
+- Lead with Mobimeo as "most recent" — Solo Recon and Modern Electric are current (2024–present)
+- Present German language ability as a qualification — it's A2, not useful
+- Claim Greg has experience he doesn't have (check CONTEXT.md before every assertion)
+- Write in first person in the CV (CVs are third-person implied; cover letters are first person)
+- Add filler paragraphs or pad content to seem longer — be concise and substantive
+- Use the same generic cover letter structure for every role — each one must be tailored
+- Describe Solo Recon as having customers, revenue, or traction — it's a solo effort with ~12 users, no funding, no sales
+- Say "led a team of 23" for any role other than Mobimeo — check CONTEXT.md team sizes per role
+- Claim direct reports or management responsibility at roles where Greg was IC (e.g., BuzzFeed, Yara, TradingScreen)
+
+### Outreach Messages
+- Write messages over 300 characters (LinkedIn connection request limit)
+- Leave the company name implied — always name the company explicitly
+- End with "Happy to connect" or "Would welcome a conversation" — end with curiosity about their work
+- Write generic messages that could apply to any company — tailor to the specific contact's role and domain
+- Use stiff, transactional language — write like a peer, not a candidate pitching
+
+### Notion and Technical
+- Use Notion MCP `update-page` — Zod serialization bug, use the queue for all updates
 - Create files outside `companies/{company}/` for company-specific content
-- Skip the fit assessment (`/analyze`) and go straight to document generation
-- Claim Greg has experience he doesn't have (check CONTEXT.md)
-- Use marketing language in CVs or cover letters
 - Leave TODO comments or placeholder content in JSON files
-- Use Notion MCP write tools — they are buggy. Use the queue system for all writes.
-- Auto-mark "Applied" or any other status — status updates are Greg's decision
+- Claim you included something in the JSON that you didn't actually include — verify your own work before reporting
+- Write to Notion directly from Cowork — use the queue system for all writes except template-based page creation
+
+### Ethical
+- Apply to defense contractors, military technology, weapons systems, or companies whose primary customer is military/intelligence — this is a firm exclusion, non-negotiable
+- Misrepresent Greg's work authorization — US citizen (no sponsorship needed for US), EU work requires employer sponsorship

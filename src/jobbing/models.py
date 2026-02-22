@@ -116,6 +116,7 @@ class Application:
     linkedin: LinkedInStatus = LinkedInStatus.NA
     conclusion: str = ""
     highlights: list[str] = field(default_factory=list)
+    job_description: str = ""
     research: list[str] = field(default_factory=list)
     contacts: list[Contact] = field(default_factory=list)
     interviews: list[Interview] = field(default_factory=list)

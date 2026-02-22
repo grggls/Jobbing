@@ -1,16 +1,15 @@
 # Jobbing
 
-AI-assisted job application workflow. Analyzes job postings against a candidate profile, generates tailored CVs and cover letters as PDFs, and tracks applications in a Notion database. Built with LangGraph for autonomous job board scanning and LangSmith for observability.
+AI-assisted job application workflow. Analyzes job postings against a candidate profile, generates tailored CVs and cover letters as PDFs, and tracks applications in a Notion database.
 
 ## How It Works
 
-1. **Paste a job posting** into a Claude Code session (instructions auto-load from `CLAUDE.md`)
-2. **Claude analyzes fit** against `CONTEXT.md` (profile, career history, skills)
-3. **Claude generates `{company}.json`** with tailored CV and cover letter content
-4. **`jobbing pdf`** renders the JSON into professional PDFs
-5. **`jobbing track`** updates the Notion tracker (or JSON fallback)
+1. **`/analyze`** — Paste a job posting. Claude scores fit (0–100), identifies green/red flags, researches the company, and drafts Experience to Highlight bullets. You review and decide: proceed or skip.
+2. **`/apply`** — Claude creates a Notion tracker entry, generates a tailored `{company}.json` with CV and cover letter content, renders PDFs, and runs an ATS keyword check.
+3. **`/outreach`** — After applying, Claude researches LinkedIn contacts and drafts connection request messages.
+4. **`/track`** — Status updates, research, highlights — any tracker operation.
 
-Full workflow details: [WORKFLOW.md](WORKFLOW.md)
+These are Claude Code skills (slash commands) defined in `.claude/skills/`. Full workflow details: [WORKFLOW.md](WORKFLOW.md)
 
 ## Setup
 
@@ -70,6 +69,20 @@ jobbing queue
 1. Edit `companies/{company}/{company}.json`
 2. Run `jobbing pdf {company}`
 
+## Skills (Slash Commands)
+
+| Skill | Purpose | When to use |
+|-------|---------|-------------|
+| `/analyze` | Fit assessment, scoring, company research | First step — paste a job posting |
+| `/apply` | Notion entry, JSON, PDFs, ATS check | After `/analyze` and go decision |
+| `/outreach` | LinkedIn contact research + messages | After applying |
+| `/track` | Status updates, research, highlights | Any tracker operation |
+
+Skills are defined in `.claude/skills/` and auto-discovered by Claude Code CLI as `/` slash commands. For Cowork, upload the `SKILL.md` files via Settings > Capabilities, then reference them naturally in conversation:
+
+- "Analyze this job posting please" — triggers the analyze skill
+- "Thanks, track this job posting and help me apply please" — triggers track + apply skills
+
 ## Project Structure
 
 ```
@@ -79,16 +92,21 @@ Jobbing/
 ├── CLAUDE.md                   # Project instructions for Claude Code
 ├── scoring_criteria.md         # Tunable scoring guidelines for job matching
 │
+├── .claude/skills/             # Claude Code slash commands
+│   ├── analyze/SKILL.md        # /analyze — fit assessment
+│   ├── apply/SKILL.md          # /apply — full application workflow
+│   ├── outreach/SKILL.md       # /outreach — LinkedIn outreach
+│   └── track/SKILL.md          # /track — tracker operations
+│
 ├── src/jobbing/                # Python package
 │   ├── cli.py                  # Unified CLI: jobbing track|queue|pdf
 │   ├── config.py               # Config loading (env, .env, API keys)
 │   ├── models.py               # Domain model (Application, Contact, CVData, etc.)
 │   ├── pdf.py                  # PDF generator (CV + cover letter)
-│   ├── tracker/
-│   │   ├── __init__.py         # TrackerBackend Protocol + factory
-│   │   ├── notion.py           # Notion API tracker
-│   │   └── json_file.py        # JSON file tracker (portable fallback)
-│   └── agent/                  # LangGraph agent (Phase 3)
+│   └── tracker/
+│       ├── __init__.py         # TrackerBackend Protocol + factory
+│       ├── notion.py           # Notion API tracker
+│       └── json_file.py        # JSON file tracker (portable fallback)
 │
 ├── docs/                       # Architecture, decisions, design history
 ├── examples/                   # Anonymized templates
@@ -98,7 +116,7 @@ Jobbing/
 ├── BOOKMARKS.md                # Your job board URLs (gitignored)
 ├── .env                        # API keys (gitignored)
 ├── companies/                  # Per-company data (gitignored)
-└── scan_results/               # Autonomous scan logs (gitignored)
+└── scan_results/               # Scan logs (gitignored)
 ```
 
 ## Tracker Backends
@@ -124,4 +142,7 @@ All config is loaded from environment variables or `.env`:
 
 ## Cowork Compatibility
 
-The `jobbing` CLI works in both Claude Code CLI and Cowork environments. Claude Code CLI auto-discovers project-level Skills from `.claude/skills/`; Cowork requires manual upload via Settings > Capabilities.
+The `jobbing` CLI works in both Claude Code CLI and Cowork environments. Skills work differently in each:
+
+- **Claude Code CLI**: Auto-discovers skills from `.claude/skills/` as `/analyze`, `/apply`, etc.
+- **Cowork**: Upload each `SKILL.md` via Settings > Capabilities. Skills load as background context — use natural language ("analyze this job posting", "help me apply") instead of slash commands

@@ -1,4 +1,9 @@
-# /outreach — LinkedIn Outreach Research
+---
+name: outreach
+description: Research LinkedIn contacts at a company for follow-up after applying. Drafts tailored connection request messages for hiring managers, recruiters, and peer connections.
+---
+
+# LinkedIn Outreach Research
 
 Research LinkedIn contacts for follow-up after Greg submits an application. Run this after applying.
 
@@ -64,3 +69,17 @@ After Greg approves, write to `notion_queue/`:
 This sets "Follow on LinkedIn" to "No" (contacts identified, outreach pending).
 
 Or use the CLI directly: `jobbing track outreach --name "CompanyName" --contacts-json contacts.json`
+
+## Do Not
+- Write messages over 300 characters — LinkedIn connection requests have a hard limit
+- Leave the company name implied — always name the company explicitly in the message
+- End with "Happy to connect", "Would welcome a conversation", or similar hard closes — end with genuine curiosity about their work
+- Write generic messages that could apply to any company or any contact — tailor every message to the specific person's role and domain
+- Use stiff, transactional language — write like a peer reaching out, not a candidate pitching
+- Use AI tells: "aligns perfectly", "uniquely positioned", "proven track record", "I'm confident that..."
+- List Greg's entire resume in a 300-char message — pick the 1-2 things most relevant to this specific contact
+- Send the same message template to hiring managers, recruiters, and peers — each category gets a different angle
+- Skip the review checkpoint — present contacts and messages to Greg before saving to Notion
+- Fabricate LinkedIn profile URLs — if you can't find the real URL, say so and leave the field for Greg to fill
+- Invent mutual connections or shared interests that don't exist
+- Save to Notion before Greg approves the contacts and messages

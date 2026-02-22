@@ -71,6 +71,16 @@ def _date(iso_date: str) -> dict:
     return {"date": {"start": iso_date}}
 
 
+def _heading2_block(text: str) -> dict:
+    return {
+        "object": "block",
+        "type": "heading_2",
+        "heading_2": {
+            "rich_text": [{"type": "text", "text": {"content": text}}],
+        },
+    }
+
+
 def _heading3_block(text: str) -> dict:
     return {
         "object": "block",
@@ -81,12 +91,61 @@ def _heading3_block(text: str) -> dict:
     }
 
 
+def _paragraph_block(text: str) -> dict:
+    """A paragraph block. Splits text at the 2000-char Notion rich_text limit."""
+    chunks = [text[i : i + 2000] for i in range(0, max(len(text), 1), 2000)]
+    return {
+        "object": "block",
+        "type": "paragraph",
+        "paragraph": {
+            "rich_text": [
+                {"type": "text", "text": {"content": chunk}} for chunk in chunks
+            ],
+        },
+    }
+
+
+def _toggle_heading3_block(text: str, children: list[dict]) -> dict:
+    """A heading_3 with is_toggleable=true and nested children."""
+    return {
+        "object": "block",
+        "type": "heading_3",
+        "heading_3": {
+            "rich_text": [{"type": "text", "text": {"content": text}}],
+            "is_toggleable": True,
+            "children": children,
+        },
+    }
+
+
 def _bullet_block(text: str) -> dict:
     return {
         "object": "block",
         "type": "bulleted_list_item",
         "bulleted_list_item": {
             "rich_text": [{"type": "text", "text": {"content": text}}],
+        },
+    }
+
+
+def _qa_bullet_block(question: str, answer: str) -> dict:
+    """A bullet for the question with a nested sub-bullet for the answer."""
+    return {
+        "object": "block",
+        "type": "bulleted_list_item",
+        "bulleted_list_item": {
+            "rich_text": [{"type": "text", "text": {"content": question}}],
+            "children": [
+                {
+                    "object": "block",
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {
+                        "rich_text": [
+                            {"type": "text", "text": {"content": answer}},
+                        ],
+                    },
+                }
+            ],
         },
     }
 
@@ -275,20 +334,27 @@ class NotionTracker:
     # --- Section management ---
 
     def _remove_section(self, page_id: str, heading_text: str) -> None:
-        """Remove a heading_3 section and its subsequent bullet items."""
+        """Remove a heading section and its subsequent bullet items.
+
+        Matches both heading_2 and heading_3 with case-insensitive text
+        comparison, so it works with both template-created pages (heading_2,
+        "Experience to highlight") and code-created pages (heading_3,
+        "Experience to Highlight").
+        """
         url = f"{NOTION_BASE_URL}/blocks/{page_id}/children?page_size=100"
         result = self._request("GET", url)
         blocks = result.get("results", [])
 
         ids_to_delete: list[str] = []
         in_section = False
+        heading_lower = heading_text.lower()
 
         for block in blocks:
             block_type = block.get("type", "")
-            if block_type == "heading_3":
-                rt = block.get("heading_3", {}).get("rich_text", [])
+            if block_type in ("heading_2", "heading_3"):
+                rt = block.get(block_type, {}).get("rich_text", [])
                 text = rt[0].get("text", {}).get("content", "") if rt else ""
-                if text == heading_text:
+                if text.lower() == heading_lower:
                     in_section = True
                     ids_to_delete.append(block["id"])
                     continue
@@ -304,11 +370,22 @@ class NotionTracker:
             self._request("DELETE", f"{NOTION_BASE_URL}/blocks/{block_id}")
 
     def _append_section(
-        self, page_id: str, heading: str, blocks: list[dict]
+        self,
+        page_id: str,
+        heading: str,
+        blocks: list[dict],
+        heading_level: int = 3,
     ) -> None:
-        """Remove then re-append a section with heading + blocks."""
+        """Remove then re-append a section with heading + blocks.
+
+        Uses heading_3 by default to match the page body convention.
+        """
         self._remove_section(page_id, heading)
-        all_blocks = [_heading3_block(heading)] + blocks
+        heading_block = (
+            _heading2_block(heading) if heading_level == 2
+            else _heading3_block(heading)
+        )
+        all_blocks = [heading_block] + blocks
         self._request(
             "PATCH",
             f"{NOTION_BASE_URL}/blocks/{page_id}/children",
@@ -321,6 +398,8 @@ class NotionTracker:
         """Create a tracker entry. Returns the Notion page ID.
 
         If a page with the same company name exists, updates it instead.
+        New pages get template body scaffolding matching the "New Job
+        Prospect" Notion template structure.
         """
         existing = self._find_page(app.name)
         if existing:
@@ -347,10 +426,62 @@ class NotionTracker:
         result = self._request("POST", f"{NOTION_BASE_URL}/pages", payload)
         page_id = result["id"]
 
-        if app.highlights:
-            self.set_highlights(page_id, app.highlights)
+        self._add_template_body(page_id, app)
 
         return page_id
+
+    def _add_template_body(self, page_id: str, app: Application) -> None:
+        """Add structured page body to a newly created page.
+
+        Creates five heading_3 sections:
+        1. Job Description — toggle (collapsible) with posting text
+        2. Experience to Highlight — bulleted list
+        3. Company Research — bulleted list
+        4. Questions I Might Get Asked — bulleted list (Q + A sub-bullets)
+        5. Questions To Ask In An Interview — bulleted list
+        """
+        blocks: list[dict] = []
+
+        # 1. Job Description (toggle heading)
+        if app.job_description:
+            # Split into paragraphs for readability inside the toggle
+            paragraphs = [
+                p.strip() for p in app.job_description.split("\n\n") if p.strip()
+            ]
+            if not paragraphs:
+                paragraphs = [app.job_description]
+            children = [_paragraph_block(p) for p in paragraphs]
+        else:
+            children = [_paragraph_block("")]
+        blocks.append(_toggle_heading3_block("Job Description", children))
+
+        # 2. Experience to Highlight
+        blocks.append(_heading3_block("Experience to Highlight"))
+        if app.highlights:
+            blocks.extend(_bullet_block(h) for h in app.highlights)
+        else:
+            blocks.append(_bullet_block(""))
+
+        # 3. Company Research
+        blocks.append(_heading3_block("Company Research"))
+        if app.research:
+            blocks.extend(_bullet_block(r) for r in app.research)
+        else:
+            blocks.append(_bullet_block(""))
+
+        # 4. Questions I Might Get Asked (scaffolded empty)
+        blocks.append(_heading3_block("Questions I Might Get Asked"))
+        blocks.append(_bullet_block(""))
+
+        # 5. Questions To Ask In An Interview
+        blocks.append(_heading3_block("Questions To Ask In An Interview"))
+        blocks.append(_bullet_block(""))
+
+        self._request(
+            "PATCH",
+            f"{NOTION_BASE_URL}/blocks/{page_id}/children",
+            {"children": blocks},
+        )
 
     def update(self, app: Application) -> None:
         """Update an existing tracker entry."""
@@ -399,6 +530,26 @@ class NotionTracker:
             f"{NOTION_BASE_URL}/pages/{page_id}",
             {"properties": {"Follow on Linkedin": _select("No")}},
         )
+
+    def set_interview_questions(
+        self, app_id: str, questions: list[dict[str, str]]
+    ) -> None:
+        """Replace 'Questions I Might Get Asked' section.
+
+        Each dict has 'question' and 'answer' keys. Rendered as a bullet
+        for the question with a nested sub-bullet for the answer.
+        """
+        page_id = app_id.replace("-", "")
+        blocks = [
+            _qa_bullet_block(q["question"], q["answer"]) for q in questions
+        ]
+        self._append_section(page_id, "Questions I Might Get Asked", blocks)
+
+    def set_questions_to_ask(self, app_id: str, questions: list[str]) -> None:
+        """Replace 'Questions To Ask In An Interview' section."""
+        page_id = app_id.replace("-", "")
+        blocks = [_bullet_block(q) for q in questions]
+        self._append_section(page_id, "Questions To Ask In An Interview", blocks)
 
     def list_all(self) -> list[Application]:
         """List all tracked applications."""
@@ -506,6 +657,10 @@ class NotionTracker:
                 return self._queue_research(task, filename)
             elif command == "outreach":
                 return self._queue_outreach(task, filename)
+            elif command == "interview_questions":
+                return self._queue_interview_questions(task, filename)
+            elif command == "questions_to_ask":
+                return self._queue_questions_to_ask(task, filename)
             else:
                 return {
                     "file": filename,
@@ -598,6 +753,36 @@ class NotionTracker:
             "page_id": page_id,
         }
 
+    def _queue_interview_questions(self, task: dict, filename: str) -> dict:
+        page_id = self._resolve_page_id(
+            task.get("page_id"), task.get("name")
+        )
+        questions = task.get("questions", [])
+        if not questions:
+            raise ValueError("interview_questions command requires questions list")
+        self.set_interview_questions(page_id, questions)
+        return {
+            "file": filename,
+            "status": "ok",
+            "action": "interview_questions_replaced",
+            "page_id": page_id,
+        }
+
+    def _queue_questions_to_ask(self, task: dict, filename: str) -> dict:
+        page_id = self._resolve_page_id(
+            task.get("page_id"), task.get("name")
+        )
+        questions = task.get("questions", [])
+        if not questions:
+            raise ValueError("questions_to_ask command requires questions list")
+        self.set_questions_to_ask(page_id, questions)
+        return {
+            "file": filename,
+            "status": "ok",
+            "action": "questions_to_ask_replaced",
+            "page_id": page_id,
+        }
+
     @staticmethod
     def _task_to_application(task: dict) -> Application:
         """Convert a queue task JSON dict to an Application."""
@@ -633,4 +818,6 @@ class NotionTracker:
             linkedin=linkedin,
             conclusion=task.get("conclusion", ""),
             highlights=task.get("highlights", []),
+            job_description=task.get("job_description", ""),
+            research=task.get("research", []),
         )

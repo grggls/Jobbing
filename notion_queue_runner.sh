@@ -12,7 +12,7 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') — Queue runner triggered" >> "$LOG"
 # Small delay to let file writes finish (Cowork may still be writing)
 sleep 1
 
-cd "$SCRIPT_DIR" && python3 notion_update.py run-queue >> "$LOG" 2>&1
+cd "$SCRIPT_DIR" && .venv/bin/python3 -m jobbing.cli queue >> "$LOG" 2>&1
 
 echo "$(date '+%Y-%m-%d %H:%M:%S') — Queue runner finished" >> "$LOG"
 echo "---" >> "$LOG"

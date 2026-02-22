@@ -1,4 +1,9 @@
-# /analyze — Role Fit Assessment
+---
+name: analyze
+description: Analyze a job posting for fit against Greg's profile. Scores 0-100, identifies green/red flags, gaps, salary benchmarks, company intel, and drafts Experience to Highlight bullets. Always the first step before any application work.
+---
+
+# Role Fit Assessment
 
 Analyze a job posting for fit against Greg's profile. This is always the first step before any application work.
 
@@ -47,7 +52,19 @@ Analyze a job posting for fit against Greg's profile. This is always the first s
 
 ## Critical Rules
 - **Chronology is sacred.** Solo Recon and Modern Electric are CURRENT roles (2024–present). Never lead with Mobimeo as most recent.
-- **People management started mid-2017.** That's 8+ years as of 2026.
+- **People management started mid-2017.** That's 8+ years as of 2026. Never write "6+ years."
 - **No fake metrics.** Don't invent percentages or impact numbers not in CONTEXT.md.
 - **Be critical.** A skip is better than a wasted application. Flag weak matches honestly.
 - **Be circumspect.** Verify before you claim. Check CONTEXT.md before asserting dates, titles, team sizes, or achievements.
+
+## Do Not
+- Inflate the fit score to be encouraging — Greg trusts the score to make go/skip decisions
+- Guess at company headcount, funding stage, or culture — web search or say "not found"
+- Describe company intel with vague phrases like "well-funded startup" without specifics — find the actual number
+- Skip the Experience to Highlight checkpoint — present the bullets and wait for Greg's feedback before moving on
+- Rubber-stamp the analysis — if something is weak, say so plainly
+- Apply to or positively assess defense contractors, military tech, or weapons companies — firm exclusion
+- Claim Greg speaks German professionally — it's A2 (studying), flag any German-language requirement as a gap
+- Assert team sizes, dates, or achievements without checking CONTEXT.md — every number must be verified
+- Write Experience to Highlight bullets that exaggerate or reframe experience beyond what CONTEXT.md supports
+- Move to `/apply` without explicit go from Greg — the analysis is a decision point, not a formality
