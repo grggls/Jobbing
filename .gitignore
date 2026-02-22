@@ -1,7 +1,27 @@
+# Environment and runtime
 .env
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
+
+# OS / editor
 .DS_Store
 .obsidian/
+
+# Personal data — never commit
+CONTEXT.md
+BOOKMARKS.md
+CV-*.pdf
+companies/**
+!companies/
+!companies/*/
+!companies/**/.gitkeep
+
+# Notion queue (transient)
+notion_queue/
 notion_queue_results/
+
+# Scan results (personal)
+scan_results/**
+!scan_results/.gitkeep

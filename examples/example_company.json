@@ -1,0 +1,91 @@
+{
+  "companyUpper": "ACME CORP",
+  "cv": {
+    "name": "JANE DOE",
+    "location": "Berlin, Germany \u2022 EU-based \u2022 Remote",
+    "email": "jane.doe@example.com",
+    "github": "https://github.com/janedoe/",
+    "linkedin": "https://www.linkedin.com/in/janedoe/",
+
+    "summary": [
+      "Engineering leader with 10+ years of experience scaling engineering organizations and building cloud-native infrastructure. Deep background in Kubernetes, observability, and developer tooling.",
+      "Hands-on experience with platform engineering, CI/CD, and infrastructure-as-code. Comfortable engaging with staff engineers on architecture and technical trade-offs."
+    ],
+
+    "coreSkills": [
+      "Engineering leadership: led teams of 5-15 engineers across Platform, SRE, and Infrastructure",
+      "Cloud-native architecture: Kubernetes (EKS, GKE), Terraform, Helm, service mesh",
+      "Observability: OpenTelemetry, Prometheus, Grafana, Datadog, structured logging",
+      "Delivery excellence: CI/CD pipelines, deployment automation, DORA metrics improvement"
+    ],
+
+    "keyAchievements": [
+      "Scaled platform team from 3 to 12 engineers during rapid growth phase",
+      "Built internal developer platform that increased deployment frequency 200%",
+      "Improved platform availability from 97% to 99.9% through SLO frameworks"
+    ],
+
+    "jobs": [
+      {
+        "title": "Head of Platform Engineering",
+        "company": "GreenTech GmbH, Berlin",
+        "dates": "January 2022 \u2013 present",
+        "bullets": [
+          "Leading platform engineering team of 8, building internal developer platform",
+          "Implemented observability stack with OpenTelemetry, Prometheus, and Grafana",
+          "Established SLO frameworks improving service availability to 99.9%"
+        ]
+      },
+      {
+        "title": "Senior SRE",
+        "company": "StartupCo, Remote",
+        "dates": "March 2019 \u2013 December 2021",
+        "bullets": [
+          "Operated Kubernetes clusters serving 100K+ concurrent users",
+          "Built CI/CD pipelines reducing deployment time from hours to minutes"
+        ]
+      }
+    ],
+
+    "earlierExperience": [
+      {
+        "title": "DevOps Engineer",
+        "company": "TechCorp, New York",
+        "bullets": [
+          "Built and maintained cloud infrastructure on AWS"
+        ]
+      }
+    ],
+
+    "education": [
+      {
+        "degree": "Bachelor of Science in Computer Science",
+        "school": "Technical University, Berlin",
+        "detail": "Focus on distributed systems"
+      }
+    ],
+
+    "skills": {
+      "Languages": "Python, Go, TypeScript, Bash",
+      "Cloud & Infrastructure": "AWS, GCP, Kubernetes, Docker, Helm, Terraform",
+      "Observability": "OpenTelemetry, Prometheus, Grafana, Datadog",
+      "Delivery & CI/CD": "GitHub Actions, ArgoCD, Flux"
+    }
+  },
+
+  "cl": {
+    "date": "February 20, 2026",
+    "recipient": "Hiring Manager",
+    "company": "Acme Corp",
+    "greeting": "Dear Hiring Team,",
+    "paragraphs": [
+      "I'm writing to apply for the Head of Platform Engineering role at Acme Corp. With 10+ years leading engineering teams and building cloud-native infrastructure, I'm excited about the opportunity to scale your platform organization.",
+      "At GreenTech, I built an internal developer platform from scratch that increased deployment frequency 200% and improved availability to 99.9%. I lead a team of 8 engineers across platform, reliability, and infrastructure.",
+      "I'd welcome the opportunity to discuss how my experience can support Acme Corp's growth."
+    ],
+    "closing": "Best regards,",
+    "name": "Jane Doe",
+    "email": "jane.doe@example.com",
+    "linkedin": "linkedin.com/in/janedoe"
+  }
+}
