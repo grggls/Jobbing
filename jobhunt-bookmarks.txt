@@ -1,0 +1,44 @@
+Web3.career - remote devops - https://web3.career/devops+remote-jobs
+Climate Change Jobs: devops remote germany - https://www.climatechangecareers.com/jobs/?q=Germany&experience_level=seniorlevel&remote=remote&job_type=fulltime
+Climate Change Jobs: devops remote US - https://www.climatechangecareers.com/jobs/?q=devops&country=unitedstates&place=United%20States&remote=remote
+cord - remote engineering leadership jobs - https://cord.com/search?filters=%5B%7B%22a%22%3A%22sortBy%22%2C%22l%22%3A%22Responsiveness%22%2C%22v%22%3A%22response_rate%22%7D%2C%7B%22a%22%3A%22jobTitle%22%2C%22l%22%3A%22%20VP%20of%20Engineering%22%2C%22v%22%3A%22VP%20of%20Engineering%22%7D%2C%7B%22a%22%3A%22jobTitle%22%2C%22l%22%3A%22%20Head%20of%20Engineering%22%2C%22v%22%3A%22Head%20of%20Engineering%22%7D%2C%7B%22a%22%3A%22remote%22%2C%22l%22%3A%22%20Remote%22%2C%22v%22%3A%22remote%22%7D%2C%7B%22a%22%3A%22seniority%22%2C%22l%22%3A%22%20Leadership%22%2C%22v%22%3A%22leadership%22%7D%2C%7B%22a%22%3A%22seniority%22%2C%22l%22%3A%22%20Lead%22%2C%22v%22%3A%22lead%22%7D%5D&v=%7B%22label%22%3A%22Positions%22%2C%22value%22%3A%22listing%22%7D
+Climate Draft - remote devops - https://jobs.climatedraft.org/jobs?filter=eyJzZWFyY2hhYmxlX2xvY2F0aW9uX29wdGlvbiI6WyJyZW1vdGUiXX0%3D&q=devops
+Climate Draft - remote SRE - https://jobs.climatedraft.org/jobs?filter=eyJzZWFyY2hhYmxlX2xvY2F0aW9uX29wdGlvbiI6WyJyZW1vdGUiXX0%3D&q=sre
+Lowercarbon Capital - remote devops - https://lowercarbon.getro.com/jobs?filter=eyJzZWFyY2hhYmxlX2xvY2F0aW9uX29wdGlvbiI6WyJyZW1vdGUiXX0%3D&q=sre
+Lowercarbon Capital - remote SRE - https://lowercarbon.getro.com/jobs?filter=eyJzZWFyY2hhYmxlX2xvY2F0aW9uX29wdGlvbiI6WyJyZW1vdGUiXX0%3D&q=devops
+Breakthrough Energy - remote devops - https://bevjobs.breakthroughenergy.org/jobs?filter=eyJzZWFyY2hhYmxlX2xvY2F0aW9uX29wdGlvbiI6WyJyZW1vdGUiXX0%3D&q=devops
+Breakthrough Energy - remote sre - https://bevjobs.breakthroughenergy.org/jobs?filter=eyJzZWFyY2hhYmxlX2xvY2F0aW9uX29wdGlvbiI6WyJyZW1vdGUiXX0%3D&q=sre
+ClimateTechList - remote jobs - https://www.climatetechlist.com/jobs?remote=remote-only
+Climatebase - remote devops - https://climatebase.org/jobs?date=last30&remote_preferences=Remote&remote=true&job_types=Full+time+role&experience_levels=Director+%2F+Executive%7CSenior+Level&categories=Software+%26+IT%3ADevOps%2CEngineering+Manager%2CSoftware%2CSoftware%2CSecurity+Engineering%2CSoftware+Architecture%2CEngineering+Manager%2C+Software%7CSoftware+%26+IT%3ADevOps%2CEngineering+Manager%2CSoftware%2CSoftware%2CSecurity+Engineering%2CSoftware+Architecture%2CEngineering+Manager%2C+Software
+remote rocketship - engineering leadership jobs - https://www.remoterocketship.com/jobs/devops/?jobsInput=devops&page=1&sort=DateAdded&jobTitle=director+of+engineering%2Cvp+of+engineering%2Chead+of+engineering%2CDevOps+Engineer&seniority=expert&locations=Europe&minSalary=160000
+Hacker News - Kubernetes jobs  - https://hnhiring.com/technologies/kubernetes
+YC Work at a Startup - Remote devops  - https://www.workatastartup.com/companies?demographic=any&hasEquity=any&hasSalary=any&industry=any&interviewProcess=any&jobType=fulltime&layout=list-compact&remote=yes&remote=only&role=eng&role_type=devops&sortBy=created_desc&tab=any&usVisaNotRequired=any
+Built In - remote devops sre platform - https://builtin.com/jobs/remote/engineering/expert-leader?daysSinceUpdated=7&skills=Python%2CAWS%2CGCP%2CDocker%2CTerraform%2CKubernetes&allLocations=true
+Still Hiring - remote devops and management - https://stillhiring.today/
+Jobgether - remote devops - https://jobgether.com/remote-jobs/anywhere/dev-ops-engineer?experience=expert-10-years
+Jobgether - remote SRE - https://jobgether.com/remote-jobs/anywhere/site-reliability-engineer?experience=expert-10-years
+Wellfound - https://wellfound.com/jobs
+Remotely - SRE - https://www.remotely.jobs/search?utf8=%E2%9C%93&search_jobs%5Bquery%5D=site+reliability&search_jobs%5Blocation%5D=&button=
+Remotely - devops - https://www.remotely.jobs/search?search_jobs%5Bquery%5D=devops&search_jobs%5Blocation%5D=&button=&search_jobs%5Bposted_date_range%5D=&search_jobs%5Bjob_type%5D=&search_jobs%5Bemployment_type%5D=
+WorksHub - remote devops - https://www.works-hub.com/jobs/search/?remote=true&remuneration.time-period=Yearly&remuneration.currency=USD&remuneration.competitive=false
+Berlin Startup Jobs - devops - http://berlinstartupjobs.com/?s=devops
+SkipTheDrive - cloud - https://www.skipthedrive.com/?s=cloud
+SkipTheDrive - site reliability - https://www.skipthedrive.com/?s=site+reliability
+SkipTheDrive - devops - https://www.skipthedrive.com/?s=devops
+AI Jobs - remote - https://aijobs.ai/remote?keyword=devops
+DynamiteJobs - remote SRE - https://dynamitejobs.com/remote-jobs?text=site+reliability
+Remote AI Jobs - https://aijobs.ai/remote?keyword=devops
+Remote DevOps Jobs | Working Nomads - https://www.workingnomads.com/remote-devops-jobs
+Working Nomads - remote cloud engineer - https://www.workingnomads.com/remote-senior-cloud-jobs?salary=144000
+Remote Developer Jobs - JustRemote - https://justremote.co/remote-developer-jobs
+Remote Jobs in Programming, Support, Design and more - https://remotive.com/
+Remote Engineering Jobs - NoDesk - https://nodesk.co/remote-jobs/engineering/?query=site%20reliability
+Startup Jobs | Wellfound (formerly AngelList Talent) - https://wellfound.com/jobs
+All Jobs - climatejobs - https://climatejobs.io/jobs
+Resources — Climate Recruit - https://www.climaterecruit.eu/resources
+Remote Devops Jobs | Remotive.com - https://remotive.com/remote-jobs/devops
+Remote DevOps and Sysadmin Jobs - https://weworkremotely.com/categories/remote-devops-sysadmin-jobs#job-listings
+Working Nomads - cloud  - https://www.workingnomads.com/jobs?tag=cloud&job=senior-cloud-engineer-contrast-security
+Remote Engineering Jobs - NoDesk - https://nodesk.co/remote-jobs/engineering/
+JustRemote - devops - https://justremote.co/remote-devops-sysadmin-jobs
+Jobspresso - remote devops - https://jobspresso.co/remote-work/?job_types=ai-data%2Cdeveloper%2Cvarious&search_location&job_categories=full-time&search_keywords=cloud
