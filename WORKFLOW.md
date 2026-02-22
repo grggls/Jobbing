@@ -4,10 +4,11 @@
 
 ## Architecture
 
-- **One generic script:** `generate_pdfs.py` — never copied, never modified per-company
+- **`jobbing` CLI** — unified command for PDF generation, tracker operations, and queue processing (`pip install -e .`)
 - **One data file per company:** `companies/{company}/{company}.json` — contains all tailored CV and CL content
 - **Output:** `companies/{company}/{COMPANY}-CV.pdf` and `companies/{company}/{COMPANY}-CL.pdf`
 - **All company files live in `companies/{company}/`** — JSON data, PDFs, application answers, interview prep, etc.
+- **Claude Code skills** — `/analyze`, `/apply`, `/outreach`, `/track` in `.claude/skills/`
 
 ## Step 1: Role Analysis & Discussion
 
@@ -107,7 +108,7 @@ If proceeding, create a tracking entry in the [Job Applications database](https:
 
 ### How to populate
 
-Use the **queue-based system**: Cowork writes a JSON file to `notion_queue/`, and a launchd agent on Greg's Mac picks it up and runs `notion_update.py run-queue` automatically.
+Use the **queue-based system**: write a JSON file to `notion_queue/`, and a launchd agent on Greg's Mac picks it up and runs `jobbing queue` automatically.
 
 **Create the entry (after Step 1 discussion):**
 
@@ -197,22 +198,22 @@ Write a JSON file to `notion_queue/` with a descriptive name (e.g., `notion_queu
 
 Both `research` and `outreach` commands accept either `"name"` (looks up the page) or `"page_id"`. They replace existing sections — safe to re-run with updated data.
 
-The launchd agent (`com.grggls.notion-queue`) watches the `notion_queue/` directory. When a file appears, it runs `notion_queue_runner.sh`, which calls `python3 notion_update.py run-queue`. Processed files are moved to `notion_queue_results/` with timestamped result files.
+The launchd agent (`com.grggls.notion-queue`) watches the `notion_queue/` directory. When a file appears, it runs `jobbing queue`. Processed files are moved to `notion_queue_results/` with timestamped result files.
 
 The `create` command checks for duplicates — if a page with the same company name exists, it updates instead of creating a new one.
 
-**Direct CLI usage** (for Greg to run manually if needed):
+**Direct CLI usage** (after `pip install -e .`):
 
 ```bash
-python3 notion_update.py create --name "Company" --position "Role" --date "2026-02-19" ...
-python3 notion_update.py update --page-id "PAGE_ID" --status "Applied"
-python3 notion_update.py highlights --page-id "PAGE_ID" --highlights "Bullet 1" "Bullet 2"
-python3 notion_update.py research --name "Company" --research "Finding 1" "Finding 2"
-python3 notion_update.py outreach --name "Company" --contacts-json contacts.json
-python3 notion_update.py run-queue  # process all files in notion_queue/
+jobbing track create --name "Company" --position "Role" --date "2026-02-19"
+jobbing track update --page-id "PAGE_ID" --status "Applied"
+jobbing track highlights --page-id "PAGE_ID" --highlights "Bullet 1" "Bullet 2"
+jobbing track research --name "Company" --research "Finding 1" "Finding 2"
+jobbing track outreach --name "Company" --contacts-json contacts.json
+jobbing queue  # process all files in notion_queue/
 ```
 
-The script loads `NOTION_API_KEY` from (in order): environment variable, `.env` file in the Jobbing directory, or `~/.zshrc-secrets`.
+All track commands support `--dry-run`. Config loads `NOTION_API_KEY` from (in order): environment variable, `.env` file in the Jobbing directory, or `~/.zshrc-secrets`.
 
 **Why not Notion MCP or browser automation?**
 
@@ -255,7 +256,7 @@ If proceeding:
 4. **Generate PDFs:**
 
    ```bash
-   .venv/bin/python3 generate_pdfs.py {company}
+   jobbing pdf {company}
    ```
 
 5. **ATS scan:** Extract text from PDF, count keyword frequencies, verify clean parsing
@@ -346,16 +347,16 @@ companies/{company}/{COMPANY}-APPLICATION-ANSWERS.md — application questions (
 companies/{company}/{COMPANY}-INTERVIEW-PREP.md      — interview prep (when needed)
 ```
 
-## Running the Script
+## Running the PDF Generator
 
 ```bash
-.venv/bin/python3 generate_pdfs.py {company}              # both CV and CL
-.venv/bin/python3 generate_pdfs.py {company} --cv-only    # just the CV
-.venv/bin/python3 generate_pdfs.py {company} --cl-only    # just the cover letter
-.venv/bin/python3 generate_pdfs.py {company} --output-dir /path  # custom output directory
+jobbing pdf {company}              # both CV and CL
+jobbing pdf {company} --cv-only    # just the CV
+jobbing pdf {company} --cl-only    # just the cover letter
+jobbing pdf {company} --output-dir /path  # custom output directory
 ```
 
-The script reads from `companies/{company}/{company}.json` and outputs PDFs to the same directory (unless `--output-dir` is specified). It uses DejaVu Sans fonts (full Unicode: bullets, em-dashes, euro signs) on the Cowork VM, with Helvetica fallback.
+Reads from `companies/{company}/{company}.json` and outputs PDFs to the same directory (unless `--output-dir` is specified). Uses DejaVu Sans fonts (full Unicode: bullets, em-dashes, euro signs) where available, with Helvetica fallback.
 
 ## Location Logic
 

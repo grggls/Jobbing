@@ -130,16 +130,35 @@
 
 ## ADR-008: ChatAnthropic as LLM Provider
 
-**Status:** Accepted
+**Status:** Deferred (requires separate Anthropic API key, not included in Max subscription)
 
-**Context:** LangChain supports multiple LLM providers. We're using Claude Max plan with unlimited API access.
+**Context:** LangChain supports multiple LLM providers. Originally planned to use Claude Max plan with API access, but discovered Max subscription is separate from the API console.
 
-**Decision:** Use `ChatAnthropic` from `langchain-anthropic`.
+**Decision:** Defer to Phase 5 (stretch goal). Use Claude Code skills for interactive workflows first.
 
 **Rationale:**
-- Already using Claude for interactive sessions
-- Claude Max plan removes cost concerns
-- Strong structured output support
-- Native LangSmith integration
+- Max subscription does not include API access — separate billing on console.anthropic.com
+- Interactive Claude Code sessions handle the primary workflow well
+- LangGraph agent layer adds value mainly for unattended scanning
+- Skills-first approach delivers immediate value without API costs
 
-**Consequences:** Coupled to Anthropic API. Could swap to other `BaseChatModel` implementations if needed.
+**Consequences:** Agent layer deferred. When API key is available, `ChatAnthropic` from `langchain-anthropic` is the planned provider.
+
+---
+
+## ADR-009: Claude Code Skills as Primary Workflow Interface
+
+**Status:** Accepted
+
+**Context:** The workflow has distinct phases (analyze, apply, outreach, track) that benefit from structured prompts. Options: free-form prompts with CLAUDE.md instructions, CLI-only workflow, Claude Code project skills.
+
+**Decision:** Create project-level Claude Code skills in `.claude/skills/` for each workflow phase.
+
+**Rationale:**
+- Skills are discoverable as slash commands in Claude Code sessions
+- Each skill encodes domain-specific instructions, reducing prompt engineering per session
+- Skills reference shared context files (WORKFLOW.md, CONTEXT.md) without duplicating content
+- Works in both Claude Code CLI and Cowork environments
+- Skills + CLI provide two complementary interfaces: conversational and programmatic
+
+**Consequences:** Skills are Claude Code-specific. Users of other AI coding tools would rely on CLAUDE.md and WORKFLOW.md directly. Skills need updating when workflow changes.

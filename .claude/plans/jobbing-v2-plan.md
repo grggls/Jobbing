@@ -514,41 +514,38 @@ jobbing = "jobbing.cli:main"
 - **Verify:** `jobbing track create --dry-run` matches old script; `jobbing pdf dash0` produces identical PDFs
 - **Files:** `tracker/`, `pdf.py`, `cli.py`
 
-### Phase 3: LangChain agent layer
+### Phase 3: Skills + Documentation ← YOU ARE HERE
+- Create `.claude/skills/analyze.md` — from WORKFLOW.md Step 1 (fit assessment, scoring, company research, Experience to Highlight checkpoint)
+- Create `.claude/skills/apply.md` — from Steps 2-3 (Notion entry, JSON generation, PDF generation, ATS check)
+- Create `.claude/skills/outreach.md` — LinkedIn contact research and outreach message drafting
+- Create `.claude/skills/track.md` — tracker operations (status updates, highlights, research)
+- Update `CLAUDE.md` — reference skills, new `jobbing` CLI commands, remove old script references
+- Update `WORKFLOW.md` — reference `jobbing` CLI instead of old scripts
+- Finalize `docs/DECISIONS.md` with all ADRs
+- **Verify:** Skills appear as slash commands in Claude Code; `/analyze` works with a real posting
+- **Files:** `.claude/skills/`, `CLAUDE.md`, `WORKFLOW.md`, `docs/DECISIONS.md`
+
+### Phase 4: /scan skill for manual bookmark scanning
+- Create `.claude/skills/scan.md` — manual scan trigger for Claude-driven bookmark scanning
+- Write `scanner.py` — `BookmarkScanner` (parse BOOKMARKS.md, fetch job boards)
+- Implement scan results logging to `scan_results/`
+- **Verify:** `/scan` in Claude Code session reads BOOKMARKS.md, fetches boards, scores postings, logs results
+- **Files:** `.claude/skills/scan.md`, `scanner.py`, `scan_results/`
+
+### Phase 5: LangGraph agent layer (stretch goal — requires Anthropic API key)
 - Write `agent/state.py` — `AgentState` TypedDict
 - Write `agent/tools.py` — LangChain `@tool` wrappers for tracker, PDF, scanner
-- Write `agent/nodes.py` — scan, score, filter, create_entries, notify nodes (+ apply/outreach for interactive)
+- Write `agent/nodes.py` — scan, score, filter, create_entries, notify nodes
 - Write `agent/graph.py` — `StateGraph` with edges, conditional routing, checkpointing
-- Configure LangSmith tracing (env vars)
-- Add `jobbing scan` subcommand
-- **Verify:** `jobbing scan` completes; LangSmith shows traces
-- **Files:** `agent/`, updated `cli.py`
-
-### Phase 4: Scanner + Scheduler
-- Write `scanner.py` — `BookmarkScanner` (parse BOOKMARKS.md, fetch top 10 boards)
 - Write `scheduler.py` — `Scheduler` (APScheduler: cron at 1am/1pm + queue polling)
-- Add `jobbing serve` subcommand
-- Implement scan results logging to `scan_results/`
-- Add `jobbing scan --review` for reviewing filtered-out postings
-- **Verify:** `jobbing serve` fires scan on schedule; scan_results/ populated; queue processed
-- **Files:** `scanner.py`, `scheduler.py`, updated `cli.py`
-
-### Phase 5: Skills + Documentation
-- Create `.claude/skills/analyze.md` — from WORKFLOW.md Step 1
-- Create `.claude/skills/apply.md` — from Steps 2-3
-- Create `.claude/skills/outreach.md` — outreach workflow
-- Create `.claude/skills/scan.md` — manual scan trigger
-- Create `.claude/skills/track.md` — tracker operations
-- Update `CLAUDE.md` — reference skills, new CLI
-- Update `WORKFLOW.md` — reference skills
-- Write `README.md` — portfolio-quality: what it is, architecture, LangChain integration, setup
+- Configure LangSmith tracing (env vars)
+- Add `jobbing scan` and `jobbing serve` subcommands to CLI
 - Write `docs/LANGCHAIN_INTEGRATION.md` — detailed LangGraph/LangSmith documentation
-- Finalize `docs/DECISIONS.md` with all ADRs
-- **Verify:** `/analyze` in Claude Code session works with a real posting
-- **Files:** `.claude/skills/`, `CLAUDE.md`, `WORKFLOW.md`, `README.md`, `docs/`
+- **Verify:** `jobbing scan` completes; LangSmith shows traces; `jobbing serve` fires on schedule
+- **Files:** `agent/`, `scanner.py`, `scheduler.py`, updated `cli.py`, `docs/LANGCHAIN_INTEGRATION.md`
 
 ### Phase 6: Cleanup + Tests
-- Write `tests/test_models.py`, `test_tracker.py`, `test_pdf.py`, `test_agent.py`
+- Write `tests/test_models.py`, `test_tracker.py`, `test_pdf.py`
 - Delete `notion_update.py`, `generate_pdfs.py`, `notion_queue_runner.sh`
 - Remove or update launchd plist
 - Final git cleanup: verify `.gitignore` works, no personal data in staged files
@@ -588,8 +585,8 @@ jobbing = "jobbing.cli:main"
 
 - **Phase 1:** `pip install -e .` succeeds; `from jobbing.models import Application, Interview, ScoringResult` works; `git status` shows no personal data
 - **Phase 2:** `jobbing track create --name "Test" --dry-run` matches old script; `jobbing pdf dash0` produces identical PDFs
-- **Phase 3:** `jobbing scan` completes; LangSmith dashboard shows traces with node transitions, scoring reasoning, and tool calls
-- **Phase 4:** `jobbing serve` fires scans on schedule; `scan_results/` has full logs; `jobbing scan --review` shows filtered-out postings
-- **Phase 5:** `/analyze` in Claude Code session works; skills appear as slash commands
+- **Phase 3:** Skills appear as slash commands in Claude Code; `/analyze` works with a real posting
+- **Phase 4:** `/scan` in Claude Code reads BOOKMARKS.md, fetches boards, scores postings, logs to `scan_results/`
+- **Phase 5:** `jobbing scan` completes; LangSmith dashboard shows traces; `jobbing serve` fires on schedule
 - **Phase 6:** Tests pass; `git diff --cached` shows only public files; no PDFs, no CONTEXT.md, no companies/
-- **End-to-end:** Scheduled scan → matches found → Notion entries (Researching) → Greg reviews → `/apply` generates docs → status update
+- **End-to-end:** `/scan` finds matches → `/analyze` assesses fit → `/apply` generates docs → `/track` updates status

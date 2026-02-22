@@ -21,6 +21,15 @@ AI-assisted job application workflow. Greg pastes a job posting, Claude analyzes
 
 **Be helpful.** When Greg decides to proceed, execute the full workflow autonomously: analysis → Notion entry → JSON → PDFs → tracker update. Don't stop to ask unless something is genuinely ambiguous.
 
+## Skills (Slash Commands)
+
+These are project-level Claude Code skills in `.claude/skills/`. Use them as slash commands:
+
+- **`/analyze`** — Fit assessment. Paste a job posting, get score, green/red flags, gaps, salary read, company intel, Experience to Highlight bullets. Always start here.
+- **`/apply`** — Full application workflow. Notion entry → tailored JSON → PDFs → ATS check. Run after `/analyze` and Greg's go decision.
+- **`/outreach`** — LinkedIn contact research. Drafts connection request messages. Run after applying.
+- **`/track`** — Tracker operations. Status updates, research, highlights, conclusions.
+
 ## Project Structure
 
 ```
@@ -28,17 +37,30 @@ Jobbing/
 ├── CLAUDE.md              ← you are here
 ├── WORKFLOW.md            ← authoritative workflow (read first)
 ├── CONTEXT.md             ← Greg's profile and career history (read second)
+├── scoring_criteria.md    ← tunable scoring guidelines
 ├── CV-GREGORY-DAMIANI.pdf ← master CV (generic, pre-tailoring)
-├── job-scan-*.md          ← periodic job market scan notes
 │
-├── generate_pdfs.py       ← PDF generator script
-├── notion_update.py       ← Notion API client
-├── notion_queue_runner.sh ← launchd queue processor
-├── pyproject.toml         ← Python deps (reportlab)
-├── .env                   ← Notion API key
+├── src/jobbing/           ← Python package
+│   ├── cli.py             ← Unified CLI: jobbing track|queue|pdf
+│   ├── config.py          ← Config loading (env, .env, API keys)
+│   ├── models.py          ← Domain models (Application, Contact, CVData, etc.)
+│   ├── pdf.py             ← PDF generator (CV + cover letter)
+│   └── tracker/
+│       ├── __init__.py    ← TrackerBackend Protocol + factory
+│       ├── notion.py      ← Notion API tracker
+│       └── json_file.py   ← JSON file tracker (portable fallback)
+│
+├── .claude/skills/        ← Claude Code slash commands
+│   ├── analyze.md         ← /analyze — fit assessment
+│   ├── apply.md           ← /apply — full application workflow
+│   ├── outreach.md        ← /outreach — LinkedIn contact research
+│   └── track.md           ← /track — tracker operations
+│
+├── pyproject.toml         ← Package metadata, deps, CLI entry point
+├── .env                   ← API keys (gitignored)
 ├── .venv/                 ← Python virtual environment
 │
-├── companies/             ← all company-specific content
+├── companies/             ← all company-specific content (gitignored)
 │   └── {company}/
 │       ├── {company}.json                    ← tailored CV + CL data
 │       ├── {COMPANY}-CV.pdf                  ← generated CV
@@ -46,6 +68,10 @@ Jobbing/
 │       ├── {COMPANY}-APPLICATION-ANSWERS.md  ← application questions
 │       ├── {COMPANY}-INTERVIEW-PREP.md       ← interview prep
 │       └── (other company-specific docs)
+│
+├── docs/                  ← Architecture, decisions, design history
+├── examples/              ← Anonymized templates
+├── tests/
 │
 ├── notion_queue/          ← transient queue files (launchd watches this)
 └── notion_queue_results/  ← processed queue audit trail
@@ -55,13 +81,11 @@ Jobbing/
 
 Full details in WORKFLOW.md. The short version:
 
-1. **Analyze** — Greg pastes a job posting. Claude Cowork updates the name of the conversation - "{COMPANY} - {ROLE}". Assess fit (score 0–100), green/red flags, gaps, salary read, company intel, Experience to Highlight bullets. Present the analysis and wait for Greg's go/skip decision.
-2. **Notion entry** — Write a `create` JSON to `notion_queue/`. The launchd agent processes it automatically.
-3. **Generate content** — Create `companies/{company}/{company}.json` using `companies/dash0/dash0.json` as the structural template. Tailor CV and CL per WORKFLOW.md rules.
-4. **Generate PDFs** — Run `.venv/bin/python3 generate_pdfs.py {company}`.
-5. **ATS check** — Extract text from the PDF, count keyword frequencies, verify clean parsing.
-6. **Application answers** — If the application has extra questions, draft `companies/{company}/{COMPANY}-APPLICATION-ANSWERS.md`.
-7. **Notion is the tracker** — all application status lives in the Notion database.
+1. **`/analyze`** — Greg pastes a job posting. Assess fit (score 0–100), green/red flags, gaps, salary read, company intel, Experience to Highlight bullets. Present the analysis and wait for Greg's go/skip decision.
+2. **`/apply`** — Notion entry → tailored JSON → PDFs → ATS check. All in one flow.
+3. **Application answers** — If the application has extra questions, draft `companies/{company}/{COMPANY}-APPLICATION-ANSWERS.md`.
+4. **`/outreach`** — After applying, research LinkedIn contacts and draft messages.
+5. **`/track`** — Status updates, research, highlights — all tracker operations.
 
 ## Critical Rules
 
@@ -95,24 +119,26 @@ The queue is the only reliable write path. Write JSON to `notion_queue/` and the
 ### PDF generation
 
 ```bash
-.venv/bin/python3 generate_pdfs.py {company}
-.venv/bin/python3 generate_pdfs.py {company} --cv-only
-.venv/bin/python3 generate_pdfs.py {company} --cl-only
+jobbing pdf {company}
+jobbing pdf {company} --cv-only
+jobbing pdf {company} --cl-only
 ```
 
-**Cowork note:** The `.venv/` symlink points to Greg's local Python and may not resolve in the Cowork VM. If it breaks, fall back to the queue for Notion and ask Greg to run PDF generation locally.
+### CLI commands
 
-### Greg's local CLI (not for Cowork use)
-
-These work on Greg's Mac but not from Cowork:
+After `pip install -e .`, the `jobbing` CLI is available:
 
 ```bash
-.venv/bin/python3 notion_update.py create --name "Company" --position "Role" --date "2026-02-20"
-.venv/bin/python3 notion_update.py update --page-id "PAGE_ID" --status "Applied" --conclusion "Outcome"
-.venv/bin/python3 notion_update.py research --name "Company" --research "Finding 1" "Finding 2"
-.venv/bin/python3 notion_update.py outreach --name "Company" --contacts-json contacts.json
-.venv/bin/python3 notion_update.py run-queue
+jobbing track create --name "Company" --position "Role" --date "2026-02-22"
+jobbing track update --page-id "PAGE_ID" --status "Applied"
+jobbing track highlights --page-id "PAGE_ID" --highlights "Bullet 1" "Bullet 2"
+jobbing track research --name "Company" --research "Finding 1" "Finding 2"
+jobbing track outreach --name "Company" --contacts-json contacts.json
+jobbing queue   # process all pending queue files
+jobbing pdf {company}
 ```
+
+All track commands support `--dry-run` for previewing without sending.
 
 ## Notion Integration Notes
 
@@ -132,9 +158,10 @@ These work on Greg's Mac but not from Cowork:
 
 ## Do Not
 
-- Modify `generate_pdfs.py` or `notion_update.py` unless Greg asks
 - Create files outside `companies/{company}/` for company-specific content
-- Skip the fit assessment and go straight to document generation
+- Skip the fit assessment (`/analyze`) and go straight to document generation
 - Claim Greg has experience he doesn't have (check CONTEXT.md)
 - Use marketing language in CVs or cover letters
 - Leave TODO comments or placeholder content in JSON files
+- Use Notion MCP write tools — they are buggy. Use the queue system for all writes.
+- Auto-mark "Applied" or any other status — status updates are Greg's decision
