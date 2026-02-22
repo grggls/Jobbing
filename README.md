@@ -1,105 +1,127 @@
 # Jobbing
 
-AI-assisted job application workflow. Tailors CVs and cover letters per company, generates PDFs, and tracks applications in a Notion database.
+AI-assisted job application workflow. Analyzes job postings against a candidate profile, generates tailored CVs and cover letters as PDFs, and tracks applications in a Notion database. Built with LangGraph for autonomous job board scanning and LangSmith for observability.
 
 ## How It Works
 
 1. **Paste a job posting** into a Claude Code session (instructions auto-load from `CLAUDE.md`)
 2. **Claude analyzes fit** against `CONTEXT.md` (profile, career history, skills)
 3. **Claude generates `{company}.json`** with tailored CV and cover letter content
-4. **`generate_pdfs.py`** renders the JSON into professional PDFs
-5. **Notion tracker** is updated via a queue-based system (`notion_update.py`)
+4. **`jobbing pdf`** renders the JSON into professional PDFs
+5. **`jobbing track`** updates the Notion tracker (or JSON fallback)
 
 Full workflow details: [WORKFLOW.md](WORKFLOW.md)
-
-## Project Structure
-
-```
-Jobbing/
-├── README.md                  # This file
-├── CONTEXT.md                 # Profile, career history, skills (read first)
-├── WORKFLOW.md                # Authoritative workflow instructions (read second)
-├── CLAUDE.md                  # Project instructions for Claude Code (auto-loaded)
-├── CV-GREGORY-DAMIANI.pdf     # Master CV (generic)
-│
-├── generate_pdfs.py           # PDF generator (reads JSON, outputs PDFs)
-├── notion_update.py           # Notion API client (create/update tracker pages)
-├── notion_queue_runner.sh     # launchd queue processor
-├── pyproject.toml             # Python project metadata and dependencies
-├── .env                       # Notion API key (not committed)
-├── .venv/                     # Python virtual environment
-│
-├── companies/                 # All company-specific content
-│   ├── acto/                  # Interview prep docs
-│   ├── ashby/                 # JSON + PDFs + application answers
-│   ├── dash0/                 # JSON + PDFs + application answers
-│   ├── perplexity/            # JSON + PDFs + application answers
-│   └── ...                    # One directory per company
-│
-├── notion_queue/              # Transient: queue files for Notion updates
-└── notion_queue_results/      # Audit trail: processed queue operations
-```
-
-### Company Directories
-
-Each company gets its own directory under `companies/`:
-
-```
-companies/dash0/
-├── dash0.json                 # Tailored CV + CL content (source of truth)
-├── DASH0-CV.pdf               # Generated CV
-├── DASH0-CL.pdf               # Generated cover letter
-└── DASH0-APPLICATION-ANSWERS.md  # Application questions (when needed)
-```
-
-Some companies also have interview prep, email drafts, or architecture docs.
 
 ## Setup
 
 ```bash
-# Create virtual environment and install dependencies
+# Clone and install
+git clone <repo-url> && cd Jobbing
 python3 -m venv .venv
-.venv/bin/pip install reportlab
+.venv/bin/pip install -e .
 
-# Set up Notion API key
-echo 'NOTION_API_KEY=your_key_here' > .env
+# Configure API keys
+cp .env.example .env
+# Edit .env with your Notion, Anthropic, and LangSmith keys
+
+# Set up your profile
+cp CONTEXT.example.md CONTEXT.md
+cp BOOKMARKS.example.md BOOKMARKS.md
+# Edit both with your real data
 ```
+
+After `pip install -e .`, the `jobbing` CLI is available at `.venv/bin/jobbing`.
 
 ## Usage
 
-### Generate PDFs for a company
+### Generate PDFs
 
 ```bash
-.venv/bin/python3 generate_pdfs.py {company}              # Both CV and CL
-.venv/bin/python3 generate_pdfs.py {company} --cv-only    # Just the CV
-.venv/bin/python3 generate_pdfs.py {company} --cl-only    # Just the cover letter
-.venv/bin/python3 generate_pdfs.py {company} --output-dir /path  # Custom output dir
+jobbing pdf <company>              # Both CV and cover letter
+jobbing pdf <company> --cv-only    # Just the CV
+jobbing pdf <company> --cl-only    # Just the cover letter
+jobbing pdf <company> --output-dir /path
+```
+
+Reads `companies/{company}/{company}.json`, writes PDFs to the same directory.
+
+### Tracker operations
+
+```bash
+jobbing track create --name "Company" --position "Role" --date 2026-02-22
+jobbing track update --page-id "ID" --status "Applied"
+jobbing track highlights --page-id "ID" --highlights "Bullet 1" "Bullet 2"
+jobbing track research --name "Company" --research "Finding 1" "Finding 2"
+jobbing track outreach --name "Company" --contacts-json contacts.json
+```
+
+All commands support `--dry-run` to preview without sending.
+
+### Queue processing
+
+Claude writes JSON files to `notion_queue/` during sessions. Process them:
+
+```bash
+jobbing queue
 ```
 
 ### Iterate on a PDF
 
 1. Edit `companies/{company}/{company}.json`
-2. Re-run `generate_pdfs.py`
+2. Run `jobbing pdf {company}`
 
-### Notion tracker
+## Project Structure
 
-The Notion integration uses a queue-based system. Claude writes JSON files to `notion_queue/`, and a launchd agent processes them automatically via `notion_queue_runner.sh`.
-
-```bash
-# Manual queue processing (if needed)
-.venv/bin/python3 notion_update.py run-queue
-
-# Direct CLI usage
-.venv/bin/python3 notion_update.py create --name "Company" --position "Role" --date "2026-02-20"
-.venv/bin/python3 notion_update.py update --page-id "PAGE_ID" --status "Applied"
+```
+Jobbing/
+├── pyproject.toml              # Package metadata, deps, CLI entry point
+├── WORKFLOW.md                 # Authoritative workflow instructions
+├── CLAUDE.md                   # Project instructions for Claude Code
+├── scoring_criteria.md         # Tunable scoring guidelines for job matching
+│
+├── src/jobbing/                # Python package
+│   ├── cli.py                  # Unified CLI: jobbing track|queue|pdf
+│   ├── config.py               # Config loading (env, .env, API keys)
+│   ├── models.py               # Domain model (Application, Contact, CVData, etc.)
+│   ├── pdf.py                  # PDF generator (CV + cover letter)
+│   ├── tracker/
+│   │   ├── __init__.py         # TrackerBackend Protocol + factory
+│   │   ├── notion.py           # Notion API tracker
+│   │   └── json_file.py        # JSON file tracker (portable fallback)
+│   └── agent/                  # LangGraph agent (Phase 3)
+│
+├── docs/                       # Architecture, decisions, design history
+├── examples/                   # Anonymized templates
+├── tests/
+│
+├── CONTEXT.md                  # Your profile (gitignored, copy from .example)
+├── BOOKMARKS.md                # Your job board URLs (gitignored)
+├── .env                        # API keys (gitignored)
+├── companies/                  # Per-company data (gitignored)
+└── scan_results/               # Autonomous scan logs (gitignored)
 ```
 
-## Key Files
+## Tracker Backends
 
-| File | Purpose |
-|------|---------|
-| `CONTEXT.md` | Greg's profile, career timeline, skills, salary benchmarks |
-| `WORKFLOW.md` | Step-by-step workflow instructions for Claude |
-| `CLAUDE.md` | Project instructions for Claude Code (auto-loaded every session) |
-| `generate_pdfs.py` | Reads `companies/{company}/{company}.json`, outputs PDFs |
-| `notion_update.py` | Creates/updates Notion database pages via REST API |
+The tracker uses a Protocol pattern — swap backends via `TRACKER_BACKEND` env var:
+
+- **`notion`** (default): Full Notion API integration with rich page sections
+- **`json`**: Local `tracker.json` file, zero dependencies, good for testing
+
+## Configuration
+
+All config is loaded from environment variables or `.env`:
+
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `NOTION_API_KEY` | For Notion tracker | — | Notion integration token |
+| `NOTION_DATABASE_ID` | No | built-in | Notion database ID |
+| `ANTHROPIC_API_KEY` | For agent | — | Claude API key |
+| `LANGCHAIN_API_KEY` | No | — | LangSmith tracing |
+| `LANGCHAIN_PROJECT` | No | `jobbing` | LangSmith project name |
+| `TRACKER_BACKEND` | No | `notion` | `notion` or `json` |
+| `SCORE_THRESHOLD` | No | `60` | Minimum score for Notion entry |
+
+## Cowork Compatibility
+
+The `jobbing` CLI works in both Claude Code CLI and Cowork environments. Claude Code CLI auto-discovers project-level Skills from `.claude/skills/`; Cowork requires manual upload via Settings > Capabilities.

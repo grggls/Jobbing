@@ -80,7 +80,7 @@ class Config:
 
     # Notion
     notion_api_key: str = ""
-    notion_database_id: str = "734d746c43b149298993464f5ccc23e7"
+    notion_database_id: str = "734d746c-43b1-4929-8993-464f5ccc23e7"
 
     # Anthropic (for LangChain agent)
     anthropic_api_key: str = ""
@@ -144,7 +144,7 @@ class Config:
             project_dir=project_dir,
             notion_api_key=notion_key,
             notion_database_id=os.environ.get(
-                "NOTION_DATABASE_ID", "734d746c43b149298993464f5ccc23e7"
+                "NOTION_DATABASE_ID", "734d746c-43b1-4929-8993-464f5ccc23e7"
             ),
             anthropic_api_key=anthropic_key,
             langsmith_api_key=langsmith_key,
