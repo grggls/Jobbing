@@ -375,17 +375,22 @@ class NotionTracker:
         heading: str,
         blocks: list[dict],
         heading_level: int = 3,
+        toggle: bool = False,
     ) -> None:
         """Remove then re-append a section with heading + blocks.
 
         Uses heading_3 by default to match the page body convention.
+        When toggle=True, uses a toggleable heading with blocks as children.
         """
         self._remove_section(page_id, heading)
-        heading_block = (
-            _heading2_block(heading) if heading_level == 2
-            else _heading3_block(heading)
-        )
-        all_blocks = [heading_block] + blocks
+        if toggle:
+            all_blocks = [_toggle_heading3_block(heading, blocks)]
+        else:
+            heading_block = (
+                _heading2_block(heading) if heading_level == 2
+                else _heading3_block(heading)
+            )
+            all_blocks = [heading_block] + blocks
         self._request(
             "PATCH",
             f"{NOTION_BASE_URL}/blocks/{page_id}/children",
@@ -549,7 +554,7 @@ class NotionTracker:
         """Replace 'Questions To Ask In An Interview' section."""
         page_id = app_id.replace("-", "")
         blocks = [_bullet_block(q) for q in questions]
-        self._append_section(page_id, "Questions To Ask In An Interview", blocks)
+        self._append_section(page_id, "Questions To Ask In An Interview", blocks, toggle=True)
 
     def list_all(self) -> list[Application]:
         """List all tracked applications."""

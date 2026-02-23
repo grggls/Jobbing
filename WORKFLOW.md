@@ -198,7 +198,7 @@ Write a JSON file to `notion_queue/` with a descriptive name (e.g., `notion_queu
 
 Both `research` and `outreach` commands accept either `"name"` (looks up the page) or `"page_id"`. They replace existing sections — safe to re-run with updated data.
 
-The launchd agent (`com.grggls.notion-queue`) watches the `notion_queue/` directory. When a file appears, it runs `jobbing queue`. Processed files are moved to `notion_queue_results/` with timestamped result files.
+The launchd agent (`com.grggls.notion-queue`) watches the `notion_queue/` directory. When a file appears, it runs `jobbing queue` via the project venv (`.venv/bin/python3 -m jobbing queue`). Processed files are moved to `notion_queue_results/` with timestamped result files. The plist lives at `~/Library/LaunchAgents/com.grggls.notion-queue.plist`. After adding new queue commands, run `pip install -e .` in the venv — the editable install picks up source changes immediately.
 
 The `create` command checks for duplicates — if a page with the same company name exists, it updates instead of creating a new one.
 

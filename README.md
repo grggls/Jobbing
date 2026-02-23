@@ -31,6 +31,27 @@ cp BOOKMARKS.example.md BOOKMARKS.md
 
 After `pip install -e .`, the `jobbing` CLI is available at `.venv/bin/jobbing`.
 
+### Notion Queue Agent (launchd)
+
+A launchd agent watches `notion_queue/` and auto-processes queue files written by Claude during sessions. To install:
+
+```bash
+# The plist runs: .venv/bin/python3 -m jobbing queue
+cp com.grggls.notion-queue.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.grggls.notion-queue.plist
+```
+
+The agent uses the project venv (`python3 -m jobbing queue`), so new queue commands are available immediately after `pip install -e .` — no agent restart needed.
+
+To reload after plist changes:
+
+```bash
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.grggls.notion-queue.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.grggls.notion-queue.plist
+```
+
+**Troubleshooting:** If a queue command fails with "Unknown command", the installed package is likely stale. Run `pip install -e .` in the project venv. Check `notion_queue_results/launchd-stderr.log` for errors. An earlier version of the agent called `notion_update.py` directly with system Python, bypassing the venv — if you see that in your plist, update it to use `.venv/bin/python3 -m jobbing queue` instead.
+
 ## Usage
 
 ### Generate PDFs
