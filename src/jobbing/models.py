@@ -22,7 +22,6 @@ from pathlib import Path
 class Status(str, Enum):
     """Application lifecycle status. Matches Notion select values."""
 
-    RESEARCHING = "Researching"
     TARGETED = "Targeted"
     APPLIED = "Applied"
     FOLLOWED_UP = "Followed-Up"

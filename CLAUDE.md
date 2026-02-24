@@ -29,6 +29,7 @@ Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analy
 - **apply** — Full application workflow. Notion entry → tailored JSON → PDFs → ATS check. Run after analyze and Greg's go decision.
 - **outreach** — LinkedIn contact research. Drafts connection request messages. Run after applying.
 - **track** — Tracker operations. Status updates, research, highlights, conclusions.
+- **scan** — Job board scanner. Python fetches boards, Claude extracts and scores postings in-conversation. No API key needed.
 
 ## Project Structure
 
@@ -41,7 +42,8 @@ Jobbing/
 ├── CV-GREGORY-DAMIANI.pdf ← master CV (generic, pre-tailoring)
 │
 ├── src/jobbing/           ← Python package
-│   ├── cli.py             ← Unified CLI: jobbing track|queue|pdf
+│   ├── cli.py             ← Unified CLI: jobbing track|queue|pdf|scan
+│   ├── scanner.py         ← Bookmark parser + board fetcher (no API key)
 │   ├── config.py          ← Config loading (env, .env, API keys)
 │   ├── models.py          ← Domain models (Application, Contact, CVData, etc.)
 │   ├── pdf.py             ← PDF generator (CV + cover letter)
@@ -54,6 +56,7 @@ Jobbing/
 │   ├── analyze/SKILL.md   ← /analyze — fit assessment
 │   ├── apply/SKILL.md     ← /apply — full application workflow
 │   ├── outreach/SKILL.md  ← /outreach — LinkedIn contact research
+│   ├── scan/SKILL.md      ← /scan — job board scanner
 │   └── track/SKILL.md     ← /track — tracker operations
 │
 ├── pyproject.toml         ← Package metadata, deps, CLI entry point
@@ -73,6 +76,7 @@ Jobbing/
 ├── examples/              ← Anonymized templates
 ├── tests/
 │
+├── scan_results/          ← scan output JSON files
 ├── notion_queue/          ← transient queue files (launchd watches this)
 └── notion_queue_results/  ← processed queue audit trail
 ```
@@ -110,6 +114,8 @@ The queue `create` command builds template-like scaffolding automatically (headi
 ```json
 {"command": "create", "name": "Company", "position": "Role", "date": "2026-02-20", "job_description": "Full posting text...", ...}
 {"command": "update", "page_id": "PAGE_ID", "status": "Applied"}
+{"command": "update", "page_id": "PAGE_ID", "status": "Followed-Up"}
+{"command": "update", "page_id": "PAGE_ID", "status": "In Progress (Interviewing)"}
 {"command": "update", "page_id": "PAGE_ID", "status": "Done", "conclusion": "Outcome text"}
 {"command": "highlights", "page_id": "PAGE_ID", "highlights": ["Bullet 1", "Bullet 2"]}
 {"command": "research", "name": "Company", "research": ["Finding 1", "Finding 2"]}
@@ -140,6 +146,12 @@ jobbing track research --name "Company" --research "Finding 1" "Finding 2"
 jobbing track outreach --name "Company" --contacts-json contacts.json
 jobbing queue   # process all pending queue files
 jobbing pdf {company}
+jobbing scan bookmarks                              # list all bookmarks by category
+jobbing scan bookmarks --categories "Climate / Impact"  # list one category
+jobbing scan existing                               # list companies already tracked
+jobbing scan fetch                                  # fetch all boards (~30s)
+jobbing scan fetch --categories "Startup / Tech"    # fetch one category
+jobbing scan fetch --limit 5                        # fetch first 5 boards
 ```
 
 All track commands support `--dry-run` for previewing without sending.
@@ -152,6 +164,7 @@ All track commands support `--dry-run` for previewing without sending.
 - **DON'T USE NOTION MCP FOR WRITES.** Known Zod serialization bug on every write tool (`update-page`, `create-pages`). Both fail with "Expected object, received string" regardless of payload format. Use the queue system for all writes.
 - **File uploads**: Not supported by Notion API for internal integrations. Greg uploads PDFs manually.
 - **Database ID**: `734d746c43b149298993464f5ccc23e7`
+- **Status values** (in order): `Targeted` → `Applied` → `Followed-Up` → `In Progress (Interviewing)` → `Done`. New entries default to **Targeted**. Do NOT invent new status values — Notion auto-creates select options for any string, so typos and made-up values silently pollute the database. Add a `Conclusion` when moving to `Done`.
 - **Page body sections**: Five heading_3 sections managed by the queue system: "Job Description" (toggle/collapsible), "Experience to Highlight", "Company Research", "Questions I Might Get Asked", "Questions To Ask In An Interview", plus "Outreach Contacts". Each command replaces the existing section — safe to re-run. Section matching is case-insensitive and handles both heading_2 and heading_3 for backward compatibility.
 
 ## Location Logic
@@ -209,4 +222,4 @@ All track commands support `--dry-run` for previewing without sending.
 
 ### Ethical
 - Apply to defense contractors, military technology, weapons systems, or companies whose primary customer is military/intelligence — this is a firm exclusion, non-negotiable
-- Misrepresent Greg's work authorization — US citizen (no sponsorship needed for US), EU work requires employer sponsorship
+- Misrepresent Greg's work authorization — US citizen (no sponsorship needed for US), German permanent residency (no sponsorship needed for EU/DE)

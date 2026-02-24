@@ -10,12 +10,15 @@ with a single `jobbing` command:
     jobbing track outreach --name "Company" --contacts-json contacts.json
     jobbing queue [--queue-dir path] [--results-dir path]
     jobbing pdf <company> [--cv-only] [--cl-only] [--output-dir path]
+    jobbing scan bookmarks [--categories CAT1 CAT2]
+    jobbing scan fetch [--categories CAT1 CAT2] [--limit N]
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import shutil
 import sys
@@ -239,6 +242,120 @@ def _cmd_pdf(args: argparse.Namespace, config: Config) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Scan subcommand
+# ---------------------------------------------------------------------------
+
+
+def _cmd_scan(args: argparse.Namespace, config: Config) -> None:
+    """Fetch job boards or list bookmarks for Claude to process."""
+    scan_sub = getattr(args, "scan_command", None)
+
+    if scan_sub == "bookmarks":
+        _scan_bookmarks(args, config)
+    elif scan_sub == "fetch":
+        _scan_fetch(args, config)
+    elif scan_sub == "existing":
+        _scan_existing(args, config)
+    else:
+        print("Usage: jobbing scan {bookmarks,fetch,existing}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _scan_bookmarks(args: argparse.Namespace, config: Config) -> None:
+    """List parsed bookmarks from BOOKMARKS.md."""
+    from jobbing.scanner import parse_bookmarks
+
+    bookmarks = parse_bookmarks(config.bookmarks_path)
+
+    # Filter by category
+    if args.categories:
+        cat_lower = [c.lower() for c in args.categories]
+        bookmarks = [b for b in bookmarks if b.category.lower() in cat_lower]
+
+    # Group by category
+    by_cat: dict[str, list] = {}
+    for b in bookmarks:
+        by_cat.setdefault(b.category, []).append(b)
+
+    total = len(bookmarks)
+    print(f"Bookmarks: {total} across {len(by_cat)} categories\n")
+
+    for cat, bms in by_cat.items():
+        print(f"## {cat} ({len(bms)})")
+        for b in bms:
+            print(f"  - {b.label}")
+        print()
+
+
+def _scan_fetch(args: argparse.Namespace, config: Config) -> None:
+    """Fetch board pages and save content for Claude to process."""
+    from jobbing.scanner import fetch_boards, parse_bookmarks, save_fetch_results
+
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    bookmarks = parse_bookmarks(config.bookmarks_path)
+
+    # Filter by category
+    if args.categories:
+        cat_lower = [c.lower() for c in args.categories]
+        bookmarks = [b for b in bookmarks if b.category.lower() in cat_lower]
+
+    # Apply limit
+    if args.limit:
+        bookmarks = bookmarks[: args.limit]
+
+    if not bookmarks:
+        print("No bookmarks match the filter.")
+        return
+
+    print(f"Fetching {len(bookmarks)} boards...")
+    result = fetch_boards(bookmarks)
+
+    # Save to scan_results/
+    filepath = save_fetch_results(result, config.scan_results_dir)
+
+    print(f"\nFetch complete: {filepath}")
+    print(f"  Fetched: {result.boards_fetched}/{result.boards_requested}")
+    if result.boards_failed:
+        print(f"  Failed: {result.boards_failed}")
+
+    # Summary of content sizes
+    for fb in result.boards:
+        status = f"{fb.char_count:,} chars" if not fb.error else f"FAILED: {fb.error}"
+        print(f"  {fb.bookmark.label}: {status}")
+
+
+def _scan_existing(args: argparse.Namespace, config: Config) -> None:
+    """List companies and positions already in the tracker."""
+    apps: list[Application] = []
+    source = "tracker"
+
+    try:
+        from jobbing.tracker import get_tracker
+
+        tracker = get_tracker(config.tracker_backend, config)
+        apps = tracker.list_all()
+    except Exception as e:
+        logging.getLogger(__name__).warning("Tracker query failed (%s), falling back to companies/ directory", e)
+        source = "companies/"
+        companies_dir = config.companies_dir
+        if companies_dir.is_dir():
+            for d in sorted(companies_dir.iterdir()):
+                if d.is_dir() and not d.name.startswith("."):
+                    apps.append(Application(name=d.name))
+
+    if not apps:
+        print("No existing applications found.")
+        return
+
+    print(f"Existing applications ({len(apps)}, source: {source}):\n")
+    for app in apps:
+        status = app.status.value if app.status else "?"
+        position = app.position or "(no position)"
+        print(f"  [{status}] {app.name} — {position}")
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -388,6 +505,22 @@ def _build_parser() -> argparse.ArgumentParser:
     p_pdf.add_argument("--cv-only", action="store_true", help="CV only")
     p_pdf.add_argument("--cl-only", action="store_true", help="Cover letter only")
 
+    # --- scan ---
+    p_scan = subparsers.add_parser("scan", help="Job board scanning utilities")
+    scan_subs = p_scan.add_subparsers(dest="scan_command", required=True)
+
+    # scan bookmarks
+    p_scan_bm = scan_subs.add_parser("bookmarks", help="List parsed bookmarks")
+    p_scan_bm.add_argument("--categories", nargs="+", help="Filter to categories")
+
+    # scan fetch
+    p_scan_fetch = scan_subs.add_parser("fetch", help="Fetch board pages")
+    p_scan_fetch.add_argument("--categories", nargs="+", help="Filter to categories")
+    p_scan_fetch.add_argument("--limit", type=int, help="Max boards to fetch")
+
+    # scan existing
+    scan_subs.add_parser("existing", help="List companies already in tracker")
+
     return parser
 
 
@@ -418,6 +551,9 @@ def main() -> None:
 
     elif args.command == "pdf":
         _cmd_pdf(args, config)
+
+    elif args.command == "scan":
+        _cmd_scan(args, config)
 
 
 if __name__ == "__main__":

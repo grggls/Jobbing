@@ -550,6 +550,17 @@ class NotionTracker:
         ]
         self._append_section(page_id, "Questions I Might Get Asked", blocks)
 
+    def set_job_description(self, app_id: str, job_description: str) -> None:
+        """Replace 'Job Description' toggle section with posting text."""
+        page_id = app_id.replace("-", "")
+        paragraphs = [
+            p.strip() for p in job_description.split("\n\n") if p.strip()
+        ]
+        if not paragraphs:
+            paragraphs = [job_description]
+        blocks = [_paragraph_block(p) for p in paragraphs]
+        self._append_section(page_id, "Job Description", blocks, toggle=True)
+
     def set_questions_to_ask(self, app_id: str, questions: list[str]) -> None:
         """Replace 'Questions To Ask In An Interview' section."""
         page_id = app_id.replace("-", "")
@@ -666,6 +677,8 @@ class NotionTracker:
                 return self._queue_interview_questions(task, filename)
             elif command == "questions_to_ask":
                 return self._queue_questions_to_ask(task, filename)
+            elif command == "job_description":
+                return self._queue_job_description(task, filename)
             else:
                 return {
                     "file": filename,
@@ -785,6 +798,21 @@ class NotionTracker:
             "file": filename,
             "status": "ok",
             "action": "questions_to_ask_replaced",
+            "page_id": page_id,
+        }
+
+    def _queue_job_description(self, task: dict, filename: str) -> dict:
+        page_id = self._resolve_page_id(
+            task.get("page_id"), task.get("name")
+        )
+        job_description = task.get("job_description", "")
+        if not job_description:
+            raise ValueError("job_description command requires job_description text")
+        self.set_job_description(page_id, job_description)
+        return {
+            "file": filename,
+            "status": "ok",
+            "action": "job_description_replaced",
             "page_id": page_id,
         }
 
