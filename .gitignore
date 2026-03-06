@@ -1,6 +1,7 @@
 # Environment and runtime
 .env
 .venv/
+.venv-vm/
 __pycache__/
 *.pyc
 *.egg-info/

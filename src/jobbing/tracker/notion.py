@@ -438,12 +438,12 @@ class NotionTracker:
     def _add_template_body(self, page_id: str, app: Application) -> None:
         """Add structured page body to a newly created page.
 
-        Creates five heading_3 sections:
-        1. Job Description — toggle (collapsible) with posting text
-        2. Experience to Highlight — bulleted list
-        3. Company Research — bulleted list
-        4. Questions I Might Get Asked — bulleted list (Q + A sub-bullets)
-        5. Questions To Ask In An Interview — bulleted list
+        Creates five heading_3 toggle sections:
+        1. Job Description — toggle with posting text
+        2. Company Research — toggle with bulleted list
+        3. Experience to Highlight — toggle with bulleted list
+        4. Questions I Might Get Asked — toggle with bulleted list (Q + A sub-bullets)
+        5. Questions To Ask In An Interview — toggle with bulleted list
         """
         blocks: list[dict] = []
 
@@ -460,27 +460,25 @@ class NotionTracker:
             children = [_paragraph_block("")]
         blocks.append(_toggle_heading3_block("Job Description", children))
 
-        # 2. Experience to Highlight
-        blocks.append(_heading3_block("Experience to Highlight"))
-        if app.highlights:
-            blocks.extend(_bullet_block(h) for h in app.highlights)
-        else:
-            blocks.append(_bullet_block(""))
-
-        # 3. Company Research
-        blocks.append(_heading3_block("Company Research"))
+        # 2. Company Research
         if app.research:
-            blocks.extend(_bullet_block(r) for r in app.research)
+            children = [_bullet_block(r) for r in app.research]
         else:
-            blocks.append(_bullet_block(""))
+            children = [_bullet_block("")]
+        blocks.append(_toggle_heading3_block("Company Research", children))
+
+        # 3. Experience to Highlight
+        if app.highlights:
+            children = [_bullet_block(h) for h in app.highlights]
+        else:
+            children = [_bullet_block("")]
+        blocks.append(_toggle_heading3_block("Experience to Highlight", children))
 
         # 4. Questions I Might Get Asked (scaffolded empty)
-        blocks.append(_heading3_block("Questions I Might Get Asked"))
-        blocks.append(_bullet_block(""))
+        blocks.append(_toggle_heading3_block("Questions I Might Get Asked", [_bullet_block("")]))
 
         # 5. Questions To Ask In An Interview
-        blocks.append(_heading3_block("Questions To Ask In An Interview"))
-        blocks.append(_bullet_block(""))
+        blocks.append(_toggle_heading3_block("Questions To Ask In An Interview", [_bullet_block("")]))
 
         self._request(
             "PATCH",
@@ -515,19 +513,19 @@ class NotionTracker:
         """Replace 'Experience to Highlight' section."""
         page_id = app_id.replace("-", "")
         blocks = [_bullet_block(h) for h in highlights]
-        self._append_section(page_id, "Experience to Highlight", blocks)
+        self._append_section(page_id, "Experience to Highlight", blocks, toggle=True)
 
     def set_research(self, app_id: str, research: list[str]) -> None:
         """Replace 'Company Research' section."""
         page_id = app_id.replace("-", "")
         blocks = [_bullet_block(r) for r in research]
-        self._append_section(page_id, "Company Research", blocks)
+        self._append_section(page_id, "Company Research", blocks, toggle=True)
 
     def set_contacts(self, app_id: str, contacts: list[Contact]) -> None:
         """Replace 'Outreach Contacts' section and set LinkedIn to 'No'."""
         page_id = app_id.replace("-", "")
         blocks = [_contact_bullet_block(c) for c in contacts]
-        self._append_section(page_id, "Outreach Contacts", blocks)
+        self._append_section(page_id, "Outreach Contacts", blocks, toggle=True)
 
         # Mark that contacts have been identified (follow-up pending)
         self._request(
@@ -548,7 +546,7 @@ class NotionTracker:
         blocks = [
             _qa_bullet_block(q["question"], q["answer"]) for q in questions
         ]
-        self._append_section(page_id, "Questions I Might Get Asked", blocks)
+        self._append_section(page_id, "Questions I Might Get Asked", blocks, toggle=True)
 
     def set_job_description(self, app_id: str, job_description: str) -> None:
         """Replace 'Job Description' toggle section with posting text."""
