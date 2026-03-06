@@ -27,3 +27,4 @@ notion_queue_results/
 # Scan results (personal)
 scan_results/**
 !scan_results/.gitkeep
+Bookmarks
