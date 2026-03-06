@@ -202,17 +202,19 @@ The launchd agent (`com.grggls.notion-queue`) watches the `notion_queue/` direct
 
 The `create` command is idempotent — if a page with the same company name exists, it updates properties and rebuilds all managed body sections. Queue files are claimed atomically (renamed to `.processing` before Notion API calls) to prevent race conditions with the launchd agent.
 
-**Page layout** (canonical order, enforced by code):
+**Page layout** (canonical order, enforced by code — matches application chronology):
 
 1. **Interviews** — inline child database (title: "Interviewer Name and Role", date: "Date"). Created once on new pages; preserved on updates.
-2. **Job Description** — toggle heading_3 with posting text (we've found a job, analyzing it)
-3. **Fit Assessment** — toggle heading_3 with score, reasoning, green/red flags, gaps, keywords (from `/analyze`). Also sets the **Score** number property on the page.
-4. **Company Research** — toggle heading_3 with bulleted list (research phase)
-5. **Experience to Highlight** — toggle heading_3 with bulleted list (document preparation)
-6. **Questions I Might Get Asked** — toggle heading_3 with Q&A bullets (interview prep)
-7. **Questions To Ask In An Interview** — toggle heading_3 with bulleted list (during interview)
+2. *(divider)* — visual separator between database and content sections
+3. **Job Description** — toggle heading_3 with posting text (discovery: what's the role?)
+4. **Fit Assessment** — toggle heading_3 with score, reasoning, green/red flags, gaps, keywords (analysis: how well do we match?)
+5. **Company Research** — toggle heading_3 with bulleted list (research: what's the company like?)
+6. **Experience to Highlight** — toggle heading_3 with bulleted list (preparation: CV/CL talking points)
+7. **Outreach Contacts** — toggle heading_3 with contact bullets (post-apply: who to reach out to)
+8. **Questions I Might Get Asked** — toggle heading_3 with Q&A bullets (interview prep: anticipated questions)
+9. **Questions to Ask** — toggle heading_3 with bulleted list (during interview: our questions)
 
-The `create` command always rebuilds the 6 toggle sections in this order. On existing pages, it reads current section content before removal and preserves data for any section the new JSON doesn't include — a `create` with only `highlights` won't wipe previously-written `research` or `job_description`. Individual section commands (`highlights`, `research`, `job_description`, etc.) replace their target section in place.
+The `create` command always rebuilds the 7 toggle sections in this order. On existing pages, it reads current section content before removal and preserves data for any section the new JSON doesn't include — a `create` with only `highlights` won't wipe previously-written `research` or `job_description`. Individual section commands (`highlights`, `research`, `job_description`, `outreach`, etc.) replace their target section in place.
 
 **Direct CLI usage** (after `pip install -e .`):
 

@@ -75,6 +75,10 @@ def _date(iso_date: str) -> dict:
     return {"date": {"start": iso_date}}
 
 
+def _divider_block() -> dict:
+    return {"object": "block", "type": "divider", "divider": {}}
+
+
 def _heading2_block(text: str) -> dict:
     return {
         "object": "block",
@@ -345,7 +349,8 @@ class NotionTracker:
         Matches both heading_2 and heading_3 with case-insensitive text
         comparison, so it works with both template-created pages (heading_2,
         "Experience to highlight") and code-created pages (heading_3,
-        "Experience to Highlight").
+        "Experience to Highlight"). Also matches SECTION_ALIASES so
+        old heading names are cleaned up on rename.
         """
         url = f"{NOTION_BASE_URL}/blocks/{page_id}/children?page_size=100"
         result = self._request("GET", url)
@@ -354,13 +359,18 @@ class NotionTracker:
         ids_to_delete: list[str] = []
         in_section = False
         heading_lower = heading_text.lower()
+        # Also match old names that alias to this section
+        match_set = {heading_lower}
+        for alias_lower, canonical in self.SECTION_ALIASES.items():
+            if canonical.lower() == heading_lower:
+                match_set.add(alias_lower)
 
         for block in blocks:
             block_type = block.get("type", "")
             if block_type in ("heading_2", "heading_3"):
                 rt = block.get(block_type, {}).get("rich_text", [])
                 text = rt[0].get("text", {}).get("content", "") if rt else ""
-                if text.lower() == heading_lower:
+                if text.lower() in match_set:
                     in_section = True
                     ids_to_delete.append(block["id"])
                     continue
@@ -404,16 +414,26 @@ class NotionTracker:
         )
 
     # --- Managed section ordering ---
-    # Canonical order for page body sections. This matches the workflow
-    # chronology: find a job → research → tailor CV → prep interview.
+    # Canonical order for page body sections. Matches job application
+    # chronology: discover → analyze → research → prepare → apply →
+    # outreach → interview prep → interview.
     MANAGED_SECTIONS = [
         "Job Description",
         "Fit Assessment",
         "Company Research",
         "Experience to Highlight",
+        "Outreach Contacts",
         "Questions I Might Get Asked",
-        "Questions To Ask In An Interview",
+        "Questions to Ask",
     ]
+
+    # Old section names that should match their canonical replacements.
+    # Used by _remove_all_managed_sections and _remove_section for
+    # backward compatibility with pages created before renames.
+    SECTION_ALIASES: dict[str, str] = {
+        "questions to ask in an interview": "Questions to Ask",
+        "questions to ask during an interview": "Questions to Ask",
+    }
 
     def _read_existing_sections(self, page_id: str) -> dict[str, Any]:
         """Read existing managed-section content from the page.
@@ -423,8 +443,10 @@ class NotionTracker:
           - "Job Description" → str (paragraphs joined by \\n\\n)
           - "Company Research" / "Experience to Highlight" → list[str]
           - "Questions I Might Get Asked" → list[dict] with "question"/"answer"
-          - "Questions To Ask In An Interview" → list[str]
+          - "Questions to Ask" → list[str]
+          - "Outreach Contacts" → list[str] (plain-text fallback)
 
+        Resolves SECTION_ALIASES so old heading names map to canonical keys.
         For toggle heading_3 blocks, fetches children via the API.
         For flat heading_2 blocks, collects sibling bullets.
         """
@@ -432,7 +454,10 @@ class NotionTracker:
         result = self._request("GET", url)
         blocks = result.get("results", [])
 
+        # Build lookup: lowercased heading → canonical name
         managed_lower = {s.lower(): s for s in self.MANAGED_SECTIONS}
+        for alias_lower, canonical in self.SECTION_ALIASES.items():
+            managed_lower[alias_lower] = canonical
         existing: dict[str, Any] = {}
 
         # Track flat heading_2 sections (non-toggle)
@@ -551,17 +576,23 @@ class NotionTracker:
 
         Handles both toggle heading_3 (code-created) and flat heading_2
         (Notion template) sections with case-insensitive matching.
+        Also removes sections matching SECTION_ALIASES (old heading names).
         """
         url = f"{NOTION_BASE_URL}/blocks/{page_id}/children?page_size=100"
         result = self._request("GET", url)
         blocks = result.get("results", [])
 
         managed_lower = {s.lower() for s in self.MANAGED_SECTIONS}
+        managed_lower.update(self.SECTION_ALIASES.keys())
         ids_to_delete: list[str] = []
         in_flat_section = False
 
         for block in blocks:
             block_type = block.get("type", "")
+            # Remove divider blocks (visual separator before managed sections)
+            if block_type == "divider":
+                ids_to_delete.append(block["id"])
+                continue
             if block_type in ("heading_2", "heading_3"):
                 rt = block.get(block_type, {}).get("rich_text", [])
                 text = rt[0].get("text", {}).get("content", "") if rt else ""
@@ -673,6 +704,9 @@ class NotionTracker:
         preserved = preserved or {}
         blocks: list[dict] = []
 
+        # Visual separator between Interviews DB and content sections
+        blocks.append(_divider_block())
+
         # 1. Job Description (toggle heading)
         if app.job_description:
             paragraphs = [
@@ -689,7 +723,6 @@ class NotionTracker:
         if app.scoring:
             children = self._scoring_result_blocks(app.scoring)
         elif preserved.get("Fit Assessment"):
-            # Preserve existing content as bullet list (raw text from page)
             items = preserved["Fit Assessment"]
             if isinstance(items, list):
                 children = [_bullet_block(item) for item in items if item]
@@ -715,7 +748,19 @@ class NotionTracker:
             children = [_bullet_block("")]
         blocks.append(_toggle_heading3_block("Experience to Highlight", children))
 
-        # 5. Questions I Might Get Asked — use preserved Q&A if available
+        # 5. Outreach Contacts — use preserved if available
+        contact_items = preserved.get("Outreach Contacts", [])
+        if contact_items and isinstance(contact_items, list):
+            children = [_bullet_block(c) for c in contact_items if c]
+        else:
+            children = []
+        if not children:
+            children = [_bullet_block("")]
+        blocks.append(
+            _toggle_heading3_block("Outreach Contacts", children)
+        )
+
+        # 6. Questions I Might Get Asked — use preserved Q&A if available
         qa_items = preserved.get("Questions I Might Get Asked", [])
         if qa_items and isinstance(qa_items, list) and isinstance(qa_items[0], dict):
             children = [
@@ -724,7 +769,6 @@ class NotionTracker:
                 if q.get("question")
             ]
         elif qa_items and isinstance(qa_items, list):
-            # Flat list of strings (from flat heading_2)
             children = [_bullet_block(q) for q in qa_items if q]
         else:
             children = []
@@ -734,8 +778,8 @@ class NotionTracker:
             _toggle_heading3_block("Questions I Might Get Asked", children)
         )
 
-        # 6. Questions To Ask In An Interview — use preserved if available
-        ask_items = preserved.get("Questions To Ask In An Interview", [])
+        # 7. Questions to Ask — use preserved if available
+        ask_items = preserved.get("Questions to Ask", [])
         if ask_items and isinstance(ask_items, list):
             children = [_bullet_block(q) for q in ask_items if q]
         else:
@@ -743,9 +787,7 @@ class NotionTracker:
         if not children:
             children = [_bullet_block("")]
         blocks.append(
-            _toggle_heading3_block(
-                "Questions To Ask In An Interview", children
-            )
+            _toggle_heading3_block("Questions to Ask", children)
         )
 
         self._request(
@@ -886,10 +928,10 @@ class NotionTracker:
         return blocks
 
     def set_questions_to_ask(self, app_id: str, questions: list[str]) -> None:
-        """Replace 'Questions To Ask In An Interview' section."""
+        """Replace 'Questions to Ask' section."""
         page_id = app_id.replace("-", "")
         blocks = [_bullet_block(q) for q in questions]
-        self._append_section(page_id, "Questions To Ask In An Interview", blocks, toggle=True)
+        self._append_section(page_id, "Questions to Ask", blocks, toggle=True)
 
     def list_all(self) -> list[Application]:
         """List all tracked applications."""
