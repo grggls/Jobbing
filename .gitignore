@@ -5,6 +5,7 @@
 __pycache__/
 *.pyc
 *.egg-info/
+.fuse_hidden*
 
 # OS / editor
 .DS_Store
