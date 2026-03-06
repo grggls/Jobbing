@@ -2,20 +2,17 @@
 
 ## ADR-001: LangGraph for Agent Orchestration
 
-**Status:** Accepted
+**Status:** Abandoned
 
-**Context:** The autonomous scan workflow requires multi-step orchestration: scan boards, score postings with an LLM, filter results, create tracker entries, and notify. Options considered: plain Python functions, Celery task chains, custom state machine, LangGraph.
+**Context:** The autonomous scan workflow was originally planned with LangGraph for multi-step orchestration. Options considered: plain Python functions, Celery task chains, custom state machine, LangGraph.
 
-**Decision:** Use LangGraph `StateGraph` with typed state.
+**Decision:** Originally accepted LangGraph, later abandoned. The Claude Code Skills approach (structured prompts invoking the `jobbing` CLI) proved sufficient for the interactive workflow without requiring a separate agent framework or API key.
 
-**Rationale:**
-- Built-in state management with TypedDict
-- Conditional edges for branching (e.g., filter threshold)
-- Checkpointing for resumable runs
-- Native LangSmith tracing integration
-- Demonstrates LangChain ecosystem mastery (portfolio goal)
-
-**Consequences:** Adds `langgraph` dependency. Graph definition is more declarative than imperative, which is a style trade-off.
+**Rationale for abandoning:**
+- Claude Code skills handle the interactive workflow without additional dependencies
+- No separate Anthropic API key needed (skills use the Claude Code session)
+- Simpler architecture with fewer moving parts
+- The autonomous scanning use case didn't justify the dependency overhead
 
 ---
 
@@ -39,19 +36,16 @@
 
 ## ADR-003: APScheduler over launchd
 
-**Status:** Accepted
+**Status:** Abandoned
 
-**Context:** Previous system used macOS launchd plist for scheduling — hardcoded Python path, macOS-only, brittle.
+**Context:** Previous system used macOS launchd plist for scheduling — hardcoded Python path, macOS-only, brittle. APScheduler was considered as a cross-platform replacement.
 
-**Decision:** Use APScheduler with cron triggers.
+**Decision:** Originally accepted APScheduler, later abandoned. macOS launchd remains the scheduling mechanism for queue processing. The autonomous scanning daemon (`jobbing serve`) was never built.
 
-**Rationale:**
-- Cross-platform (Linux, macOS, Windows)
-- Pythonic API, runs in-process
-- Cron + interval triggers cover both scheduled scans and queue polling
-- Optional persistence via SQLite for crash recovery
-
-**Consequences:** Scheduler runs as a long-lived Python process (`jobbing serve`). Needs process management (systemd, launchd, Docker) for production reliability.
+**Rationale for abandoning:**
+- Queue processing via launchd works reliably for the actual use case
+- The `/scan` skill handles board scanning interactively, eliminating the need for a daemon
+- Removes a runtime dependency
 
 ---
 
@@ -64,7 +58,7 @@
 **Decision:** Implement full scoring transparency with editable criteria.
 
 **Rationale:**
-- `scoring_criteria.md` is human-editable and version-tracked
+- `SCORING.md` is human-editable and version-tracked
 - Every scoring decision preserved in `scan_results/` with full reasoning
 - `ScoringResult` dataclass captures criteria_version, model, timestamp
 - CLI provides `--review` (see filtered-out postings) and `--rescore` (re-evaluate with new criteria)
@@ -76,19 +70,20 @@
 
 ## ADR-005: Autonomous Mode = Discovery Only
 
-**Status:** Accepted
+**Status:** Not Implemented (principle retained)
 
-**Context:** Should the autonomous agent apply for jobs, or just find them?
+**Context:** Should the tool apply for jobs autonomously, or just help find and evaluate them?
 
-**Decision:** Discovery only. The agent scans, scores, and creates "Researching" entries. It never applies.
+**Decision:** Discovery and evaluation only. The tool never applies without explicit human approval. Originally planned as an autonomous daemon, this principle is now implemented through the interactive `/scan` and `/analyze` skills.
 
 **Rationale:**
+
 - Applying requires human judgment (CV tailoring, cover letter tone, timing)
 - Mistakes in automated applications are hard to reverse
 - The value is in reducing the search funnel, not automating the application
-- Interactive Skills handle the apply workflow with human-in-the-loop
+- Interactive Skills handle the full workflow with human-in-the-loop
 
-**Consequences:** The user must review and act on discovered roles manually (via `/apply` Skill).
+**Consequences:** The user drives every step via Claude Code skills.
 
 ---
 
@@ -130,19 +125,18 @@
 
 ## ADR-008: ChatAnthropic as LLM Provider
 
-**Status:** Deferred (requires separate Anthropic API key, not included in Max subscription)
+**Status:** Abandoned
 
-**Context:** LangChain supports multiple LLM providers. Originally planned to use Claude Max plan with API access, but discovered Max subscription is separate from the API console.
+**Context:** LangChain's `ChatAnthropic` was planned as the LLM provider for the autonomous agent layer. Discovered that the Max subscription is separate from API console billing.
 
-**Decision:** Defer to Phase 5 (stretch goal). Use Claude Code skills for interactive workflows first.
+**Decision:** Abandoned. Claude Code skills provide the LLM interaction layer without requiring a separate API key or LangChain dependency.
 
 **Rationale:**
-- Max subscription does not include API access — separate billing on console.anthropic.com
-- Interactive Claude Code sessions handle the primary workflow well
-- LangGraph agent layer adds value mainly for unattended scanning
-- Skills-first approach delivers immediate value without API costs
 
-**Consequences:** Agent layer deferred. When API key is available, `ChatAnthropic` from `langchain-anthropic` is the planned provider.
+- Claude Code sessions handle all workflow phases effectively
+- No separate API billing needed
+- Skills-first approach proved sufficient — the agent layer was unnecessary
+- Fewer dependencies, simpler architecture
 
 ---
 

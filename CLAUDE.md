@@ -29,7 +29,9 @@ Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analy
 - **apply** — Full application workflow. Notion entry → tailored JSON → PDFs → ATS check. Run after analyze and Greg's go decision.
 - **outreach** — LinkedIn contact research. Drafts connection request messages. Run after applying.
 - **track** — Tracker operations. Status updates, research, highlights, conclusions.
+- **scoring** — Tunable scoring guidelines. Component weights, thresholds, domain/tech matching rules. Referenced by analyze, disaggregate, and scan.
 - **scan** — Job board scanner. Python fetches boards, Claude extracts and scores postings in-conversation. No API key needed.
+- **disaggregate** — Aggregator spam parser. Identifies original companies behind Jobgether/Lensa repostings, de-duplicates, quick-scores.
 
 ## Project Structure
 
@@ -38,7 +40,7 @@ Jobbing/
 ├── CLAUDE.md              ← you are here
 ├── WORKFLOW.md            ← authoritative workflow (read first)
 ├── CONTEXT.md             ← Greg's profile and career history (read second)
-├── scoring_criteria.md    ← tunable scoring guidelines
+├── SCORING.md             ← pointer to .claude/skills/scoring/SKILL.md
 ├── CV-GREGORY-DAMIANI.pdf ← master CV (generic, pre-tailoring)
 │
 ├── src/jobbing/           ← Python package
@@ -53,11 +55,13 @@ Jobbing/
 │       └── json_file.py   ← JSON file tracker (portable fallback)
 │
 ├── .claude/skills/        ← Claude Code slash commands
-│   ├── analyze/SKILL.md   ← /analyze — fit assessment
-│   ├── apply/SKILL.md     ← /apply — full application workflow
-│   ├── outreach/SKILL.md  ← /outreach — LinkedIn contact research
-│   ├── scan/SKILL.md      ← /scan — job board scanner
-│   └── track/SKILL.md     ← /track — tracker operations
+│   ├── analyze/SKILL.md      ← /analyze — fit assessment
+│   ├── apply/SKILL.md        ← /apply — full application workflow
+│   ├── disaggregate/SKILL.md ← /disaggregate — aggregator spam parser
+│   ├── outreach/SKILL.md     ← /outreach — LinkedIn contact research
+│   ├── scan/SKILL.md         ← /scan — job board scanner
+│   ├── scoring/SKILL.md      ← /scoring — tunable scoring guidelines
+│   └── track/SKILL.md        ← /track — tracker operations
 │
 ├── pyproject.toml         ← Package metadata, deps, CLI entry point
 ├── .env                   ← API keys (gitignored)
@@ -109,7 +113,7 @@ Full details in WORKFLOW.md. The short version:
 
 The queue is the only reliable write path. Write JSON to `notion_queue/` and the launchd agent on Greg's Mac processes it automatically. Do not attempt Notion MCP writes — known Zod serialization bugs on every write tool.
 
-The queue `create` command builds template-like scaffolding automatically (heading_2 sections for "Experience to highlight" and "Questions to ask during an interview"). It does NOT create the sub-document page or inline interview database — those require the real Notion template, which Greg can apply manually if needed.
+The queue `create` command builds template-like scaffolding automatically: six toggle heading_3 sections (Job Description, Fit Assessment, Company Research, Experience to Highlight, Questions I Might Get Asked, Questions To Ask In An Interview) plus an inline Interviews database. If `score` is included, it also sets the Score number property.
 
 ```json
 {"command": "create", "name": "Company", "position": "Role", "date": "2026-02-20", "job_description": "Full posting text...", ...}
@@ -122,6 +126,7 @@ The queue `create` command builds template-like scaffolding automatically (headi
 {"command": "outreach", "name": "Company", "contacts": [{"name": "Jane Smith", "title": "VP Eng", "linkedin": "https://...", "note": "Leads Platform org, ex-Google SRE", "message": "Hi Jane — ..."}]}
 {"command": "interview_questions", "name": "Company", "questions": [{"question": "Q1?", "answer": "A1"}]}
 {"command": "questions_to_ask", "name": "Company", "questions": ["Q1?", "Q2?"]}
+{"command": "fit_assessment", "name": "Company", "score": 75, "reasoning": "...", "green_flags": ["..."], "red_flags": ["..."], "gaps": ["..."], "keywords_missing": ["..."]}
 ```
 
 **Status updates are Greg's decision.** Do not auto-mark "Applied" or any other status. Greg will explicitly ask for status changes.
@@ -165,7 +170,8 @@ All track commands support `--dry-run` for previewing without sending.
 - **File uploads**: Not supported by Notion API for internal integrations. Greg uploads PDFs manually.
 - **Database ID**: `734d746c43b149298993464f5ccc23e7`
 - **Status values** (in order): `Targeted` → `Applied` → `Followed-Up` → `In Progress (Interviewing)` → `Done`. New entries default to **Targeted**. Do NOT invent new status values — Notion auto-creates select options for any string, so typos and made-up values silently pollute the database. Add a `Conclusion` when moving to `Done`.
-- **Page body sections**: Five heading_3 sections managed by the queue system: "Job Description" (toggle/collapsible), "Experience to Highlight", "Company Research", "Questions I Might Get Asked", "Questions To Ask In An Interview", plus "Outreach Contacts". Each command replaces the existing section — safe to re-run. Section matching is case-insensitive and handles both heading_2 and heading_3 for backward compatibility.
+- **Page layout** (canonical order): Inline "Interviews" database (created once on new pages), then six toggle heading_3 sections: "Job Description", "Fit Assessment" (score + reasoning + flags + gaps), "Company Research", "Experience to Highlight", "Questions I Might Get Asked", "Questions To Ask In An Interview", plus "Outreach Contacts". On update-existing, existing section content is preserved for any section the new JSON doesn't include — safe to re-run without data loss. Section matching is case-insensitive and handles both heading_2 and heading_3 for backward compatibility.
+- **Score property**: Number property on the database. Set automatically when `fit_assessment` command runs or when `create` includes a `score` field.
 
 ## Location Logic
 
@@ -182,7 +188,7 @@ All track commands support `--dry-run` for previewing without sending.
 - Generate the JSON before Greg approves the tailoring plan
 - Auto-mark "Applied" or any other Notion status — status updates are Greg's decision
 - Proceed without reading WORKFLOW.md and CONTEXT.md at the start of each session
-- Proceed without reading `companies/dash0/dash0.json` as the structural template before generating JSON
+- Proceed without reading `examples/example_company.json` as the structural template before generating JSON
 - Inflate fit scores to be encouraging — be honest, a skip is better than a wasted application
 - Guess at company info (headcount, funding, culture) — web search or say "not found"
 

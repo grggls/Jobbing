@@ -200,7 +200,19 @@ Both `research` and `outreach` commands accept either `"name"` (looks up the pag
 
 The launchd agent (`com.grggls.notion-queue`) watches the `notion_queue/` directory. When a file appears, it runs `jobbing queue` via the project venv (`.venv/bin/python3 -m jobbing queue`). Processed files are moved to `notion_queue_results/` with timestamped result files. The plist lives at `~/Library/LaunchAgents/com.grggls.notion-queue.plist`. After adding new queue commands, run `pip install -e .` in the venv — the editable install picks up source changes immediately.
 
-The `create` command checks for duplicates — if a page with the same company name exists, it updates instead of creating a new one.
+The `create` command is idempotent — if a page with the same company name exists, it updates properties and rebuilds all managed body sections. Queue files are claimed atomically (renamed to `.processing` before Notion API calls) to prevent race conditions with the launchd agent.
+
+**Page layout** (canonical order, enforced by code):
+
+1. **Interviews** — inline child database (title: "Interviewer Name and Role", date: "Date"). Created once on new pages; preserved on updates.
+2. **Job Description** — toggle heading_3 with posting text (we've found a job, analyzing it)
+3. **Fit Assessment** — toggle heading_3 with score, reasoning, green/red flags, gaps, keywords (from `/analyze`). Also sets the **Score** number property on the page.
+4. **Company Research** — toggle heading_3 with bulleted list (research phase)
+5. **Experience to Highlight** — toggle heading_3 with bulleted list (document preparation)
+6. **Questions I Might Get Asked** — toggle heading_3 with Q&A bullets (interview prep)
+7. **Questions To Ask In An Interview** — toggle heading_3 with bulleted list (during interview)
+
+The `create` command always rebuilds the 6 toggle sections in this order. On existing pages, it reads current section content before removal and preserves data for any section the new JSON doesn't include — a `create` with only `highlights` won't wipe previously-written `research` or `job_description`. Individual section commands (`highlights`, `research`, `job_description`, etc.) replace their target section in place.
 
 **Direct CLI usage** (after `pip install -e .`):
 
@@ -235,7 +247,7 @@ All track commands support `--dry-run`. Config loads `NOTION_API_KEY` from (in o
 
 If proceeding:
 
-1. **Create `companies/{company}/{company}.json`** with two top-level keys: `"cv"` and `"cl"`. Use `companies/dash0/dash0.json` as the structural template.
+1. **Create `companies/{company}/{company}.json`** with two top-level keys: `"cv"` and `"cl"`. Use `examples/example_company.json` as the structural template.
 2. **Tailor the CV data:**
    - Rewrite summary to lead with the role's core requirements
    - Reorder/rewrite core skills to front-load what matters
@@ -277,7 +289,7 @@ If the application has additional questions, draft answers in `companies/{compan
 When Greg reads a PDF and wants changes:
 
 1. Edit `companies/{company}/{company}.json` (just the data fields that need changing)
-2. Re-run `.venv/bin/python3 generate_pdfs.py {company}` (or `--cv-only` / `--cl-only`)
+2. Re-run `jobbing pdf {company}` (or `--cv-only` / `--cl-only`)
 3. Done
 
 ## JSON Data Schema

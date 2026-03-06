@@ -31,18 +31,27 @@ Write a `create` JSON to `notion_queue/`. The launchd agent processes it automat
   "mission": "Company mission",
   "highlights": ["Bullet 1", "Bullet 2", "Bullet 3"],
   "job_description": "Full job posting text here...",
-  "research": ["Company intel bullet 1", "Company intel bullet 2"]
+  "research": ["Company intel bullet 1", "Company intel bullet 2"],
+  "score": 75,
+  "reasoning": "2-3 sentence summary of the fit score from /analyze",
+  "green_flags": ["Strong alignment signal 1", "Signal 2"],
+  "red_flags": ["Concern 1"],
+  "gaps": ["Missing skill 1"],
+  "keywords_missing": ["keyword1", "keyword2"]
 }
 ```
 
 Save the page ID from the queue result (check `notion_queue_results/`) for subsequent operations.
 
-The queue `create` command builds 5 heading_3 sections automatically:
-1. **Job Description** — toggle (collapsible) containing the posting text
-2. **Experience to Highlight** — bulleted list from highlights
+The queue `create` command builds 6 heading_3 toggle sections automatically:
+1. **Job Description** — toggle containing the posting text
+2. **Fit Assessment** — toggle with score, reasoning, green/red flags, gaps, keywords (from `/analyze`)
 3. **Company Research** — bulleted list from research (or empty placeholder)
-4. **Questions I Might Get Asked** — empty placeholder (populated later)
-5. **Questions To Ask In An Interview** — empty placeholder (populated later)
+4. **Experience to Highlight** — bulleted list from highlights
+5. **Questions I Might Get Asked** — empty placeholder (populated later)
+6. **Questions To Ask In An Interview** — empty placeholder (populated later)
+
+The `score` field also sets the **Score** number property on the database page.
 
 ### Step 2: Present Tailoring Plan — CHECKPOINT
 
@@ -67,7 +76,7 @@ Before generating any documents, present Greg with the tailoring strategy:
 
 After Greg approves the tailoring plan, create `companies/{company}/{company}.json`:
 
-1. **Use `companies/dash0/dash0.json` as the structural template** (read it for the exact schema)
+1. **Use `examples/example_company.json` as the structural template** (read it for the exact schema)
 2. **Tailor the CV data:**
    - Rewrite summary to lead with the role's core requirements — include the domain signals Greg approved
    - Reorder/rewrite core skills to front-load what matters
@@ -126,7 +135,7 @@ Show Greg:
 ### Process
 - Skip the tailoring plan checkpoint (Step 2) — present the strategy and STOP until Greg approves
 - Generate the JSON before Greg has reviewed and approved the tailoring plan
-- Skip reading `companies/dash0/dash0.json` before generating JSON — it's the structural template
+- Skip reading `examples/example_company.json` before generating JSON — it's the structural template
 - Auto-mark "Applied" or change any Notion status without Greg's explicit instruction
 - Claim you included a domain signal or keyword and then not actually include it — verify your own work (Step 3.4)
 
@@ -153,7 +162,7 @@ Show Greg:
 
 ### Technical
 - Leave TODO, FIXME, or placeholder comments in the JSON
-- Generate JSON that doesn't match the dash0.json schema structure
+- Generate JSON that doesn't match the example_company.json schema structure
 - Write Notion queue JSON with incorrect property names (check the schema)
 - Use Notion MCP write tools (`create-pages`, `update-page`) — they have Zod serialization bugs. Use the queue for all writes.
 - Forget to check `notion_queue_results/` for the page ID — it's needed for subsequent queue operations

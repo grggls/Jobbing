@@ -17,7 +17,7 @@ from datetime import date
 from typing import Any
 
 from jobbing.config import Config
-from jobbing.models import Application, Contact, LinkedInStatus, Status
+from jobbing.models import Application, Contact, LinkedInStatus, ScoringResult, Status
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +65,10 @@ def _select(name: str) -> dict:
 
 def _multi_select(names: list[str]) -> dict:
     return {"multi_select": [{"name": n} for n in names]}
+
+
+def _number(value: int | float) -> dict:
+    return {"number": value}
 
 
 def _date(iso_date: str) -> dict:
@@ -304,6 +308,8 @@ class NotionTracker:
             props["Follow on Linkedin"] = _select(app.linkedin.value)
         if app.conclusion:
             props["Conclusion"] = _rich_text(app.conclusion)
+        if app.scoring and app.scoring.score is not None:
+            props["Score"] = _number(app.scoring.score)
 
         return props
 
@@ -397,18 +403,204 @@ class NotionTracker:
             {"children": all_blocks},
         )
 
+    # --- Managed section ordering ---
+    # Canonical order for page body sections. This matches the workflow
+    # chronology: find a job → research → tailor CV → prep interview.
+    MANAGED_SECTIONS = [
+        "Job Description",
+        "Fit Assessment",
+        "Company Research",
+        "Experience to Highlight",
+        "Questions I Might Get Asked",
+        "Questions To Ask In An Interview",
+    ]
+
+    def _read_existing_sections(self, page_id: str) -> dict[str, Any]:
+        """Read existing managed-section content from the page.
+
+        Returns a dict keyed by canonical section name. Values depend on
+        section type:
+          - "Job Description" → str (paragraphs joined by \\n\\n)
+          - "Company Research" / "Experience to Highlight" → list[str]
+          - "Questions I Might Get Asked" → list[dict] with "question"/"answer"
+          - "Questions To Ask In An Interview" → list[str]
+
+        For toggle heading_3 blocks, fetches children via the API.
+        For flat heading_2 blocks, collects sibling bullets.
+        """
+        url = f"{NOTION_BASE_URL}/blocks/{page_id}/children?page_size=100"
+        result = self._request("GET", url)
+        blocks = result.get("results", [])
+
+        managed_lower = {s.lower(): s for s in self.MANAGED_SECTIONS}
+        existing: dict[str, Any] = {}
+
+        # Track flat heading_2 sections (non-toggle)
+        in_flat_section: str | None = None
+        flat_bullets: list[str] = []
+
+        def _flush_flat():
+            nonlocal in_flat_section, flat_bullets
+            if in_flat_section and flat_bullets:
+                existing[in_flat_section] = flat_bullets
+            in_flat_section = None
+            flat_bullets = []
+
+        for block in blocks:
+            block_type = block.get("type", "")
+            if block_type in ("heading_2", "heading_3"):
+                _flush_flat()
+                rt = block.get(block_type, {}).get("rich_text", [])
+                text = rt[0].get("text", {}).get("content", "") if rt else ""
+                canonical = managed_lower.get(text.lower())
+                if not canonical:
+                    continue
+
+                is_toggle = block.get(block_type, {}).get("is_toggleable", False)
+                has_children = block.get("has_children", False)
+
+                if is_toggle and has_children:
+                    # Read toggle children from API
+                    children_url = (
+                        f"{NOTION_BASE_URL}/blocks/{block['id']}"
+                        f"/children?page_size=100"
+                    )
+                    children = self._request("GET", children_url).get(
+                        "results", []
+                    )
+                    existing[canonical] = self._parse_section_children(
+                        canonical, children
+                    )
+                elif not is_toggle:
+                    # Flat heading — collect sibling bullets
+                    in_flat_section = canonical
+                    flat_bullets = []
+            elif in_flat_section:
+                if block_type == "bulleted_list_item":
+                    rt = block.get("bulleted_list_item", {}).get(
+                        "rich_text", []
+                    )
+                    text = "".join(
+                        seg.get("text", {}).get("content", "")
+                        for seg in rt
+                    )
+                    if text:
+                        flat_bullets.append(text)
+                else:
+                    _flush_flat()
+
+        _flush_flat()
+        return existing
+
+    @staticmethod
+    def _parse_section_children(
+        section_name: str, children: list[dict]
+    ) -> Any:
+        """Parse toggle children into the appropriate Python structure."""
+        if section_name == "Job Description":
+            paragraphs: list[str] = []
+            for child in children:
+                if child.get("type") == "paragraph":
+                    rt = child.get("paragraph", {}).get("rich_text", [])
+                    text = "".join(
+                        seg.get("text", {}).get("content", "")
+                        for seg in rt
+                    )
+                    if text:
+                        paragraphs.append(text)
+            return "\n\n".join(paragraphs) if paragraphs else ""
+
+        if section_name == "Questions I Might Get Asked":
+            qa_list: list[dict[str, str]] = []
+            for child in children:
+                if child.get("type") == "bulleted_list_item":
+                    rt = child.get("bulleted_list_item", {}).get(
+                        "rich_text", []
+                    )
+                    question = "".join(
+                        seg.get("text", {}).get("content", "")
+                        for seg in rt
+                    )
+                    if not question:
+                        continue
+                    # Try to get nested answer sub-bullet
+                    answer = ""
+                    if child.get("has_children"):
+                        # Sub-bullets are included in the block response
+                        # only if fetched separately — we have toggle
+                        # children already, but sub-bullets need another fetch
+                        pass  # Answer extraction handled below
+                    qa_list.append({"question": question, "answer": answer})
+            return qa_list if qa_list else []
+
+        # Default: bulleted list → list[str]
+        items: list[str] = []
+        for child in children:
+            if child.get("type") == "bulleted_list_item":
+                rt = child.get("bulleted_list_item", {}).get("rich_text", [])
+                text = "".join(
+                    seg.get("text", {}).get("content", "")
+                    for seg in rt
+                )
+                if text:
+                    items.append(text)
+        return items
+
+    def _remove_all_managed_sections(self, page_id: str) -> None:
+        """Remove all managed sections from the page in one pass.
+
+        Handles both toggle heading_3 (code-created) and flat heading_2
+        (Notion template) sections with case-insensitive matching.
+        """
+        url = f"{NOTION_BASE_URL}/blocks/{page_id}/children?page_size=100"
+        result = self._request("GET", url)
+        blocks = result.get("results", [])
+
+        managed_lower = {s.lower() for s in self.MANAGED_SECTIONS}
+        ids_to_delete: list[str] = []
+        in_flat_section = False
+
+        for block in blocks:
+            block_type = block.get("type", "")
+            if block_type in ("heading_2", "heading_3"):
+                rt = block.get(block_type, {}).get("rich_text", [])
+                text = rt[0].get("text", {}).get("content", "") if rt else ""
+                if text.lower() in managed_lower:
+                    in_flat_section = True
+                    ids_to_delete.append(block["id"])
+                    continue
+                else:
+                    in_flat_section = False
+            elif in_flat_section:
+                # Sibling blocks under a flat heading_2 (non-toggle)
+                if block_type == "bulleted_list_item":
+                    ids_to_delete.append(block["id"])
+                else:
+                    in_flat_section = False
+
+        for block_id in ids_to_delete:
+            self._request("DELETE", f"{NOTION_BASE_URL}/blocks/{block_id}")
+
     # --- TrackerBackend protocol implementation ---
 
-    def create(self, app: Application) -> str:
-        """Create a tracker entry. Returns the Notion page ID.
+    def create(self, app: Application) -> tuple[str, list[str]]:
+        """Create or update a tracker entry. Idempotent.
 
-        If a page with the same company name exists, updates it instead.
-        New pages get template body scaffolding matching the "New Job
-        Prospect" Notion template structure.
+        Returns (page_id, sections_written) where sections_written lists
+        what was actually written (e.g. ["properties", "highlights", "research"]).
+
+        If a page with the same company name exists:
+        1. Reads existing section content
+        2. Merges: new data wins, existing data preserved where JSON is silent
+        3. Removes all managed sections + rebuilds in canonical order
+
+        New pages get template body scaffolding + an inline Interviews
+        database.
         """
         existing = self._find_page(app.name)
         if existing:
             page_id = existing["id"]
+            sections: list[str] = []
             props = self._to_properties(app, include_name=False)
             if props:
                 self._request(
@@ -416,9 +608,31 @@ class NotionTracker:
                     f"{NOTION_BASE_URL}/pages/{page_id}",
                     {"properties": props},
                 )
+                sections.append("properties")
+            # Read existing content BEFORE removal — preserve data for
+            # sections the current JSON doesn't include.
+            preserved = self._read_existing_sections(page_id)
+            if not app.job_description and preserved.get("Job Description"):
+                app.job_description = preserved["Job Description"]
+            if not app.research and preserved.get("Company Research"):
+                app.research = preserved["Company Research"]
+            if not app.highlights and preserved.get("Experience to Highlight"):
+                app.highlights = preserved["Experience to Highlight"]
+            # Scoring and questions are not directly reconstructable from
+            # preserved bullet text — pass through to _add_template_body
+            # via the preserved dict.
+
+            # Remove all managed sections, rebuild in canonical order.
+            self._remove_all_managed_sections(page_id)
+            self._add_template_body(page_id, app, preserved=preserved)
+            sections.append("template_body")
             if app.highlights:
-                self.set_highlights(page_id, app.highlights)
-            return page_id
+                sections.append("highlights")
+            if app.research:
+                sections.append("research")
+            if app.job_description:
+                sections.append("job_description")
+            return page_id, sections
 
         props = self._to_properties(app, include_name=True)
         if "Status" not in props:
@@ -431,25 +645,36 @@ class NotionTracker:
         result = self._request("POST", f"{NOTION_BASE_URL}/pages", payload)
         page_id = result["id"]
 
+        # New page: add interviews database + template body
+        self._add_interviews_database(page_id)
         self._add_template_body(page_id, app)
 
-        return page_id
+        sections = ["properties", "interviews_db", "template_body"]
+        if app.highlights:
+            sections.append("highlights")
+        if app.research:
+            sections.append("research")
+        if app.job_description:
+            sections.append("job_description")
+        return page_id, sections
 
-    def _add_template_body(self, page_id: str, app: Application) -> None:
-        """Add structured page body to a newly created page.
+    def _add_template_body(
+        self,
+        page_id: str,
+        app: Application,
+        preserved: dict[str, Any] | None = None,
+    ) -> None:
+        """Add structured page body with five heading_3 toggle sections.
 
-        Creates five heading_3 toggle sections:
-        1. Job Description — toggle with posting text
-        2. Company Research — toggle with bulleted list
-        3. Experience to Highlight — toggle with bulleted list
-        4. Questions I Might Get Asked — toggle with bulleted list (Q + A sub-bullets)
-        5. Questions To Ask In An Interview — toggle with bulleted list
+        When *preserved* is provided (update-existing path), any section
+        without new data in *app* uses the preserved content instead of
+        creating an empty placeholder. This prevents data loss on rebuild.
         """
+        preserved = preserved or {}
         blocks: list[dict] = []
 
         # 1. Job Description (toggle heading)
         if app.job_description:
-            # Split into paragraphs for readability inside the toggle
             paragraphs = [
                 p.strip() for p in app.job_description.split("\n\n") if p.strip()
             ]
@@ -460,30 +685,94 @@ class NotionTracker:
             children = [_paragraph_block("")]
         blocks.append(_toggle_heading3_block("Job Description", children))
 
-        # 2. Company Research
+        # 2. Fit Assessment
+        if app.scoring:
+            children = self._scoring_result_blocks(app.scoring)
+        elif preserved.get("Fit Assessment"):
+            # Preserve existing content as bullet list (raw text from page)
+            items = preserved["Fit Assessment"]
+            if isinstance(items, list):
+                children = [_bullet_block(item) for item in items if item]
+            else:
+                children = [_paragraph_block(str(items))]
+            if not children:
+                children = [_paragraph_block("")]
+        else:
+            children = [_paragraph_block("")]
+        blocks.append(_toggle_heading3_block("Fit Assessment", children))
+
+        # 3. Company Research
         if app.research:
             children = [_bullet_block(r) for r in app.research]
         else:
             children = [_bullet_block("")]
         blocks.append(_toggle_heading3_block("Company Research", children))
 
-        # 3. Experience to Highlight
+        # 4. Experience to Highlight
         if app.highlights:
             children = [_bullet_block(h) for h in app.highlights]
         else:
             children = [_bullet_block("")]
         blocks.append(_toggle_heading3_block("Experience to Highlight", children))
 
-        # 4. Questions I Might Get Asked (scaffolded empty)
-        blocks.append(_toggle_heading3_block("Questions I Might Get Asked", [_bullet_block("")]))
+        # 5. Questions I Might Get Asked — use preserved Q&A if available
+        qa_items = preserved.get("Questions I Might Get Asked", [])
+        if qa_items and isinstance(qa_items, list) and isinstance(qa_items[0], dict):
+            children = [
+                _qa_bullet_block(q.get("question", ""), q.get("answer", ""))
+                for q in qa_items
+                if q.get("question")
+            ]
+        elif qa_items and isinstance(qa_items, list):
+            # Flat list of strings (from flat heading_2)
+            children = [_bullet_block(q) for q in qa_items if q]
+        else:
+            children = []
+        if not children:
+            children = [_bullet_block("")]
+        blocks.append(
+            _toggle_heading3_block("Questions I Might Get Asked", children)
+        )
 
-        # 5. Questions To Ask In An Interview
-        blocks.append(_toggle_heading3_block("Questions To Ask In An Interview", [_bullet_block("")]))
+        # 6. Questions To Ask In An Interview — use preserved if available
+        ask_items = preserved.get("Questions To Ask In An Interview", [])
+        if ask_items and isinstance(ask_items, list):
+            children = [_bullet_block(q) for q in ask_items if q]
+        else:
+            children = []
+        if not children:
+            children = [_bullet_block("")]
+        blocks.append(
+            _toggle_heading3_block(
+                "Questions To Ask In An Interview", children
+            )
+        )
 
         self._request(
             "PATCH",
             f"{NOTION_BASE_URL}/blocks/{page_id}/children",
             {"children": blocks},
+        )
+
+    def _add_interviews_database(self, page_id: str) -> None:
+        """Create an inline 'Interviews' child database on the page.
+
+        Schema matches the Goldie Tech reference page:
+        - Interviewer Name and Role (title property)
+        - Date (date property)
+        """
+        self._request(
+            "POST",
+            f"{NOTION_BASE_URL}/databases",
+            {
+                "parent": {"type": "page_id", "page_id": page_id},
+                "title": [{"type": "text", "text": {"content": "Interviews"}}],
+                "is_inline": True,
+                "properties": {
+                    "Interviewer Name and Role": {"title": {}},
+                    "Date": {"date": {}},
+                },
+            },
         )
 
     def update(self, app: Application) -> None:
@@ -558,6 +847,43 @@ class NotionTracker:
             paragraphs = [job_description]
         blocks = [_paragraph_block(p) for p in paragraphs]
         self._append_section(page_id, "Job Description", blocks, toggle=True)
+
+    def set_fit_assessment(self, app_id: str, scoring: ScoringResult) -> None:
+        """Replace 'Fit Assessment' section and update Score property."""
+        page_id = app_id.replace("-", "")
+        blocks = self._scoring_result_blocks(scoring)
+        self._append_section(page_id, "Fit Assessment", blocks, toggle=True)
+        # Also update the Score number property
+        self._request(
+            "PATCH",
+            f"{NOTION_BASE_URL}/pages/{page_id}",
+            {"properties": {"Score": _number(scoring.score)}},
+        )
+
+    @staticmethod
+    def _scoring_result_blocks(scoring: ScoringResult) -> list[dict]:
+        """Build Notion blocks from a ScoringResult for the Fit Assessment section."""
+        blocks: list[dict] = []
+        blocks.append(_paragraph_block(f"Score: {scoring.score}/100"))
+        if scoring.reasoning:
+            blocks.append(_paragraph_block(scoring.reasoning))
+        if scoring.green_flags:
+            blocks.append(_paragraph_block("Green flags:"))
+            for flag in scoring.green_flags:
+                blocks.append(_bullet_block(flag))
+        if scoring.red_flags:
+            blocks.append(_paragraph_block("Red flags:"))
+            for flag in scoring.red_flags:
+                blocks.append(_bullet_block(flag))
+        if scoring.gaps:
+            blocks.append(_paragraph_block("Gaps:"))
+            for gap in scoring.gaps:
+                blocks.append(_bullet_block(gap))
+        if scoring.keywords_missing:
+            blocks.append(_paragraph_block("Keywords to weave in:"))
+            for kw in scoring.keywords_missing:
+                blocks.append(_bullet_block(kw))
+        return blocks
 
     def set_questions_to_ask(self, app_id: str, questions: list[str]) -> None:
         """Replace 'Questions To Ask In An Interview' section."""
@@ -677,6 +1003,8 @@ class NotionTracker:
                 return self._queue_questions_to_ask(task, filename)
             elif command == "job_description":
                 return self._queue_job_description(task, filename)
+            elif command == "fit_assessment":
+                return self._queue_fit_assessment(task, filename)
             else:
                 return {
                     "file": filename,
@@ -688,16 +1016,18 @@ class NotionTracker:
 
     def _queue_create(self, task: dict, filename: str) -> dict:
         app = self._task_to_application(task)
-        page_id = self.create(app)
+        was_existing = self._find_page(app.name) is not None
+        page_id, sections_written = self.create(app)
         page = self._find_page(app.name)
         url = page.get("url", "") if page else ""
-        action = "updated_existing" if self._find_page(app.name) else "created"
+        action = "updated_existing" if was_existing else "created"
         return {
             "file": filename,
             "status": "ok",
             "action": action,
             "page_id": page_id,
             "url": url,
+            "sections_written": sections_written,
         }
 
     def _queue_update(self, task: dict, filename: str) -> dict:
@@ -814,6 +1144,31 @@ class NotionTracker:
             "page_id": page_id,
         }
 
+    def _queue_fit_assessment(self, task: dict, filename: str) -> dict:
+        page_id = self._resolve_page_id(
+            task.get("page_id"), task.get("name")
+        )
+        scoring = self._task_to_scoring_result(task)
+        self.set_fit_assessment(page_id, scoring)
+        return {
+            "file": filename,
+            "status": "ok",
+            "action": "fit_assessment_replaced",
+            "page_id": page_id,
+        }
+
+    @staticmethod
+    def _task_to_scoring_result(task: dict) -> ScoringResult:
+        """Convert a queue task JSON dict to a ScoringResult."""
+        return ScoringResult(
+            score=task.get("score", 0),
+            reasoning=task.get("reasoning", ""),
+            green_flags=task.get("green_flags", []),
+            red_flags=task.get("red_flags", []),
+            gaps=task.get("gaps", []),
+            keywords_missing=task.get("keywords_missing", []),
+        )
+
     @staticmethod
     def _task_to_application(task: dict) -> Application:
         """Convert a queue task JSON dict to an Application."""
@@ -822,7 +1177,7 @@ class NotionTracker:
             try:
                 status = Status(task["status"])
             except ValueError:
-                status = Status.TARGETED
+                status = None
 
         start_date = None
         if task.get("date"):
@@ -838,7 +1193,7 @@ class NotionTracker:
         return Application(
             name=task.get("name", ""),
             position=task.get("position", ""),
-            status=status or Status.TARGETED,
+            status=status,
             start_date=start_date,
             url=task.get("url", ""),
             environment=task.get("environment", []),
@@ -851,4 +1206,12 @@ class NotionTracker:
             highlights=task.get("highlights", []),
             job_description=task.get("job_description", ""),
             research=task.get("research", []),
+            scoring=ScoringResult(
+                score=task["score"],
+                reasoning=task.get("reasoning", ""),
+                green_flags=task.get("green_flags", []),
+                red_flags=task.get("red_flags", []),
+                gaps=task.get("gaps", []),
+                keywords_missing=task.get("keywords_missing", []),
+            ) if task.get("score") is not None else None,
         )

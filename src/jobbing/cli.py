@@ -180,7 +180,17 @@ def _cmd_queue(args: argparse.Namespace, config: Config) -> None:
 
     for filepath in files:
         print(f"\n--- {filepath.name} ---")
-        result = tracker.process_queue_file(str(filepath))
+
+        # Atomic claim: rename to .processing before touching Notion API.
+        # Only one process can win the rename — losers skip gracefully.
+        claimed_path = filepath.with_suffix(".processing")
+        try:
+            filepath.rename(claimed_path)
+        except (FileNotFoundError, OSError):
+            print("  Skipped (claimed by another process)")
+            continue
+
+        result = tracker.process_queue_file(str(claimed_path))
 
         if result["status"] == "ok":
             print(f"  OK: {result.get('action', 'done')}")
@@ -188,10 +198,12 @@ def _cmd_queue(args: argparse.Namespace, config: Config) -> None:
                 print(f"  Page ID: {result['page_id']}")
             if "url" in result:
                 print(f"  URL: {result['url']}")
+            if "sections_written" in result:
+                print(f"  Sections: {', '.join(result['sections_written'])}")
         else:
             print(f"  ERROR: {result.get('message', 'unknown error')}")
 
-        # Write result file and move queue file to results
+        # Write result file and move claimed file to results
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         result_filename = f"{timestamp}_{filepath.name}"
         result_path = results_dir / result_filename
@@ -199,7 +211,10 @@ def _cmd_queue(args: argparse.Namespace, config: Config) -> None:
             json.dump(result, f, indent=2)
 
         processed_path = results_dir / f"{timestamp}_input_{filepath.name}"
-        shutil.move(str(filepath), str(processed_path))
+        try:
+            shutil.move(str(claimed_path), str(processed_path))
+        except FileNotFoundError:
+            print("  Input already moved (concurrent process)")
         print(f"  Moved to: {result_filename}")
 
     print(f"\nDone. Results in: {results_dir}")

@@ -1,6 +1,6 @@
 # Design History
 
-A chronicle of how Jobbing evolved from procedural scripts to a LangChain-powered agent system.
+A chronicle of how Jobbing evolved from procedural scripts to a clean Python package with Claude Code skills.
 
 ## Phase 0: Procedural Scripts (v1.0)
 
@@ -34,16 +34,14 @@ A chronicle of how Jobbing evolved from procedural scripts to a LangChain-powere
 - No separation between domain logic, API calls, and CLI handling
 - Font registration at import time caused unnecessary side effects
 
-## Phase 2: Portfolio Pivot
+## Phase 2: Portfolio Pivot (later abandoned)
 
-**Catalyst:** A Platform Engineering role at LangChain appeared. The refactor became an opportunity to demonstrate LangChain ecosystem mastery.
+**Catalyst:** A Platform Engineering role at LangChain appeared. The refactor was initially framed as a portfolio piece demonstrating LangChain ecosystem mastery (LangGraph, LangSmith, APScheduler). That framing was later abandoned — the tool proved more valuable as a clean, focused Python package with Claude Code skills as the interaction layer, without the LangChain dependency overhead.
 
 **Design questions resolved:**
+
 - **Notion vs alternatives:** Keep Notion (49 companies, rich content), add JSON fallback for pattern demo
-- **Scheduling:** APScheduler replaces macOS launchd (cross-platform, Pythonic)
-- **Agent framework:** LangGraph StateGraph for the autonomous scan workflow
-- **Observability:** LangSmith tracing on every LLM call and tool invocation
-- **Autonomy boundary:** Agent discovers and scores only — never applies without human approval
+- **Autonomy boundary:** Human-in-the-loop at every decision point — the tool never applies without approval
 
 ## Phase 3: Domain-Driven Redesign (v2.0)
 
@@ -53,9 +51,9 @@ A chronicle of how Jobbing evolved from procedural scripts to a LangChain-powere
 
 2. **TrackerBackend Protocol** — Pluggable storage via structural subtyping. NotionTracker rewrites the 856-line monolith into ~400 lines with one `_to_properties()` method. JsonFileTracker for testing.
 
-3. **Scoring transparency** — After discovering that Claude scored 30-35 on actually-good roles due to seniority title mismatch, we designed a full feedback loop: editable `scoring_criteria.md`, full scan result logging, `--review` and `--rescore` CLI commands, criteria version tracking in every ScoringResult.
+3. **Scoring transparency** — After discovering that Claude scored 30-35 on actually-good roles due to seniority title mismatch, we designed a full feedback loop: editable `SCORING.md`, score component weights, and criteria version tracking in every ScoringResult.
 
-4. **LangGraph workflow** — scan → score → filter → create_entries → notify. Nodes mix pure Python (scan, filter) with LLM calls (score). Additional interactive nodes (apply, outreach) in the graph but only invoked via Skills.
+4. **Claude Code Skills** — Five project-level skills (`/analyze`, `/apply`, `/outreach`, `/scan`, `/track`) encode the workflow as structured prompts. Skills invoke the `jobbing` CLI and read local context files, providing a conversational interface over the Python package.
 
 5. **Git safety** — Personal data (CONTEXT.md, BOOKMARKS.md, companies/, .env) gitignored. Repo ships with anonymized examples and placeholder directories.
 
@@ -65,4 +63,4 @@ A chronicle of how Jobbing evolved from procedural scripts to a LangChain-powere
 - **Transparency over automation:** The agent's scoring decisions are always reviewable and adjustable
 - **Human-in-the-loop:** Autonomous mode discovers; humans decide and act
 - **Clean boundaries:** Domain model, tracker backend, PDF generation, and agent orchestration are independent modules
-- **Portfolio-quality code:** Type hints, dataclasses, Protocol pattern, proper packaging — demonstrating professional Python
+- **Professional Python:** Type hints, dataclasses, Protocol pattern, proper packaging

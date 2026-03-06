@@ -12,13 +12,13 @@ Analyze a job posting for fit against Greg's profile. This is always the first s
 1. **Read required context files** (if not already loaded this session):
    - `WORKFLOW.md` — authoritative workflow (this skill implements Step 1)
    - `CONTEXT.md` — Greg's profile, career timeline, skills, salary benchmarks
-   - `scoring_criteria.md` — scoring guidelines
+   - `.claude/skills/scoring/SKILL.md` — scoring guidelines (the `/scoring` skill)
 
 2. **The user will paste a job posting.** Analyze it and present:
 
 ### Fit Assessment
 - **Fit:** Underqualified / right in the pocket / overqualified
-- **Match score:** 0–100 (follow scoring_criteria.md and Title Flexibility rules in WORKFLOW.md)
+- **Match score:** 0–100 (follow the `/scoring` skill and Title Flexibility rules in WORKFLOW.md)
 - **Green flags:** Strong alignment — cite specific roles, achievements, and skills from CONTEXT.md
 - **Red flags:** Concerns about the role, company, or posting. Look for:
   - Vague titles masking lower-level work
@@ -49,6 +49,8 @@ Analyze a job posting for fit against Greg's profile. This is always the first s
 3. **Present the analysis and Experience to Highlight bullets explicitly.** This is a review checkpoint — wait for Greg's feedback before proceeding. Greg may correct, reframe, or add items.
 
 4. **Greg decides: proceed or skip.** If proceeding, use `/apply` next.
+
+5. **Pass scoring data forward.** When Greg says go and `/apply` runs, the scoring output (score, reasoning, green/red flags, gaps, keywords) must be included in the Notion `create` queue JSON so it populates the "Fit Assessment" section and Score property. Keep the scoring data available for the `/apply` step.
 
 ## Critical Rules
 - **Chronology is sacred.** Solo Recon and Modern Electric are CURRENT roles (2024–present). Never lead with Mobimeo as most recent.

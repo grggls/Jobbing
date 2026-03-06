@@ -84,7 +84,7 @@ class ScoringResult:
     red_flags: list[str] = field(default_factory=list)
     gaps: list[str] = field(default_factory=list)
     keywords_missing: list[str] = field(default_factory=list)
-    criteria_version: str = ""  # Which scoring_criteria.md version was used
+    criteria_version: str = ""  # Which SCORING.md version was used
     timestamp: str = ""  # ISO datetime when scored
     model: str = ""  # Which LLM model scored it
 

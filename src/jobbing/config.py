@@ -1,7 +1,6 @@
 """Configuration loading for the Jobbing package.
 
-Consolidates API key loading (previously in notion_update.py) and adds
-configuration for LangChain, LangSmith, scoring, and scheduling.
+Consolidates API key loading and adds configuration for scoring and tracker.
 
 Key loading cascade: environment variable → .env file → ~/.zshrc-secrets
 """
@@ -10,7 +9,7 @@ from __future__ import annotations
 
 import os
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -82,22 +81,11 @@ class Config:
     notion_api_key: str = ""
     notion_database_id: str = "734d746c-43b1-4929-8993-464f5ccc23e7"
 
-    # Anthropic (for LangChain agent)
-    anthropic_api_key: str = ""
-
-    # LangSmith (observability)
-    langsmith_api_key: str = ""
-    langsmith_project: str = "jobbing"
-
     # Tracker
     tracker_backend: str = "notion"  # "notion" | "json"
 
-    # Scanning
-    scan_schedule: list[str] = field(default_factory=lambda: ["01:00", "13:00"])
+    # Scoring
     score_threshold: int = 60
-
-    # Notification
-    notification_method: str = "stdout"  # "stdout" | "macos"
 
     @classmethod
     def load(cls, project_dir: Path | None = None) -> Config:
@@ -113,21 +101,9 @@ class Config:
 
         # Load keys — allow missing (some features are optional)
         notion_key = ""
-        anthropic_key = ""
-        langsmith_key = ""
 
         try:
             notion_key = _load_key("NOTION_API_KEY", env_path)
-        except ValueError:
-            pass
-
-        try:
-            anthropic_key = _load_key("ANTHROPIC_API_KEY", env_path)
-        except ValueError:
-            pass
-
-        try:
-            langsmith_key = _load_key("LANGCHAIN_API_KEY", env_path)
         except ValueError:
             pass
 
@@ -137,18 +113,12 @@ class Config:
         # Tracker backend from env
         backend = os.environ.get("TRACKER_BACKEND", "notion")
 
-        # LangSmith project name
-        ls_project = os.environ.get("LANGCHAIN_PROJECT", "jobbing")
-
         return cls(
             project_dir=project_dir,
             notion_api_key=notion_key,
             notion_database_id=os.environ.get(
                 "NOTION_DATABASE_ID", "734d746c-43b1-4929-8993-464f5ccc23e7"
             ),
-            anthropic_api_key=anthropic_key,
-            langsmith_api_key=langsmith_key,
-            langsmith_project=ls_project,
             tracker_backend=backend,
             score_threshold=threshold,
         )
@@ -180,8 +150,8 @@ class Config:
         return self.project_dir / "CONTEXT.md"
 
     @property
-    def scoring_criteria_path(self) -> Path:
-        return self.project_dir / "scoring_criteria.md"
+    def scoring_path(self) -> Path:
+        return self.project_dir / "SCORING.md"
 
     @property
     def env_path(self) -> Path:

@@ -13,7 +13,7 @@ Scan bookmarked job boards for relevant postings. Python handles HTTP fetching, 
 
 Read these if not already loaded this session:
 - `CONTEXT.md` — Greg's profile (scoring reference)
-- `scoring_criteria.md` — scoring rubric
+- `.claude/skills/scoring/SKILL.md` — scoring rubric (the `/scoring` skill)
 
 ### Step 2: Get existing applications
 
@@ -59,12 +59,12 @@ Read the fetch results file. For each board with content:
    - Entry-level or junior roles
    - Defense contractors, military tech, weapons companies
 
-3. **Do NOT filter out based on title alone.** Per `scoring_criteria.md`:
+3. **Do NOT filter out based on title alone.** Per the `/scoring` skill:
    - A "Senior DevOps Engineer" that involves defining a function and hiring a team should score like a "Head of DevOps"
    - Roles described as "first hire", "founding team", or "building from scratch" are leadership-track regardless of title
    - Score based on **scope**, not **title** — leveling is negotiable
 
-4. **Score** — For each relevant posting, score 0-100 using `scoring_criteria.md`:
+4. **Score** — For each relevant posting, score 0-100 using the `/scoring` skill:
    - Domain fit (0-30)
    - Technical match (0-25)
    - Seniority/scope (0-20)

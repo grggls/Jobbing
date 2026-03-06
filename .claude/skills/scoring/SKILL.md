@@ -1,7 +1,12 @@
+---
+name: scoring
+description: Tunable scoring guidelines for evaluating job postings against Greg's profile. Referenced by /analyze, /disaggregate, and /scan. Edit this skill to change how fit scores are calculated — component weights, thresholds, domain/tech matching rules, and output format.
+---
+
 # Scoring Criteria
 
-Guidelines for the LLM when scoring job postings against the user profile.
-Edit this file to tune how the autonomous scanner evaluates matches.
+Guidelines for scoring job postings against the user profile.
+Edit this file to tune how the `/analyze`, `/disaggregate`, and `/scan` skills evaluate matches.
 
 ## Threshold
 
@@ -31,7 +36,7 @@ Edit this file to tune how the autonomous scanner evaluates matches.
 ### Technical matching
 - Core stack match: Kubernetes, AWS/GCP, Terraform, Python, Go, observability tools
 - Adjacent tech that maps to experience: Docker, Helm, CI/CD, IaC, service mesh
-- De-weight exact years-of-experience requirements (±3 years is fine at senior level)
+- De-weight exact years-of-experience requirements (+/-3 years is fine at senior level)
 
 ### Location and remote
 - Remote-friendly roles score highest
