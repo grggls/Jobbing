@@ -282,8 +282,12 @@ def _contact_bullet_block(contact: Contact) -> dict:
 def _markdown_to_blocks(text: str) -> list[dict]:
     """Convert simple markdown to Notion blocks.
 
-    Handles: ## heading → heading_3, - bullet → bulleted_list_item,
-    blank lines → paragraph separation, everything else → paragraph.
+    Handles:
+    - # heading → heading_2, ##/### heading → heading_3
+    - - bullet → bulleted_list_item (indented → nested child)
+    - **bold** and *italic* in paragraphs and bullets
+    - blank lines → paragraph separation
+    - everything else → paragraph
     """
     blocks: list[dict] = []
     lines = text.split("\n")
@@ -299,9 +303,26 @@ def _markdown_to_blocks(text: str) -> list[dict]:
         if not stripped:
             _flush_paragraph()
             continue
-        if stripped.startswith("## "):
+        # Check ### before ## before # to avoid prefix collisions
+        if stripped.startswith("### "):
+            _flush_paragraph()
+            blocks.append(_heading3_block(stripped[4:]))
+        elif stripped.startswith("## "):
             _flush_paragraph()
             blocks.append(_heading3_block(stripped[3:]))
+        elif stripped.startswith("# "):
+            _flush_paragraph()
+            blocks.append(_heading2_block(stripped[2:]))
+        elif stripped.startswith("- ") and line != line.lstrip():
+            # Indented bullet → nested child of preceding bullet
+            _flush_paragraph()
+            child = _bullet_block(stripped[2:])
+            if blocks and blocks[-1].get("type") == "bulleted_list_item":
+                blocks[-1]["bulleted_list_item"].setdefault(
+                    "children", []
+                ).append(child)
+            else:
+                blocks.append(child)
         elif stripped.startswith("- "):
             _flush_paragraph()
             blocks.append(_bullet_block(stripped[2:]))

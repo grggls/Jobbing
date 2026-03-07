@@ -191,6 +191,7 @@ All track commands support `--dry-run` for previewing without sending.
 - **Status values** (in order): `Targeted` → `Applied` → `Followed-Up` → `In Progress (Interviewing)` → `Done`. New entries default to **Targeted**. Do NOT invent new status values — Notion auto-creates select options for any string, so typos and made-up values silently pollute the database. Add a `Conclusion` when moving to `Done`.
 - **Page layout** (canonical order, matches application chronology): Inline "Interviews" database, divider, then seven toggle heading_3 sections: "Job Description", "Fit Assessment", "Company Research", "Experience to Highlight", "Outreach Contacts", "Questions I Might Get Asked", "Questions to Ask". All sections scaffolded from creation with empty placeholders. On update-existing, existing section content is preserved for any section the new JSON doesn't include — safe to re-run without data loss. Section matching is case-insensitive with backward-compat aliases for renamed sections.
 - **Score property**: Number property on the database. Set automatically when `fit_assessment` command runs or when `create` includes a `score` field.
+- **Markdown in queue payloads**: The `_markdown_to_blocks()` parser handles `#`/`##`/`###` headings, `-` bullets (including nested/indented), `**bold**`/`*italic*` inline formatting, and blank-line-separated paragraphs. Other markdown (tables, links, code blocks) is not supported and will render as plain text. Keep queue payload markdown simple.
 
 ## Location Logic
 
