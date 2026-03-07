@@ -31,6 +31,7 @@ Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analy
 - **prep** — Interview prep generation. Researches interviewer, generates likely questions, talking points, and questions to ask. Run when an interview is scheduled.
 - **debrief** — Post-interview debrief capture. Greg dumps raw thoughts, Claude structures them into the Interviews DB row. Run right after an interview.
 - **followup** — Follow-up cadence monitor. Checks all "In Progress (Interviewing)" entries for staleness, surfaces stale conversations with suggested actions. Read-only, no auto-actions.
+- **reassess** — Living Fit Assessment. Re-scores an application after interviews reveal new information. Reads existing score, debrief notes, and Greg's input. Writes via the existing `fit_assessment` queue command.
 - **track** — Tracker operations. Status updates, research, highlights, conclusions.
 - **scoring** — Tunable scoring guidelines. Component weights, thresholds, domain/tech matching rules. Referenced by analyze, disaggregate, and scan.
 - **scan** — Job board scanner. Python fetches boards, Claude extracts and scores postings in-conversation. No API key needed.
@@ -65,6 +66,7 @@ Jobbing/
 │   ├── followup/SKILL.md     ← /followup — follow-up cadence monitor
 │   ├── outreach/SKILL.md     ← /outreach — LinkedIn contact research
 │   ├── prep/SKILL.md         ← /prep — interview prep generation
+│   ├── reassess/SKILL.md     ← /reassess — living fit assessment
 │   ├── scan/SKILL.md         ← /scan — job board scanner
 │   ├── scoring/SKILL.md      ← /scoring — tunable scoring guidelines
 │   └── track/SKILL.md        ← /track — tracker operations
@@ -101,7 +103,9 @@ Full details in WORKFLOW.md. The short version:
 4. **`/outreach`** — After applying, research LinkedIn contacts and draft messages.
 5. **`/prep`** — Interview scheduled. Research interviewer, generate prep, write to Interviews DB.
 6. **`/debrief`** — After interview. Capture what happened, structure into Interviews DB row.
-7. **`/track`** — Status updates, research, highlights — all tracker operations.
+7. **`/followup`** — Check for stale interview processes. Surfaces companies needing follow-up.
+8. **`/reassess`** — After interviews change the picture. Re-scores with debrief data and Greg's input.
+9. **`/track`** — Status updates, research, highlights — all tracker operations.
 
 ## Critical Rules
 

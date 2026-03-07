@@ -377,6 +377,22 @@ jobbing track followup --threshold 7      # custom threshold
 jobbing track followup --save             # save report to notion_queue_results/
 ```
 
+## Step 8: Living Fit Assessment
+
+After one or more interview rounds, the original `/analyze` score may no longer reflect reality. Use `/reassess` to update the score based on what Greg has learned.
+
+**Trigger:** "Reassess Cozero — turns out the team is 3 people" or "Update the score for Bandcamp after the technical round."
+
+**Inputs:**
+
+1. Existing Fit Assessment (score, reasoning, flags, gaps) from the tracker page
+2. All debrief notes from the Interviews DB
+3. Greg's verbal input on what's changed (team size, stack, scope, culture, comp)
+
+**Output:** Updated score (0–100) with revised reasoning that explicitly states the original score, what changed, and which scoring components moved. Written via the existing `fit_assessment` queue command — replaces the Fit Assessment section and updates the Score property.
+
+**Greg approves before writing.** The updated assessment is presented with a before/after comparison. Greg confirms before the queue file is written.
+
 ## Iteration
 
 When Greg reads a PDF and wants changes:
