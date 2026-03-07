@@ -63,11 +63,16 @@ class Interview:
     """
 
     date: str  # ISO date
-    interview_type: str  # Phone Screen, Technical, System Design, Behavioral, Panel, Final
+    interview_type: str = ""  # Phone Screen, Technical, System Design, Behavioral, Panel, Hiring Manager, Executive, Take-Home
     interviewers: list[str] = field(default_factory=list)
     prep_notes: str = ""
     questions_to_ask: list[str] = field(default_factory=list)
-    outcome: str = ""  # Passed, Rejected, Pending, or freeform notes
+    outcome: str = ""  # Passed, Rejected, Pending, Withdrawn
+    debrief: str = ""  # Structured debrief text (markdown)
+    questions_they_asked: list[str] = field(default_factory=list)
+    questions_i_asked: list[str] = field(default_factory=list)
+    follow_up: str = ""  # Next steps, action items
+    vibe: int = 0  # 1-5 gut-feel rating, 0 = not set
 
 
 @dataclass

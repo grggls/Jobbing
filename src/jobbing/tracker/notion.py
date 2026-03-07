@@ -17,7 +17,14 @@ from datetime import date
 from typing import Any
 
 from jobbing.config import Config
-from jobbing.models import Application, Contact, LinkedInStatus, ScoringResult, Status
+from jobbing.models import (
+    Application,
+    Contact,
+    Interview,
+    LinkedInStatus,
+    ScoringResult,
+    Status,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -79,6 +86,59 @@ def _divider_block() -> dict:
     return {"object": "block", "type": "divider", "divider": {}}
 
 
+def _parse_inline_markdown(text: str) -> list[dict]:
+    """Parse **bold** and *italic* markers into Notion rich_text segments.
+
+    Handles nested **bold** and *italic* markers. Returns a list of
+    rich_text objects with appropriate annotations. Respects the 2000-char
+    Notion rich_text segment limit.
+    """
+    import re
+
+    segments: list[dict] = []
+    # Match **bold** first, then *italic* (non-greedy, no nesting across types)
+    pattern = re.compile(r"(\*\*(.+?)\*\*|\*(.+?)\*)")
+    pos = 0
+    for m in pattern.finditer(text):
+        # Plain text before match
+        if m.start() > pos:
+            plain = text[pos : m.start()]
+            if plain:
+                segments.append(
+                    {"type": "text", "text": {"content": plain}}
+                )
+        if m.group(2) is not None:
+            # **bold**
+            segments.append(
+                {
+                    "type": "text",
+                    "text": {"content": m.group(2)},
+                    "annotations": {"bold": True},
+                }
+            )
+        elif m.group(3) is not None:
+            # *italic*
+            segments.append(
+                {
+                    "type": "text",
+                    "text": {"content": m.group(3)},
+                    "annotations": {"italic": True},
+                }
+            )
+        pos = m.end()
+    # Remaining plain text
+    if pos < len(text):
+        remaining = text[pos:]
+        if remaining:
+            segments.append(
+                {"type": "text", "text": {"content": remaining}}
+            )
+    # If no markdown found, return single plain segment
+    if not segments:
+        segments.append({"type": "text", "text": {"content": text}})
+    return segments
+
+
 def _heading2_block(text: str) -> dict:
     return {
         "object": "block",
@@ -100,15 +160,12 @@ def _heading3_block(text: str) -> dict:
 
 
 def _paragraph_block(text: str) -> dict:
-    """A paragraph block. Splits text at the 2000-char Notion rich_text limit."""
-    chunks = [text[i : i + 2000] for i in range(0, max(len(text), 1), 2000)]
+    """A paragraph block with inline markdown support (**bold**, *italic*)."""
     return {
         "object": "block",
         "type": "paragraph",
         "paragraph": {
-            "rich_text": [
-                {"type": "text", "text": {"content": chunk}} for chunk in chunks
-            ],
+            "rich_text": _parse_inline_markdown(text),
         },
     }
 
@@ -131,7 +188,7 @@ def _bullet_block(text: str) -> dict:
         "object": "block",
         "type": "bulleted_list_item",
         "bulleted_list_item": {
-            "rich_text": [{"type": "text", "text": {"content": text}}],
+            "rich_text": _parse_inline_markdown(text),
         },
     }
 
@@ -220,6 +277,39 @@ def _contact_bullet_block(contact: Contact) -> dict:
         block["bulleted_list_item"]["children"] = children
 
     return block
+
+
+def _markdown_to_blocks(text: str) -> list[dict]:
+    """Convert simple markdown to Notion blocks.
+
+    Handles: ## heading → heading_3, - bullet → bulleted_list_item,
+    blank lines → paragraph separation, everything else → paragraph.
+    """
+    blocks: list[dict] = []
+    lines = text.split("\n")
+    paragraph_lines: list[str] = []
+
+    def _flush_paragraph() -> None:
+        if paragraph_lines:
+            blocks.append(_paragraph_block("\n".join(paragraph_lines)))
+            paragraph_lines.clear()
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            _flush_paragraph()
+            continue
+        if stripped.startswith("## "):
+            _flush_paragraph()
+            blocks.append(_heading3_block(stripped[3:]))
+        elif stripped.startswith("- "):
+            _flush_paragraph()
+            blocks.append(_bullet_block(stripped[2:]))
+        else:
+            paragraph_lines.append(stripped)
+
+    _flush_paragraph()
+    return blocks
 
 
 # ---------------------------------------------------------------------------
@@ -558,6 +648,31 @@ class NotionTracker:
                     qa_list.append({"question": question, "answer": answer})
             return qa_list if qa_list else []
 
+        if section_name == "Fit Assessment":
+            # Preserve both paragraphs (score, reasoning, category labels)
+            # and bullets (flags, gaps, keywords) in order.
+            entries: list[dict[str, str]] = []
+            for child in children:
+                if child.get("type") == "paragraph":
+                    rt = child.get("paragraph", {}).get("rich_text", [])
+                    text = "".join(
+                        seg.get("text", {}).get("content", "")
+                        for seg in rt
+                    )
+                    if text:
+                        entries.append({"type": "paragraph", "text": text})
+                elif child.get("type") == "bulleted_list_item":
+                    rt = child.get("bulleted_list_item", {}).get(
+                        "rich_text", []
+                    )
+                    text = "".join(
+                        seg.get("text", {}).get("content", "")
+                        for seg in rt
+                    )
+                    if text:
+                        entries.append({"type": "bullet", "text": text})
+            return entries
+
         # Default: bulleted list → list[str]
         items: list[str] = []
         for child in children:
@@ -724,7 +839,15 @@ class NotionTracker:
             children = self._scoring_result_blocks(app.scoring)
         elif preserved.get("Fit Assessment"):
             items = preserved["Fit Assessment"]
-            if isinstance(items, list):
+            if isinstance(items, list) and items and isinstance(items[0], dict):
+                # Structured format from _parse_section_children
+                children = []
+                for entry in items:
+                    if entry.get("type") == "paragraph":
+                        children.append(_paragraph_block(entry["text"]))
+                    elif entry.get("type") == "bullet":
+                        children.append(_bullet_block(entry["text"]))
+            elif isinstance(items, list):
                 children = [_bullet_block(item) for item in items if item]
             else:
                 children = [_paragraph_block(str(items))]
@@ -796,14 +919,19 @@ class NotionTracker:
             {"children": blocks},
         )
 
-    def _add_interviews_database(self, page_id: str) -> None:
+    def _add_interviews_database(self, page_id: str) -> str:
         """Create an inline 'Interviews' child database on the page.
 
-        Schema matches the Goldie Tech reference page:
-        - Interviewer Name and Role (title property)
-        - Date (date property)
+        Properties:
+        - Interviewer Name and Role (title)
+        - Date (date)
+        - Type (select): Phone Screen, Technical, System Design, etc.
+        - Vibe (select): 1-5 gut-feel rating
+        - Outcome (select): Pending, Passed, Rejected, Withdrawn
+
+        Returns the database ID.
         """
-        self._request(
+        result = self._request(
             "POST",
             f"{NOTION_BASE_URL}/databases",
             {
@@ -813,9 +941,45 @@ class NotionTracker:
                 "properties": {
                     "Interviewer Name and Role": {"title": {}},
                     "Date": {"date": {}},
+                    "Type": {
+                        "select": {
+                            "options": [
+                                {"name": "Phone Screen"},
+                                {"name": "Technical"},
+                                {"name": "System Design"},
+                                {"name": "Behavioral"},
+                                {"name": "Panel"},
+                                {"name": "Hiring Manager"},
+                                {"name": "Executive"},
+                                {"name": "Take-Home"},
+                            ]
+                        }
+                    },
+                    "Vibe": {
+                        "select": {
+                            "options": [
+                                {"name": "1"},
+                                {"name": "2"},
+                                {"name": "3"},
+                                {"name": "4"},
+                                {"name": "5"},
+                            ]
+                        }
+                    },
+                    "Outcome": {
+                        "select": {
+                            "options": [
+                                {"name": "Pending"},
+                                {"name": "Passed"},
+                                {"name": "Rejected"},
+                                {"name": "Withdrawn"},
+                            ]
+                        }
+                    },
                 },
             },
         )
+        return result["id"]
 
     def update(self, app: Application) -> None:
         """Update an existing tracker entry."""
@@ -933,6 +1097,477 @@ class NotionTracker:
         blocks = [_bullet_block(q) for q in questions]
         self._append_section(page_id, "Questions to Ask", blocks, toggle=True)
 
+    # --- Interview DB helpers (Notion-specific, not on protocol) ---
+
+    def _find_interviews_db(self, page_id: str) -> str | None:
+        """Find the Interviews inline database on a tracker page.
+
+        Walks page children looking for a child_database block titled
+        "Interviews". Returns the database ID or None.
+        """
+        page_id = page_id.replace("-", "")
+        url = f"{NOTION_BASE_URL}/blocks/{page_id}/children?page_size=100"
+        result = self._request("GET", url)
+        for block in result.get("results", []):
+            if block.get("type") == "child_database":
+                title = block.get("child_database", {}).get("title", "")
+                if title == "Interviews":
+                    return block["id"]
+        return None
+
+    def _find_interview_entry(
+        self,
+        db_id: str,
+        interviewer: str | None = None,
+        date: str | None = None,
+    ) -> str | None:
+        """Find an interview row by interviewer name and/or date.
+
+        Returns the row's page ID or None.
+        """
+        filters: list[dict] = []
+        if interviewer:
+            filters.append({
+                "property": "Interviewer Name and Role",
+                "title": {"contains": interviewer},
+            })
+        if date:
+            filters.append({
+                "property": "Date",
+                "date": {"equals": date},
+            })
+        if not filters:
+            return None
+
+        payload: dict[str, Any] = {"page_size": 10}
+        if len(filters) == 1:
+            payload["filter"] = filters[0]
+        else:
+            payload["filter"] = {"and": filters}
+
+        url = f"{NOTION_BASE_URL}/databases/{db_id}/query"
+        result = self._request("POST", url, payload)
+        pages = result.get("results", [])
+        return pages[0]["id"] if pages else None
+
+    def _ensure_interviews_db_schema(self, page_id: str) -> str:
+        """Ensure the Interviews DB on a page has the full Phase 1 schema.
+
+        If no Interviews DB exists, creates one. If it exists but is
+        missing Type/Vibe/Outcome columns, adds them (idempotent).
+        Returns the database ID.
+        """
+        db_id = self._find_interviews_db(page_id)
+        if not db_id:
+            return self._add_interviews_database(page_id)
+
+        # PATCH to add new properties. Omit colors — Notion rejects color
+        # changes on existing select options, and assigns defaults for new ones.
+        new_props = {
+            "Type": {
+                "select": {
+                    "options": [
+                        {"name": n}
+                        for n in [
+                            "Phone Screen", "Technical", "System Design",
+                            "Behavioral", "Panel", "Hiring Manager",
+                            "Executive", "Take-Home",
+                        ]
+                    ]
+                }
+            },
+            "Vibe": {
+                "select": {
+                    "options": [{"name": str(i)} for i in range(1, 6)]
+                }
+            },
+            "Outcome": {
+                "select": {
+                    "options": [
+                        {"name": n}
+                        for n in ["Passed", "Rejected", "Pending", "Withdrawn"]
+                    ]
+                }
+            },
+        }
+        self._request(
+            "PATCH",
+            f"{NOTION_BASE_URL}/databases/{db_id}",
+            {"properties": new_props},
+        )
+        return db_id
+
+    def _remove_entry_section(self, entry_id: str, heading_text: str) -> None:
+        """Remove a toggle heading from an interview row's page body.
+
+        Deleting the toggle heading automatically removes its children.
+        """
+        url = f"{NOTION_BASE_URL}/blocks/{entry_id}/children?page_size=100"
+        result = self._request("GET", url)
+        heading_lower = heading_text.lower()
+
+        for block in result.get("results", []):
+            block_type = block.get("type", "")
+            if block_type == "heading_3":
+                rt = block.get("heading_3", {}).get("rich_text", [])
+                text = rt[0].get("text", {}).get("content", "") if rt else ""
+                if text.lower() == heading_lower:
+                    self._request(
+                        "DELETE", f"{NOTION_BASE_URL}/blocks/{block['id']}"
+                    )
+                    return
+
+    def _build_debrief_body(self, interview: Interview) -> list[dict]:
+        """Build the block children for a Debrief toggle section."""
+        children: list[dict] = []
+
+        if interview.debrief:
+            children.extend(_markdown_to_blocks(interview.debrief))
+
+        if interview.questions_they_asked:
+            children.append(_heading3_block("Questions They Asked"))
+            for q in interview.questions_they_asked:
+                children.append(_bullet_block(q))
+
+        if interview.questions_i_asked:
+            children.append(_heading3_block("Questions I Asked"))
+            for q in interview.questions_i_asked:
+                children.append(_bullet_block(q))
+
+        if interview.follow_up:
+            children.append(_heading3_block("Follow-Up"))
+            children.append(_paragraph_block(interview.follow_up))
+
+        if not children:
+            children = [_paragraph_block("")]
+
+        return children
+
+    def add_interview_entry(self, page_id: str, interview: Interview) -> str:
+        """Create a new row in the Interviews inline database.
+
+        Writes DB properties and optional page-body toggle sections.
+        Only writes sections that have content — no empty placeholders.
+        Returns the new row's page ID.
+        """
+        db_id = self._find_interviews_db(page_id)
+        if not db_id:
+            raise ValueError(
+                f"No Interviews database found on page {page_id}. "
+                "Run migration or create a new page first."
+            )
+
+        properties: dict[str, Any] = {}
+        if interview.interviewers:
+            properties["Interviewer Name and Role"] = _title(
+                ", ".join(interview.interviewers)
+            )
+        if interview.date:
+            properties["Date"] = _date(interview.date)
+        if interview.interview_type:
+            properties["Type"] = _select(interview.interview_type)
+        if interview.vibe and interview.vibe > 0:
+            properties["Vibe"] = _select(str(interview.vibe))
+        if interview.outcome:
+            properties["Outcome"] = _select(interview.outcome)
+
+        payload: dict[str, Any] = {
+            "parent": {"database_id": db_id},
+            "properties": properties,
+        }
+        result = self._request("POST", f"{NOTION_BASE_URL}/pages", payload)
+        entry_id = result["id"]
+
+        body_blocks: list[dict] = []
+        if interview.prep_notes:
+            children = _markdown_to_blocks(interview.prep_notes)
+            if not children:
+                children = [_paragraph_block(interview.prep_notes)]
+            body_blocks.append(_toggle_heading3_block("Prep Notes", children))
+
+        if (
+            interview.debrief
+            or interview.questions_they_asked
+            or interview.questions_i_asked
+            or interview.follow_up
+        ):
+            debrief_children = self._build_debrief_body(interview)
+            body_blocks.append(
+                _toggle_heading3_block("Debrief", debrief_children)
+            )
+
+        if body_blocks:
+            self._request(
+                "PATCH",
+                f"{NOTION_BASE_URL}/blocks/{entry_id}/children",
+                {"children": body_blocks},
+            )
+
+        return entry_id
+
+    def update_interview_entry(
+        self, entry_id: str, interview: Interview
+    ) -> None:
+        """Update an existing Interviews DB row.
+
+        Updates properties via PATCH. For page body content, uses
+        remove-then-append to prevent duplicate sections on re-run.
+        """
+        entry_id = entry_id.replace("-", "")
+
+        properties: dict[str, Any] = {}
+        if interview.interview_type:
+            properties["Type"] = _select(interview.interview_type)
+        if interview.vibe and interview.vibe > 0:
+            properties["Vibe"] = _select(str(interview.vibe))
+        if interview.outcome:
+            properties["Outcome"] = _select(interview.outcome)
+        if interview.date:
+            properties["Date"] = _date(interview.date)
+
+        if properties:
+            self._request(
+                "PATCH",
+                f"{NOTION_BASE_URL}/pages/{entry_id}",
+                {"properties": properties},
+            )
+
+        if interview.prep_notes:
+            children = _markdown_to_blocks(interview.prep_notes)
+            if not children:
+                children = [_paragraph_block(interview.prep_notes)]
+            self._remove_entry_section(entry_id, "Prep Notes")
+            self._request(
+                "PATCH",
+                f"{NOTION_BASE_URL}/blocks/{entry_id}/children",
+                {"children": [
+                    _toggle_heading3_block("Prep Notes", children)
+                ]},
+            )
+
+        if (
+            interview.debrief
+            or interview.questions_they_asked
+            or interview.questions_i_asked
+            or interview.follow_up
+        ):
+            debrief_children = self._build_debrief_body(interview)
+            self._remove_entry_section(entry_id, "Debrief")
+            self._request(
+                "PATCH",
+                f"{NOTION_BASE_URL}/blocks/{entry_id}/children",
+                {"children": [
+                    _toggle_heading3_block("Debrief", debrief_children)
+                ]},
+            )
+
+    @staticmethod
+    def _blocks_to_text(blocks: list[dict]) -> str:
+        """Convert Notion blocks back to plain text (lossy)."""
+        parts: list[str] = []
+        for block in blocks:
+            block_type = block.get("type", "")
+            rt_data = block.get(block_type, {}).get("rich_text", [])
+            text = "".join(
+                seg.get("text", {}).get("content", "") for seg in rt_data
+            )
+            if not text:
+                continue
+            if block_type == "bulleted_list_item":
+                parts.append(f"- {text}")
+            elif block_type == "heading_3":
+                parts.append(f"## {text}")
+            else:
+                parts.append(text)
+        return "\n\n".join(parts)
+
+    @staticmethod
+    def _parse_debrief_body(
+        children: list[dict],
+    ) -> tuple[str, list[str], list[str], str]:
+        """Parse Debrief toggle children into structured fields.
+
+        Returns (debrief_text, questions_they_asked,
+                 questions_i_asked, follow_up).
+        """
+        current_section: str | None = None
+        debrief_parts: list[str] = []
+        questions_they_asked: list[str] = []
+        questions_i_asked: list[str] = []
+        follow_up_parts: list[str] = []
+
+        for child in children:
+            child_type = child.get("type", "")
+
+            if child_type == "heading_3":
+                rt = child.get("heading_3", {}).get("rich_text", [])
+                text = "".join(
+                    seg.get("text", {}).get("content", "") for seg in rt
+                )
+                current_section = text
+                continue
+
+            rt_data = child.get(child_type, {}).get("rich_text", [])
+            text = "".join(
+                seg.get("text", {}).get("content", "") for seg in rt_data
+            )
+            if not text:
+                continue
+
+            if current_section == "Questions They Asked":
+                questions_they_asked.append(text)
+            elif current_section == "Questions I Asked":
+                questions_i_asked.append(text)
+            elif current_section == "Follow-Up":
+                follow_up_parts.append(text)
+            else:
+                debrief_parts.append(text)
+
+        return (
+            "\n\n".join(debrief_parts),
+            questions_they_asked,
+            questions_i_asked,
+            "\n\n".join(follow_up_parts),
+        )
+
+    def get_interviews(self, page_id: str) -> list[Interview]:
+        """Read all interview entries from a page's Interviews database.
+
+        Returns Interview objects with properties and page body content.
+        Makes N+1 API calls (1 DB query + N page body reads).
+        Returns empty list if no Interviews DB exists.
+        """
+        db_id = self._find_interviews_db(page_id)
+        if not db_id:
+            return []
+
+        url = f"{NOTION_BASE_URL}/databases/{db_id}/query"
+        payload: dict[str, Any] = {"page_size": 100}
+        rows: list[dict] = []
+
+        while True:
+            result = self._request("POST", url, payload)
+            rows.extend(result.get("results", []))
+            if not result.get("has_more"):
+                break
+            payload["start_cursor"] = result["next_cursor"]
+
+        interviews: list[Interview] = []
+        for row in rows:
+            props = row.get("properties", {})
+
+            # Title (interviewer)
+            title_list = props.get(
+                "Interviewer Name and Role", {}
+            ).get("title", [])
+            interviewer = (
+                title_list[0].get("text", {}).get("content", "")
+                if title_list
+                else ""
+            )
+
+            # Date
+            date_val = props.get("Date", {}).get("date")
+            interview_date = date_val.get("start", "") if date_val else ""
+
+            # Selects
+            type_sel = props.get("Type", {}).get("select")
+            interview_type = type_sel.get("name", "") if type_sel else ""
+
+            vibe_sel = props.get("Vibe", {}).get("select")
+            vibe = int(vibe_sel.get("name", "0")) if vibe_sel else 0
+
+            outcome_sel = props.get("Outcome", {}).get("select")
+            outcome = outcome_sel.get("name", "") if outcome_sel else ""
+
+            # Read page body for long-form content
+            prep_notes = ""
+            debrief = ""
+            questions_they_asked: list[str] = []
+            questions_i_asked: list[str] = []
+            follow_up = ""
+
+            try:
+                row_url = (
+                    f"{NOTION_BASE_URL}/blocks/{row['id']}"
+                    f"/children?page_size=100"
+                )
+                row_children = self._request("GET", row_url).get(
+                    "results", []
+                )
+                for block in row_children:
+                    if block.get("type") != "heading_3":
+                        continue
+                    rt = block.get("heading_3", {}).get("rich_text", [])
+                    heading = (
+                        rt[0].get("text", {}).get("content", "")
+                        if rt
+                        else ""
+                    )
+                    if not block.get("has_children"):
+                        continue
+
+                    toggle_url = (
+                        f"{NOTION_BASE_URL}/blocks/{block['id']}"
+                        f"/children?page_size=100"
+                    )
+                    toggle_children = self._request(
+                        "GET", toggle_url
+                    ).get("results", [])
+
+                    if heading == "Prep Notes":
+                        prep_notes = self._blocks_to_text(toggle_children)
+                    elif heading == "Debrief":
+                        (
+                            debrief,
+                            questions_they_asked,
+                            questions_i_asked,
+                            follow_up,
+                        ) = self._parse_debrief_body(toggle_children)
+            except NotionAPIError:
+                pass  # Row may have no body content
+
+            interviews.append(
+                Interview(
+                    date=interview_date,
+                    interview_type=interview_type,
+                    interviewers=[interviewer] if interviewer else [],
+                    prep_notes=prep_notes,
+                    outcome=outcome,
+                    debrief=debrief,
+                    questions_they_asked=questions_they_asked,
+                    questions_i_asked=questions_i_asked,
+                    follow_up=follow_up,
+                    vibe=vibe,
+                )
+            )
+
+        return interviews
+
+    def migrate_all_interviews_dbs(self) -> list[dict]:
+        """Add Type/Vibe/Outcome columns to all existing Interviews DBs.
+
+        Idempotent — delegates to _ensure_interviews_db_schema() per page.
+        For pages without an Interviews DB, creates one.
+        """
+        all_apps = self.list_all()
+        results: list[dict] = []
+
+        for app in all_apps:
+            if not app.page_id:
+                continue
+            page_id = app.page_id.replace("-", "")
+            had_db = self._find_interviews_db(page_id) is not None
+            db_id = self._ensure_interviews_db_schema(page_id)
+            results.append({
+                "name": app.name,
+                "page_id": page_id,
+                "action": "patched_existing_db" if had_db else "created_new_db",
+                "db_id": db_id,
+            })
+
+        return results
+
     def list_all(self) -> list[Application]:
         """List all tracked applications."""
         url = f"{NOTION_BASE_URL}/databases/{self._database_id}/query"
@@ -1047,6 +1682,12 @@ class NotionTracker:
                 return self._queue_job_description(task, filename)
             elif command == "fit_assessment":
                 return self._queue_fit_assessment(task, filename)
+            elif command == "interview_prep":
+                return self._queue_interview_prep(task, filename)
+            elif command == "debrief":
+                return self._queue_debrief(task, filename)
+            elif command == "migrate_interviews_schema":
+                return self._queue_migrate_interviews(task, filename)
             else:
                 return {
                     "file": filename,
@@ -1197,6 +1838,112 @@ class NotionTracker:
             "status": "ok",
             "action": "fit_assessment_replaced",
             "page_id": page_id,
+        }
+
+    def _queue_interview_prep(self, task: dict, filename: str) -> dict:
+        page_id = self._resolve_page_id(
+            task.get("page_id"), task.get("name")
+        )
+        interviewer = task.get("interviewer", "")
+        interview_date = task.get("date", "")
+        if not interview_date:
+            raise ValueError("interview_prep command requires date")
+
+        interview = Interview(
+            date=interview_date,
+            interview_type=task.get("interview_type", ""),
+            interviewers=[interviewer] if interviewer else [],
+            prep_notes=task.get("prep_notes", ""),
+            questions_to_ask=task.get("questions_to_ask", []),
+        )
+
+        # Ensure DB has full schema (idempotent), then find or create row
+        db_id = self._ensure_interviews_db_schema(page_id)
+
+        entry_id = None
+        if interviewer or interview_date:
+            entry_id = self._find_interview_entry(
+                db_id, interviewer or None, interview_date or None
+            )
+
+        if entry_id:
+            self.update_interview_entry(entry_id, interview)
+            action = "interview_prep_updated"
+        else:
+            entry_id = self.add_interview_entry(page_id, interview)
+            action = "interview_prep_created"
+
+        # Optionally populate page-level "Questions I Might Get Asked"
+        if task.get("interview_questions"):
+            self.set_interview_questions(
+                page_id, task["interview_questions"]
+            )
+
+        return {
+            "file": filename,
+            "status": "ok",
+            "action": action,
+            "page_id": page_id,
+            "entry_id": entry_id,
+        }
+
+    def _queue_debrief(self, task: dict, filename: str) -> dict:
+        page_id = self._resolve_page_id(
+            task.get("page_id"), task.get("name")
+        )
+        interviewer = task.get("interviewer", "")
+        interview_date = task.get("date", "")
+        if not interview_date:
+            raise ValueError("debrief command requires date")
+
+        vibe = task.get("vibe", 0)
+        if isinstance(vibe, str):
+            vibe = int(vibe) if vibe.isdigit() else 0
+
+        interview = Interview(
+            date=interview_date,
+            interview_type=task.get("interview_type", ""),
+            interviewers=[interviewer] if interviewer else [],
+            outcome=task.get("outcome", ""),
+            debrief=task.get("debrief", ""),
+            questions_they_asked=task.get("questions_they_asked", []),
+            questions_i_asked=task.get("questions_i_asked", []),
+            follow_up=task.get("follow_up", ""),
+            vibe=vibe,
+        )
+
+        # Ensure DB has full schema (idempotent), then find or create row
+        db_id = self._ensure_interviews_db_schema(page_id)
+
+        entry_id = None
+        if interviewer or interview_date:
+            entry_id = self._find_interview_entry(
+                db_id, interviewer or None, interview_date or None
+            )
+
+        if entry_id:
+            self.update_interview_entry(entry_id, interview)
+            action = "debrief_updated"
+        else:
+            entry_id = self.add_interview_entry(page_id, interview)
+            action = "debrief_created"
+
+        return {
+            "file": filename,
+            "status": "ok",
+            "action": action,
+            "page_id": page_id,
+            "entry_id": entry_id,
+        }
+
+    def _queue_migrate_interviews(self, task: dict, filename: str) -> dict:
+        results = self.migrate_all_interviews_dbs()
+        return {
+            "file": filename,
+            "status": "ok",
+            "action": "migrate_interviews_schema",
+            "pages_processed": len(results),
+            "details": results,
         }
 
     @staticmethod

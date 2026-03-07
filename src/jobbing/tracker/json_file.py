@@ -116,20 +116,20 @@ class JsonFileTracker:
 
     # --- TrackerBackend protocol ---
 
-    def create(self, app: Application) -> str:
-        """Create a tracker entry. Returns a generated ID."""
+    def create(self, app: Application) -> tuple[str, list[str]]:
+        """Create a tracker entry. Returns (ID, list of sections written)."""
         # Check for existing entry with same name
         for app_id, data in self._data["applications"].items():
             if data.get("name", "").lower() == app.name.lower():
                 # Update existing instead of duplicating
                 self._data["applications"][app_id] = self._app_to_dict(app)
                 self._save()
-                return app_id
+                return app_id, ["properties"]
 
         app_id = uuid.uuid4().hex[:12]
         self._data["applications"][app_id] = self._app_to_dict(app)
         self._save()
-        return app_id
+        return app_id, ["properties"]
 
     def update(self, app: Application) -> None:
         """Update an existing tracker entry."""

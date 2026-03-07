@@ -54,7 +54,7 @@ def _track_create(args: argparse.Namespace, config: Config) -> None:
         print(json.dumps(_preview_application(app), indent=2))
         return
 
-    page_id = tracker.create(app)
+    page_id, _sections = tracker.create(app)
     print(f"Created/updated entry: {page_id}")
 
 

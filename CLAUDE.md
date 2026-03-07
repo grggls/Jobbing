@@ -28,6 +28,7 @@ Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analy
 - **analyze** — Fit assessment. Paste a job posting, get score, green/red flags, gaps, salary read, company intel, Experience to Highlight bullets. Always start here.
 - **apply** — Full application workflow. Notion entry → tailored JSON → PDFs → ATS check. Run after analyze and Greg's go decision.
 - **outreach** — LinkedIn contact research. Drafts connection request messages. Run after applying.
+- **prep** — Interview prep generation. Researches interviewer, generates likely questions, talking points, and questions to ask. Run when an interview is scheduled.
 - **track** — Tracker operations. Status updates, research, highlights, conclusions.
 - **scoring** — Tunable scoring guidelines. Component weights, thresholds, domain/tech matching rules. Referenced by analyze, disaggregate, and scan.
 - **scan** — Job board scanner. Python fetches boards, Claude extracts and scores postings in-conversation. No API key needed.
@@ -93,7 +94,8 @@ Full details in WORKFLOW.md. The short version:
 2. **`/apply`** — Notion entry → tailored JSON → PDFs → ATS check. All in one flow.
 3. **Application answers** — If the application has extra questions, draft `companies/{company}/{COMPANY}-APPLICATION-ANSWERS.md`.
 4. **`/outreach`** — After applying, research LinkedIn contacts and draft messages.
-5. **`/track`** — Status updates, research, highlights — all tracker operations.
+5. **`/prep`** — Interview scheduled. Research interviewer, generate prep, write to Interviews DB.
+6. **`/track`** — Status updates, research, highlights — all tracker operations.
 
 ## Critical Rules
 
@@ -127,6 +129,8 @@ The queue `create` command builds template-like scaffolding automatically: six t
 {"command": "interview_questions", "name": "Company", "questions": [{"question": "Q1?", "answer": "A1"}]}
 {"command": "questions_to_ask", "name": "Company", "questions": ["Q1?", "Q2?"]}
 {"command": "fit_assessment", "name": "Company", "score": 75, "reasoning": "...", "green_flags": ["..."], "red_flags": ["..."], "gaps": ["..."], "keywords_missing": ["..."]}
+{"command": "interview_prep", "name": "Company", "date": "2026-03-15", "interviewer": "Jane Smith — VP Eng", "interview_type": "Hiring Manager", "prep_notes": "## Key Topics\n- ...", "questions_to_ask": ["Q1?", "Q2?"]}
+{"command": "debrief", "name": "Company", "date": "2026-03-15", "interviewer": "Jane Smith — VP Eng", "outcome": "Passed", "vibe": 4, "debrief": "Strong conversation...", "questions_they_asked": ["Q1?"], "questions_i_asked": ["Q2?"], "follow_up": "Next steps..."}
 ```
 
 **Status updates are Greg's decision.** Do not auto-mark "Applied" or any other status. Greg will explicitly ask for status changes.

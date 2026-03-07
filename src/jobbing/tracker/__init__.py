@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 class TrackerBackend(Protocol):
     """Interface for application tracking storage."""
 
-    def create(self, app: Application) -> str:
-        """Create a tracker entry. Returns the backend-specific ID."""
+    def create(self, app: Application) -> tuple[str, list[str]]:
+        """Create a tracker entry. Returns (ID, list of sections written)."""
         ...
 
     def update(self, app: Application) -> None:

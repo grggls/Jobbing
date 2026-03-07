@@ -196,6 +196,40 @@ Write a JSON file to `notion_queue/` with a descriptive name (e.g., `notion_queu
 }
 ```
 
+**Interview prep** (write prep notes to an Interviews DB row):
+
+```json
+{
+  "command": "interview_prep",
+  "name": "CompanyName",
+  "date": "2026-03-15",
+  "interviewer": "Jane Smith — VP Engineering",
+  "interview_type": "Hiring Manager",
+  "prep_notes": "## Key Topics\n- Platform strategy\n- Team scaling\n\n## Their Background\n- Ex-Google SRE, 12 years",
+  "questions_to_ask": ["What's the team's biggest challenge right now?", "How do you measure platform success?"]
+}
+```
+
+**Debrief** (write debrief + outcome to an Interviews DB row):
+
+```json
+{
+  "command": "debrief",
+  "name": "CompanyName",
+  "date": "2026-03-15",
+  "interviewer": "Jane Smith — VP Engineering",
+  "interview_type": "Hiring Manager",
+  "outcome": "Passed",
+  "vibe": 4,
+  "debrief": "Strong conversation about platform strategy. She was engaged on the IDP work at 1KOMMA5°.",
+  "questions_they_asked": ["How did you handle the Terraform migration?", "Tell me about incident response at Mobimeo"],
+  "questions_i_asked": ["What's the on-call rotation?", "How is the platform team structured?"],
+  "follow_up": "Send architecture diagram of the IDP. Next round: system design with lead architect."
+}
+```
+
+Both `interview_prep` and `debrief` find or create the interview row by matching interviewer name and date. If no Interviews DB exists on the page, one is created automatically.
+
 Both `research` and `outreach` commands accept either `"name"` (looks up the page) or `"page_id"`. They replace existing sections — safe to re-run with updated data.
 
 The launchd agent (`com.grggls.notion-queue`) watches the `notion_queue/` directory. When a file appears, it runs `jobbing queue` via the project venv (`.venv/bin/python3 -m jobbing queue`). Processed files are moved to `notion_queue_results/` with timestamped result files. The plist lives at `~/Library/LaunchAgents/com.grggls.notion-queue.plist`. After adding new queue commands, run `pip install -e .` in the venv — the editable install picks up source changes immediately.
@@ -204,7 +238,7 @@ The `create` command is idempotent — if a page with the same company name exis
 
 **Page layout** (canonical order, enforced by code — matches application chronology):
 
-1. **Interviews** — inline child database (title: "Interviewer Name and Role", date: "Date"). Created once on new pages; preserved on updates.
+1. **Interviews** — inline child database with 5 properties: Title (interviewer name/role), Date, Type (select: Phone Screen, Technical, System Design, Behavioral, Panel, Hiring Manager, Executive, Take-Home), Vibe (select: 1–5), Outcome (select: Passed, Rejected, Pending, Withdrawn). Each row's page body holds Prep Notes and Debrief toggles. Created once on new pages; preserved on updates.
 2. *(divider)* — visual separator between database and content sections
 3. **Job Description** — toggle heading_3 with posting text (discovery: what's the role?)
 4. **Fit Assessment** — toggle heading_3 with score, reasoning, green/red flags, gaps, keywords (analysis: how well do we match?)
@@ -285,6 +319,20 @@ If proceeding:
 ## Step 4: Application Questions (if needed)
 
 If the application has additional questions, draft answers in `companies/{company}/{COMPANY}-APPLICATION-ANSWERS.md`.
+
+## Step 5: Interview Prep
+
+When Greg has an upcoming interview, use `/prep` to generate targeted preparation material.
+
+**Trigger:** "I have an interview with Thomas Roton at Bandcamp on Thursday, it's a technical screen" or "Prep me for Cozero — meeting the CTO next Tuesday."
+
+**What it generates:**
+1. Interviewer research (LinkedIn, background, connection points)
+2. Likely questions (tailored to interview type + interviewer seniority)
+3. Talking points (Experience to Highlight reframed for interview type)
+4. Questions to ask (tailored to this interviewer's role)
+
+**Output:** Prep Notes toggle in the Interviews DB row page body, via `interview_prep` queue command. If "Questions I Might Get Asked" is empty, auto-populates that section too.
 
 ## Iteration
 

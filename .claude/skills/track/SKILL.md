@@ -17,7 +17,7 @@ When Greg asks to change an application's status:
 {"command": "update", "page_id": "PAGE_ID", "status": "Applied"}
 ```
 
-Valid statuses: Targeted, Researching, Applied, Interviewing, Offered, Done
+Valid statuses: Targeted, Applied, Followed-Up, In Progress (Interviewing), Done
 
 Write to `notion_queue/` or use: `jobbing track update --page-id "PAGE_ID" --status "Applied"`
 
@@ -72,7 +72,7 @@ Replace the "Questions I Might Get Asked" section (Q as bullet, A as nested sub-
 
 ### Update Questions To Ask
 
-Replace the "Questions To Ask In An Interview" section:
+Replace the "Questions to Ask" section:
 
 ```json
 {
@@ -104,6 +104,41 @@ Replace the "Questions To Ask In An Interview" section:
 - Create duplicate tracker entries — check if one already exists before creating
 - Modify status to "Done" without a conclusion — always include the outcome text
 
+### Interview Prep
+
+Write prep notes to an Interviews DB row (finds or creates the row):
+
+```json
+{
+  "command": "interview_prep",
+  "name": "CompanyName",
+  "date": "2026-03-15",
+  "interviewer": "Jane Smith — VP Engineering",
+  "interview_type": "Hiring Manager",
+  "prep_notes": "## Key Topics\n- Platform strategy\n- Team scaling",
+  "questions_to_ask": ["What's the team's biggest challenge right now?"]
+}
+```
+
+### Debrief
+
+Write debrief + outcome after an interview:
+
+```json
+{
+  "command": "debrief",
+  "name": "CompanyName",
+  "date": "2026-03-15",
+  "interviewer": "Jane Smith — VP Engineering",
+  "outcome": "Passed",
+  "vibe": 4,
+  "debrief": "Strong conversation about platform strategy.",
+  "questions_they_asked": ["How did you handle the Terraform migration?"],
+  "questions_i_asked": ["What's the on-call rotation?"],
+  "follow_up": "Send architecture diagram. Next round: system design."
+}
+```
+
 ## CLI Reference
 
 ```bash
@@ -114,3 +149,9 @@ jobbing track research --name "Company" --research "Finding 1" "Finding 2" [--dr
 jobbing track outreach --name "Company" --contacts-json contacts.json [--dry-run]
 jobbing queue  # process all pending queue files
 ```
+
+## Related Skills
+
+- `/analyze` — Fit assessment (always the first step)
+- `/apply` — Full application workflow (Notion entry + JSON + PDFs)
+- `/outreach` — LinkedIn contact research and messages
