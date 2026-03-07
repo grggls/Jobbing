@@ -393,6 +393,30 @@ After one or more interview rounds, the original `/analyze` score may no longer 
 
 **Greg approves before writing.** The updated assessment is presented with a before/after comparison. Greg confirms before the queue file is written.
 
+## Step 9: Decision Comparison
+
+When multiple companies reach the offer stage or Greg needs a structured decision framework, use `/compare` to produce a weighted side-by-side analysis.
+
+**Trigger:** "Compare Bandcamp and Cozero" or "Compare my top three."
+
+**Inputs:** Tracker pages for specified companies — Fit Assessment, debrief notes, company research, salary data, vibe ratings, interview outcomes.
+
+**Dimensions** (weighted):
+
+| Dimension         | Weight |
+| ----------------- | ------ |
+| Compensation | High |
+| Technical Fit | High |
+| Team & Culture | Medium |
+| Mission Alignment | Medium |
+| Growth Trajectory | Medium |
+| Remote & Location | Low |
+| Risk Factors | Low |
+
+**Output:** A Markdown comparison document saved to `companies/comparison-{date}.md` with a summary table, dimension deep-dives with evidence, and a synthesis with tradeoffs. Not a single "winner" — structured tradeoffs for Greg to weigh.
+
+**Read-only.** No Notion writes. Greg makes the final decision.
+
 ## Iteration
 
 When Greg reads a PDF and wants changes:
