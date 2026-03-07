@@ -155,3 +155,5 @@ jobbing queue  # process all pending queue files
 - `/analyze` — Fit assessment (always the first step)
 - `/apply` — Full application workflow (Notion entry + JSON + PDFs)
 - `/outreach` — LinkedIn contact research and messages
+- `/prep` — Interview prep generation (run before interview)
+- `/debrief` — Post-interview debrief capture (run after interview)

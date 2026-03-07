@@ -334,6 +334,24 @@ When Greg has an upcoming interview, use `/prep` to generate targeted preparatio
 
 **Output:** Prep Notes toggle in the Interviews DB row page body, via `interview_prep` queue command. If "Questions I Might Get Asked" is empty, auto-populates that section too.
 
+## Step 6: Post-Interview Debrief
+
+After an interview, use `/debrief` to capture what happened while the conversation is fresh. Greg dumps raw thoughts; Claude structures them into the Interviews DB row.
+
+**Trigger:** "Debrief FICO — just talked to Jess Wilson" or "Quick debrief on the Cozero technical screen."
+
+**What it captures:**
+
+1. Questions they asked
+2. What landed (positive reactions, engagement)
+3. What stumbled (under-prepared areas, caught off guard)
+4. What you learned (new info about role, team, company)
+5. Updated read (fit score reassessment warranted?)
+6. Follow-up needed (action items, next steps, timeline)
+7. Vibe (1–5 gut-feel rating)
+
+**Output:** Debrief toggle in the Interviews DB row page body, plus Vibe and Outcome property updates, via `debrief` queue command.
+
 ## Iteration
 
 When Greg reads a PDF and wants changes:

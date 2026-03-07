@@ -29,6 +29,7 @@ Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analy
 - **apply** — Full application workflow. Notion entry → tailored JSON → PDFs → ATS check. Run after analyze and Greg's go decision.
 - **outreach** — LinkedIn contact research. Drafts connection request messages. Run after applying.
 - **prep** — Interview prep generation. Researches interviewer, generates likely questions, talking points, and questions to ask. Run when an interview is scheduled.
+- **debrief** — Post-interview debrief capture. Greg dumps raw thoughts, Claude structures them into the Interviews DB row. Run right after an interview.
 - **track** — Tracker operations. Status updates, research, highlights, conclusions.
 - **scoring** — Tunable scoring guidelines. Component weights, thresholds, domain/tech matching rules. Referenced by analyze, disaggregate, and scan.
 - **scan** — Job board scanner. Python fetches boards, Claude extracts and scores postings in-conversation. No API key needed.
@@ -95,7 +96,8 @@ Full details in WORKFLOW.md. The short version:
 3. **Application answers** — If the application has extra questions, draft `companies/{company}/{COMPANY}-APPLICATION-ANSWERS.md`.
 4. **`/outreach`** — After applying, research LinkedIn contacts and draft messages.
 5. **`/prep`** — Interview scheduled. Research interviewer, generate prep, write to Interviews DB.
-6. **`/track`** — Status updates, research, highlights — all tracker operations.
+6. **`/debrief`** — After interview. Capture what happened, structure into Interviews DB row.
+7. **`/track`** — Status updates, research, highlights — all tracker operations.
 
 ## Critical Rules
 
