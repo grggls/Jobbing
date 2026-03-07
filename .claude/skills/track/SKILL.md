@@ -139,6 +139,18 @@ Write debrief + outcome after an interview:
 }
 ```
 
+### Follow-Up Check
+
+Check all "In Progress (Interviewing)" entries for staleness:
+
+```bash
+jobbing track followup                    # check with default threshold (5 days)
+jobbing track followup --threshold 7      # override threshold
+jobbing track followup --save             # save report to notion_queue_results/
+```
+
+Or invoke conversationally via `/followup` for a richer interactive summary with suggested actions.
+
 ## CLI Reference
 
 ```bash
@@ -147,6 +159,7 @@ jobbing track update --page-id "ID" --status "Applied" [--dry-run]
 jobbing track highlights --page-id "ID" --highlights "Bullet 1" "Bullet 2" [--dry-run]
 jobbing track research --name "Company" --research "Finding 1" "Finding 2" [--dry-run]
 jobbing track outreach --name "Company" --contacts-json contacts.json [--dry-run]
+jobbing track followup [--threshold N] [--save]
 jobbing queue  # process all pending queue files
 ```
 
@@ -157,3 +170,4 @@ jobbing queue  # process all pending queue files
 - `/outreach` — LinkedIn contact research and messages
 - `/prep` — Interview prep generation (run before interview)
 - `/debrief` — Post-interview debrief capture (run after interview)
+- `/followup` — Follow-up cadence monitor (check for stale conversations)

@@ -87,6 +87,9 @@ class Config:
     # Scoring
     score_threshold: int = 60
 
+    # Follow-up cadence
+    followup_threshold_days: int = 5
+
     @classmethod
     def load(cls, project_dir: Path | None = None) -> Config:
         """Load configuration from environment, .env, and defaults.
@@ -113,6 +116,13 @@ class Config:
         # Tracker backend from env
         backend = os.environ.get("TRACKER_BACKEND", "notion")
 
+        # Follow-up cadence threshold
+        followup_days = int(
+            _load_key_from_env("FOLLOWUP_THRESHOLD_DAYS")
+            or _load_key_from_dotenv("FOLLOWUP_THRESHOLD_DAYS", env_path)
+            or "5"
+        )
+
         return cls(
             project_dir=project_dir,
             notion_api_key=notion_key,
@@ -121,6 +131,7 @@ class Config:
             ),
             tracker_backend=backend,
             score_threshold=threshold,
+            followup_threshold_days=followup_days,
         )
 
     # --- Derived paths ---

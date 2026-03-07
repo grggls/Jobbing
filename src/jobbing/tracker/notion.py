@@ -1946,6 +1946,214 @@ class NotionTracker:
             "details": results,
         }
 
+    # --- Follow-up cadence monitor ---
+
+    def check_followups(self, threshold_days: int = 5) -> list[dict]:
+        """Check all 'In Progress (Interviewing)' entries for staleness.
+
+        For each active company, reads the Interviews DB to find the most
+        recent interview date and calculates days since last activity.
+
+        Returns a list of dicts sorted by days_since (most stale first):
+            {
+                "name": str,
+                "page_id": str,
+                "status": "stale" | "active" | "no_data",
+                "days_since": int | None,
+                "last_date": str | None,       # ISO date
+                "last_interviewer": str | None,
+                "last_type": str | None,
+                "follow_up": str | None,        # from most recent debrief
+                "threshold": int,
+            }
+        """
+        from datetime import date as date_type
+
+        today = date_type.today()
+
+        # Query only "In Progress (Interviewing)" pages
+        url = f"{NOTION_BASE_URL}/databases/{self._database_id}/query"
+        payload: dict[str, Any] = {
+            "filter": {
+                "property": "Status",
+                "select": {"equals": Status.IN_PROGRESS.value},
+            },
+            "page_size": 100,
+        }
+        response = self._request("POST", url, payload)
+        pages = [
+            p for p in response.get("results", []) if not p.get("archived")
+        ]
+
+        results: list[dict] = []
+
+        for page in pages:
+            app = self._page_to_application(page)
+            page_id = page["id"]
+
+            interviews = self.get_interviews(page_id)
+
+            if not interviews:
+                # No interviews logged — check Start Date as fallback
+                days = None
+                if app.start_date:
+                    days = (today - app.start_date).days
+                results.append({
+                    "name": app.name,
+                    "page_id": page_id,
+                    "status": "no_data",
+                    "days_since": days,
+                    "last_date": None,
+                    "last_interviewer": None,
+                    "last_type": None,
+                    "follow_up": None,
+                    "threshold": threshold_days,
+                })
+                continue
+
+            # Find most recent interview by date
+            dated = [
+                iv for iv in interviews if iv.date
+            ]
+            if not dated:
+                results.append({
+                    "name": app.name,
+                    "page_id": page_id,
+                    "status": "no_data",
+                    "days_since": None,
+                    "last_date": None,
+                    "last_interviewer": None,
+                    "last_type": None,
+                    "follow_up": None,
+                    "threshold": threshold_days,
+                })
+                continue
+
+            most_recent = max(dated, key=lambda iv: iv.date)
+            last_date = date_type.fromisoformat(most_recent.date)
+            days_since = (today - last_date).days
+
+            # Future dates = upcoming interview scheduled
+            if days_since < 0:
+                status = "upcoming"
+            elif days_since > threshold_days:
+                status = "stale"
+            else:
+                status = "active"
+
+            results.append({
+                "name": app.name,
+                "page_id": page_id,
+                "status": status,
+                "days_since": days_since,
+                "last_date": most_recent.date,
+                "last_interviewer": (
+                    most_recent.interviewers[0]
+                    if most_recent.interviewers
+                    else None
+                ),
+                "last_type": most_recent.interview_type or None,
+                "follow_up": most_recent.follow_up or None,
+                "threshold": threshold_days,
+            })
+
+        # Sort: stale first (by days_since desc), then active, upcoming, no_data
+        def _sort_key(r: dict) -> tuple:
+            order = {"stale": 0, "active": 1, "upcoming": 2, "no_data": 3}
+            days = r.get("days_since")
+            return (order.get(r["status"], 4), -(days or 0))
+
+        results.sort(key=_sort_key)
+        return results
+
+    def format_followup_report(
+        self, results: list[dict], threshold_days: int = 5
+    ) -> str:
+        """Format check_followups() results into a readable report."""
+        from datetime import date as date_type
+
+        today = date_type.today().isoformat()
+
+        stale = [r for r in results if r["status"] == "stale"]
+        active = [r for r in results if r["status"] == "active"]
+        upcoming = [r for r in results if r["status"] == "upcoming"]
+        no_data = [r for r in results if r["status"] == "no_data"]
+
+        lines: list[str] = []
+        lines.append(f"## Follow-Up Check — {today}")
+        lines.append(f"Threshold: {threshold_days} days\n")
+
+        if stale:
+            lines.append(f"### Needs Attention ({len(stale)} companies)\n")
+            for r in stale:
+                lines.append(
+                    f"**{r['name']}** — {r['days_since']} days since last contact"
+                )
+                parts = []
+                if r["last_type"]:
+                    parts.append(r["last_type"])
+                if r["last_interviewer"]:
+                    parts.append(f"with {r['last_interviewer']}")
+                if r["last_date"]:
+                    parts.append(f"({r['last_date']})")
+                if parts:
+                    lines.append(f"  Last: {' '.join(parts)}")
+                if r["follow_up"]:
+                    lines.append(f"  Outstanding: {r['follow_up']}")
+                lines.append("")
+
+        if active:
+            lines.append(f"### Recently Active ({len(active)} companies)\n")
+            for r in active:
+                lines.append(
+                    f"**{r['name']}** — {r['days_since']} days since last contact"
+                )
+                parts = []
+                if r["last_type"]:
+                    parts.append(r["last_type"])
+                if r["last_interviewer"]:
+                    parts.append(f"with {r['last_interviewer']}")
+                if r["last_date"]:
+                    parts.append(f"({r['last_date']})")
+                if parts:
+                    lines.append(f"  Last: {' '.join(parts)}")
+                lines.append("")
+
+        if upcoming:
+            lines.append(f"### Upcoming Interviews ({len(upcoming)} companies)\n")
+            for r in upcoming:
+                days_until = abs(r["days_since"])
+                lines.append(
+                    f"**{r['name']}** — interview in {days_until} days"
+                )
+                parts = []
+                if r["last_type"]:
+                    parts.append(r["last_type"])
+                if r["last_interviewer"]:
+                    parts.append(f"with {r['last_interviewer']}")
+                if r["last_date"]:
+                    parts.append(f"({r['last_date']})")
+                if parts:
+                    lines.append(f"  Next: {' '.join(parts)}")
+                lines.append("")
+
+        if no_data:
+            lines.append(f"### No Interview Data ({len(no_data)} companies)\n")
+            for r in no_data:
+                line = f"**{r['name']}** — Status is \"In Progress\" but no interviews logged"
+                if r["days_since"] is not None:
+                    line += f" (tracked {r['days_since']} days)"
+                lines.append(line)
+                lines.append("")
+
+        if not stale and not no_data:
+            lines.append(
+                "All active interview processes have recent activity. "
+                "Nothing needs follow-up right now."
+            )
+
+        return "\n".join(lines)
+
     @staticmethod
     def _task_to_scoring_result(task: dict) -> ScoringResult:
         """Convert a queue task JSON dict to a ScoringResult."""

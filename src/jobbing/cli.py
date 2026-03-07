@@ -112,6 +112,30 @@ def _track_research(args: argparse.Namespace, config: Config) -> None:
     print(f"Research updated on: {page_id}")
 
 
+def _track_followup(args: argparse.Namespace, config: Config) -> None:
+    """Check active interview processes for staleness."""
+    from jobbing.tracker.notion import NotionTracker
+
+    tracker = NotionTracker(config)
+    threshold = args.threshold or config.followup_threshold_days
+
+    results = tracker.check_followups(threshold_days=threshold)
+    report = tracker.format_followup_report(results, threshold_days=threshold)
+
+    print(report)
+
+    # Optionally write to results file
+    if args.save:
+        from datetime import date as date_type
+
+        results_dir = config.queue_results_dir
+        results_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"followup-{date_type.today().isoformat()}.md"
+        filepath = results_dir / filename
+        filepath.write_text(report + "\n")
+        print(f"\nSaved to: {filepath}")
+
+
 def _track_outreach(args: argparse.Namespace, config: Config) -> None:
     """Replace outreach contacts on a tracker entry."""
     from jobbing.tracker import get_tracker
@@ -500,6 +524,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_research.add_argument("--research", nargs="+", required=True, help="Research bullets")
     p_research.add_argument("--dry-run", action="store_true", dest="dry_run")
 
+    # track followup
+    p_followup = track_subs.add_parser("followup", help="Check for stale interview processes")
+    p_followup.add_argument("--threshold", type=int, help="Days before flagging as stale (default: from .env or 5)")
+    p_followup.add_argument("--save", action="store_true", help="Save report to notion_queue_results/")
+
     # track outreach
     p_outreach = track_subs.add_parser("outreach", help="Replace outreach contacts")
     p_outreach_id = p_outreach.add_mutually_exclusive_group(required=True)
@@ -557,6 +586,7 @@ def main() -> None:
             "highlights": _track_highlights,
             "research": _track_research,
             "outreach": _track_outreach,
+            "followup": _track_followup,
         }
         handler = dispatch[args.track_command]
         handler(args, config)

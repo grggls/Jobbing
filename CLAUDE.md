@@ -30,6 +30,7 @@ Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analy
 - **outreach** — LinkedIn contact research. Drafts connection request messages. Run after applying.
 - **prep** — Interview prep generation. Researches interviewer, generates likely questions, talking points, and questions to ask. Run when an interview is scheduled.
 - **debrief** — Post-interview debrief capture. Greg dumps raw thoughts, Claude structures them into the Interviews DB row. Run right after an interview.
+- **followup** — Follow-up cadence monitor. Checks all "In Progress (Interviewing)" entries for staleness, surfaces stale conversations with suggested actions. Read-only, no auto-actions.
 - **track** — Tracker operations. Status updates, research, highlights, conclusions.
 - **scoring** — Tunable scoring guidelines. Component weights, thresholds, domain/tech matching rules. Referenced by analyze, disaggregate, and scan.
 - **scan** — Job board scanner. Python fetches boards, Claude extracts and scores postings in-conversation. No API key needed.
@@ -59,8 +60,11 @@ Jobbing/
 ├── .claude/skills/        ← Claude Code slash commands
 │   ├── analyze/SKILL.md      ← /analyze — fit assessment
 │   ├── apply/SKILL.md        ← /apply — full application workflow
+│   ├── debrief/SKILL.md      ← /debrief — post-interview debrief
 │   ├── disaggregate/SKILL.md ← /disaggregate — aggregator spam parser
+│   ├── followup/SKILL.md     ← /followup — follow-up cadence monitor
 │   ├── outreach/SKILL.md     ← /outreach — LinkedIn contact research
+│   ├── prep/SKILL.md         ← /prep — interview prep generation
 │   ├── scan/SKILL.md         ← /scan — job board scanner
 │   ├── scoring/SKILL.md      ← /scoring — tunable scoring guidelines
 │   └── track/SKILL.md        ← /track — tracker operations
@@ -155,6 +159,8 @@ jobbing track update --page-id "PAGE_ID" --status "Applied"
 jobbing track highlights --page-id "PAGE_ID" --highlights "Bullet 1" "Bullet 2"
 jobbing track research --name "Company" --research "Finding 1" "Finding 2"
 jobbing track outreach --name "Company" --contacts-json contacts.json
+jobbing track followup                              # check stale interview processes
+jobbing track followup --threshold 7 --save         # custom threshold + save report
 jobbing queue   # process all pending queue files
 jobbing pdf {company}
 jobbing scan bookmarks                              # list all bookmarks by category

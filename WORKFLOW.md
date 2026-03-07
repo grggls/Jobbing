@@ -352,6 +352,31 @@ After an interview, use `/debrief` to capture what happened while the conversati
 
 **Output:** Debrief toggle in the Interviews DB row page body, plus Vibe and Outcome property updates, via `debrief` queue command.
 
+## Step 7: Follow-Up Cadence Monitor
+
+Periodically check all active interview processes for staleness. Use `/followup` conversationally or `jobbing track followup` from CLI.
+
+**Trigger:** "Any stale conversations?", "Check my follow-ups", or run `jobbing track followup`.
+
+**What it checks:**
+
+1. All applications with status "In Progress (Interviewing)"
+2. For each, reads the Interviews DB to find the most recent interview date
+3. Calculates days since last activity
+4. Flags companies exceeding the threshold (default: 5 days, configurable via `FOLLOWUP_THRESHOLD_DAYS` in `.env`)
+
+**Output:** A summary sorted by staleness — stale companies first with suggested follow-up actions, then recently active companies, then any with no interview data logged.
+
+**No auto-actions.** This is a read-only check. Greg decides what to do based on the summary.
+
+**CLI:**
+
+```bash
+jobbing track followup                    # default threshold (5 days)
+jobbing track followup --threshold 7      # custom threshold
+jobbing track followup --save             # save report to notion_queue_results/
+```
+
 ## Iteration
 
 When Greg reads a PDF and wants changes:
