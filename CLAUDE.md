@@ -128,7 +128,7 @@ Full details in WORKFLOW.md. The short version:
 
 The queue is the only reliable write path. Write JSON to `notion_queue/` and the launchd agent on Greg's Mac processes it automatically. Do not attempt Notion MCP writes — known Zod serialization bugs on every write tool.
 
-The queue `create` command builds template-like scaffolding automatically: six toggle heading_3 sections (Job Description, Fit Assessment, Company Research, Experience to Highlight, Questions I Might Get Asked, Questions To Ask In An Interview) plus an inline Interviews database. If `score` is included, it also sets the Score number property.
+The queue `create` command builds template-like scaffolding automatically: seven toggle heading_3 sections (Job Description, Fit Assessment, Company Research, Experience to Highlight, Outreach Contacts, Questions I Might Get Asked, Questions to Ask) plus an inline Interviews database. If `score` is included, it also sets the Score number property.
 
 ```json
 {"command": "create", "name": "Company", "position": "Role", "date": "2026-02-20", "job_description": "Full posting text...", ...}

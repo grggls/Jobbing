@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
-from dataclasses import asdict
 from datetime import date
 from typing import Any
 
@@ -25,7 +24,6 @@ from jobbing.models import (
     ScoringResult,
     Status,
 )
-
 
 # ---------------------------------------------------------------------------
 # Exceptions
@@ -58,35 +56,35 @@ NOTION_BASE_URL = "https://api.notion.com/v1"
 # ---------------------------------------------------------------------------
 
 
-def _title(text: str) -> dict:
+def _title(text: str) -> dict[str, Any]:
     return {"title": [{"text": {"content": text}}]}
 
 
-def _rich_text(text: str) -> dict:
+def _rich_text(text: str) -> dict[str, Any]:
     return {"rich_text": [{"text": {"content": text}}]}
 
 
-def _select(name: str) -> dict:
+def _select(name: str) -> dict[str, Any]:
     return {"select": {"name": name}}
 
 
-def _multi_select(names: list[str]) -> dict:
+def _multi_select(names: list[str]) -> dict[str, Any]:
     return {"multi_select": [{"name": n} for n in names]}
 
 
-def _number(value: int | float) -> dict:
+def _number(value: int | float) -> dict[str, Any]:
     return {"number": value}
 
 
-def _date(iso_date: str) -> dict:
+def _date(iso_date: str) -> dict[str, Any]:
     return {"date": {"start": iso_date}}
 
 
-def _divider_block() -> dict:
+def _divider_block() -> dict[str, Any]:
     return {"object": "block", "type": "divider", "divider": {}}
 
 
-def _parse_inline_markdown(text: str) -> list[dict]:
+def _parse_inline_markdown(text: str) -> list[dict[str, Any]]:
     """Parse **bold** and *italic* markers into Notion rich_text segments.
 
     Handles nested **bold** and *italic* markers. Returns a list of
@@ -95,7 +93,7 @@ def _parse_inline_markdown(text: str) -> list[dict]:
     """
     import re
 
-    segments: list[dict] = []
+    segments: list[dict[str, Any]] = []
     # Match **bold** first, then *italic* (non-greedy, no nesting across types)
     pattern = re.compile(r"(\*\*(.+?)\*\*|\*(.+?)\*)")
     pos = 0
@@ -104,9 +102,7 @@ def _parse_inline_markdown(text: str) -> list[dict]:
         if m.start() > pos:
             plain = text[pos : m.start()]
             if plain:
-                segments.append(
-                    {"type": "text", "text": {"content": plain}}
-                )
+                segments.append({"type": "text", "text": {"content": plain}})
         if m.group(2) is not None:
             # **bold**
             segments.append(
@@ -130,16 +126,14 @@ def _parse_inline_markdown(text: str) -> list[dict]:
     if pos < len(text):
         remaining = text[pos:]
         if remaining:
-            segments.append(
-                {"type": "text", "text": {"content": remaining}}
-            )
+            segments.append({"type": "text", "text": {"content": remaining}})
     # If no markdown found, return single plain segment
     if not segments:
         segments.append({"type": "text", "text": {"content": text}})
     return segments
 
 
-def _heading2_block(text: str) -> dict:
+def _heading2_block(text: str) -> dict[str, Any]:
     return {
         "object": "block",
         "type": "heading_2",
@@ -149,7 +143,7 @@ def _heading2_block(text: str) -> dict:
     }
 
 
-def _heading3_block(text: str) -> dict:
+def _heading3_block(text: str) -> dict[str, Any]:
     return {
         "object": "block",
         "type": "heading_3",
@@ -159,7 +153,7 @@ def _heading3_block(text: str) -> dict:
     }
 
 
-def _paragraph_block(text: str) -> dict:
+def _paragraph_block(text: str) -> dict[str, Any]:
     """A paragraph block with inline markdown support (**bold**, *italic*)."""
     return {
         "object": "block",
@@ -170,7 +164,7 @@ def _paragraph_block(text: str) -> dict:
     }
 
 
-def _toggle_heading3_block(text: str, children: list[dict]) -> dict:
+def _toggle_heading3_block(text: str, children: list[dict[str, Any]]) -> dict[str, Any]:
     """A heading_3 with is_toggleable=true and nested children."""
     return {
         "object": "block",
@@ -183,7 +177,7 @@ def _toggle_heading3_block(text: str, children: list[dict]) -> dict:
     }
 
 
-def _bullet_block(text: str) -> dict:
+def _bullet_block(text: str) -> dict[str, Any]:
     return {
         "object": "block",
         "type": "bulleted_list_item",
@@ -193,7 +187,7 @@ def _bullet_block(text: str) -> dict:
     }
 
 
-def _qa_bullet_block(question: str, answer: str) -> dict:
+def _qa_bullet_block(question: str, answer: str) -> dict[str, Any]:
     """A bullet for the question with a nested sub-bullet for the answer."""
     return {
         "object": "block",
@@ -215,9 +209,9 @@ def _qa_bullet_block(question: str, answer: str) -> dict:
     }
 
 
-def _contact_bullet_block(contact: Contact) -> dict:
+def _contact_bullet_block(contact: Contact) -> dict[str, Any]:
     """Build a rich bullet block for a contact with nested sub-bullets."""
-    parts: list[dict] = [
+    parts: list[dict[str, Any]] = [
         {
             "type": "text",
             "text": {"content": contact.name},
@@ -228,23 +222,17 @@ def _contact_bullet_block(contact: Contact) -> dict:
         parts.append({"type": "text", "text": {"content": f" — {contact.title}"}})
     if contact.linkedin:
         url = contact.linkedin
-        display = (
-            url.replace("https://www.", "")
-            .replace("https://", "")
-            .replace("http://", "")
-        )
+        display = url.replace("https://www.", "").replace("https://", "").replace("http://", "")
         parts.append({"type": "text", "text": {"content": " — "}})
-        parts.append(
-            {"type": "text", "text": {"content": display, "link": {"url": url}}}
-        )
+        parts.append({"type": "text", "text": {"content": display, "link": {"url": url}}})
 
-    block: dict = {
+    block: dict[str, Any] = {
         "object": "block",
         "type": "bulleted_list_item",
         "bulleted_list_item": {"rich_text": parts},
     }
 
-    children: list[dict] = []
+    children: list[dict[str, Any]] = []
     if contact.note:
         children.append(
             {
@@ -279,7 +267,7 @@ def _contact_bullet_block(contact: Contact) -> dict:
     return block
 
 
-def _markdown_to_blocks(text: str) -> list[dict]:
+def _markdown_to_blocks(text: str) -> list[dict[str, Any]]:
     """Convert simple markdown to Notion blocks.
 
     Handles:
@@ -289,7 +277,7 @@ def _markdown_to_blocks(text: str) -> list[dict]:
     - blank lines → paragraph separation
     - everything else → paragraph
     """
-    blocks: list[dict] = []
+    blocks: list[dict[str, Any]] = []
     lines = text.split("\n")
     paragraph_lines: list[str] = []
 
@@ -318,9 +306,7 @@ def _markdown_to_blocks(text: str) -> list[dict]:
             _flush_paragraph()
             child = _bullet_block(stripped[2:])
             if blocks and blocks[-1].get("type") == "bulleted_list_item":
-                blocks[-1]["bulleted_list_item"].setdefault(
-                    "children", []
-                ).append(child)
+                blocks[-1]["bulleted_list_item"].setdefault("children", []).append(child)
             else:
                 blocks.append(child)
         elif stripped.startswith("- "):
@@ -361,13 +347,11 @@ class NotionTracker:
         }
 
     def _request(
-        self, method: str, url: str, payload: dict | None = None
+        self, method: str, url: str, payload: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """Send an HTTP request to the Notion API."""
         data = json.dumps(payload).encode("utf-8") if payload else None
-        req = urllib.request.Request(
-            url, data=data, headers=self._headers(), method=method
-        )
+        req = urllib.request.Request(url, data=data, headers=self._headers(), method=method)
 
         try:
             with urllib.request.urlopen(req) as resp:
@@ -383,15 +367,11 @@ class NotionTracker:
                 pass
             raise NotionAPIError(exc.code, message, url) from exc
         except urllib.error.URLError as exc:
-            raise NotionConnectionError(
-                f"Could not reach Notion API: {exc.reason}"
-            ) from exc
+            raise NotionConnectionError(f"Could not reach Notion API: {exc.reason}") from exc
 
     # --- Property mapping (single source of truth) ---
 
-    def _to_properties(
-        self, app: Application, *, include_name: bool = True
-    ) -> dict[str, Any]:
+    def _to_properties(self, app: Application, *, include_name: bool = True) -> dict[str, Any]:
         """Build Notion properties dict from an Application.
 
         This is the ONE place that maps domain fields to Notion property names.
@@ -430,7 +410,7 @@ class NotionTracker:
 
     # --- Page lookup ---
 
-    def _find_page(self, name: str) -> dict | None:
+    def _find_page(self, name: str) -> dict[str, Any] | None:
         """Query the database for a page matching company name."""
         payload = {
             "filter": {"property": "Name", "title": {"equals": name}},
@@ -448,7 +428,7 @@ class NotionTracker:
         if name:
             page = self._find_page(name)
             if page:
-                return page["id"]
+                return str(page["id"])
             raise ValueError(f"No Notion page found for company '{name}'")
         raise ValueError("Either app_id or name is required")
 
@@ -500,7 +480,7 @@ class NotionTracker:
         self,
         page_id: str,
         heading: str,
-        blocks: list[dict],
+        blocks: list[dict[str, Any]],
         heading_level: int = 3,
         toggle: bool = False,
     ) -> None:
@@ -514,8 +494,7 @@ class NotionTracker:
             all_blocks = [_toggle_heading3_block(heading, blocks)]
         else:
             heading_block = (
-                _heading2_block(heading) if heading_level == 2
-                else _heading3_block(heading)
+                _heading2_block(heading) if heading_level == 2 else _heading3_block(heading)
             )
             all_blocks = [heading_block] + blocks
         self._request(
@@ -567,15 +546,15 @@ class NotionTracker:
 
         # Build lookup: lowercased heading → canonical name
         managed_lower = {s.lower(): s for s in self.MANAGED_SECTIONS}
-        for alias_lower, canonical in self.SECTION_ALIASES.items():
-            managed_lower[alias_lower] = canonical
+        for alias_lower, canon in self.SECTION_ALIASES.items():
+            managed_lower[alias_lower] = canon
         existing: dict[str, Any] = {}
 
         # Track flat heading_2 sections (non-toggle)
         in_flat_section: str | None = None
         flat_bullets: list[str] = []
 
-        def _flush_flat():
+        def _flush_flat() -> None:
             nonlocal in_flat_section, flat_bullets
             if in_flat_section and flat_bullets:
                 existing[in_flat_section] = flat_bullets
@@ -588,38 +567,27 @@ class NotionTracker:
                 _flush_flat()
                 rt = block.get(block_type, {}).get("rich_text", [])
                 text = rt[0].get("text", {}).get("content", "") if rt else ""
-                canonical = managed_lower.get(text.lower())
-                if not canonical:
+                canonical_or_none = managed_lower.get(text.lower())
+                if not canonical_or_none:
                     continue
+                canonical: str = canonical_or_none
 
                 is_toggle = block.get(block_type, {}).get("is_toggleable", False)
                 has_children = block.get("has_children", False)
 
                 if is_toggle and has_children:
                     # Read toggle children from API
-                    children_url = (
-                        f"{NOTION_BASE_URL}/blocks/{block['id']}"
-                        f"/children?page_size=100"
-                    )
-                    children = self._request("GET", children_url).get(
-                        "results", []
-                    )
-                    existing[canonical] = self._parse_section_children(
-                        canonical, children
-                    )
+                    children_url = f"{NOTION_BASE_URL}/blocks/{block['id']}/children?page_size=100"
+                    children = self._request("GET", children_url).get("results", [])
+                    existing[canonical] = self._parse_section_children(canonical, children)
                 elif not is_toggle:
                     # Flat heading — collect sibling bullets
                     in_flat_section = canonical
                     flat_bullets = []
             elif in_flat_section:
                 if block_type == "bulleted_list_item":
-                    rt = block.get("bulleted_list_item", {}).get(
-                        "rich_text", []
-                    )
-                    text = "".join(
-                        seg.get("text", {}).get("content", "")
-                        for seg in rt
-                    )
+                    rt = block.get("bulleted_list_item", {}).get("rich_text", [])
+                    text = "".join(seg.get("text", {}).get("content", "") for seg in rt)
                     if text:
                         flat_bullets.append(text)
                 else:
@@ -629,19 +597,14 @@ class NotionTracker:
         return existing
 
     @staticmethod
-    def _parse_section_children(
-        section_name: str, children: list[dict]
-    ) -> Any:
+    def _parse_section_children(section_name: str, children: list[dict[str, Any]]) -> Any:
         """Parse toggle children into the appropriate Python structure."""
         if section_name == "Job Description":
             paragraphs: list[str] = []
             for child in children:
                 if child.get("type") == "paragraph":
                     rt = child.get("paragraph", {}).get("rich_text", [])
-                    text = "".join(
-                        seg.get("text", {}).get("content", "")
-                        for seg in rt
-                    )
+                    text = "".join(seg.get("text", {}).get("content", "") for seg in rt)
                     if text:
                         paragraphs.append(text)
             return "\n\n".join(paragraphs) if paragraphs else ""
@@ -650,13 +613,8 @@ class NotionTracker:
             qa_list: list[dict[str, str]] = []
             for child in children:
                 if child.get("type") == "bulleted_list_item":
-                    rt = child.get("bulleted_list_item", {}).get(
-                        "rich_text", []
-                    )
-                    question = "".join(
-                        seg.get("text", {}).get("content", "")
-                        for seg in rt
-                    )
+                    rt = child.get("bulleted_list_item", {}).get("rich_text", [])
+                    question = "".join(seg.get("text", {}).get("content", "") for seg in rt)
                     if not question:
                         continue
                     # Try to get nested answer sub-bullet
@@ -676,20 +634,12 @@ class NotionTracker:
             for child in children:
                 if child.get("type") == "paragraph":
                     rt = child.get("paragraph", {}).get("rich_text", [])
-                    text = "".join(
-                        seg.get("text", {}).get("content", "")
-                        for seg in rt
-                    )
+                    text = "".join(seg.get("text", {}).get("content", "") for seg in rt)
                     if text:
                         entries.append({"type": "paragraph", "text": text})
                 elif child.get("type") == "bulleted_list_item":
-                    rt = child.get("bulleted_list_item", {}).get(
-                        "rich_text", []
-                    )
-                    text = "".join(
-                        seg.get("text", {}).get("content", "")
-                        for seg in rt
-                    )
+                    rt = child.get("bulleted_list_item", {}).get("rich_text", [])
+                    text = "".join(seg.get("text", {}).get("content", "") for seg in rt)
                     if text:
                         entries.append({"type": "bullet", "text": text})
             return entries
@@ -699,10 +649,7 @@ class NotionTracker:
         for child in children:
             if child.get("type") == "bulleted_list_item":
                 rt = child.get("bulleted_list_item", {}).get("rich_text", [])
-                text = "".join(
-                    seg.get("text", {}).get("content", "")
-                    for seg in rt
-                )
+                text = "".join(seg.get("text", {}).get("content", "") for seg in rt)
                 if text:
                     items.append(text)
         return items
@@ -831,26 +778,23 @@ class NotionTracker:
         app: Application,
         preserved: dict[str, Any] | None = None,
     ) -> None:
-        """Add structured page body with five heading_3 toggle sections.
+        """Add structured page body with seven heading_3 toggle sections.
 
         When *preserved* is provided (update-existing path), any section
         without new data in *app* uses the preserved content instead of
         creating an empty placeholder. This prevents data loss on rebuild.
         """
         preserved = preserved or {}
-        blocks: list[dict] = []
+        blocks: list[dict[str, Any]] = []
 
         # Visual separator between Interviews DB and content sections
         blocks.append(_divider_block())
 
         # 1. Job Description (toggle heading)
         if app.job_description:
-            paragraphs = [
-                p.strip() for p in app.job_description.split("\n\n") if p.strip()
-            ]
-            if not paragraphs:
-                paragraphs = [app.job_description]
-            children = [_paragraph_block(p) for p in paragraphs]
+            children = _markdown_to_blocks(app.job_description)
+            if not children:
+                children = [_paragraph_block(app.job_description)]
         else:
             children = [_paragraph_block("")]
         blocks.append(_toggle_heading3_block("Job Description", children))
@@ -900,9 +844,7 @@ class NotionTracker:
             children = []
         if not children:
             children = [_bullet_block("")]
-        blocks.append(
-            _toggle_heading3_block("Outreach Contacts", children)
-        )
+        blocks.append(_toggle_heading3_block("Outreach Contacts", children))
 
         # 6. Questions I Might Get Asked — use preserved Q&A if available
         qa_items = preserved.get("Questions I Might Get Asked", [])
@@ -918,9 +860,7 @@ class NotionTracker:
             children = []
         if not children:
             children = [_bullet_block("")]
-        blocks.append(
-            _toggle_heading3_block("Questions I Might Get Asked", children)
-        )
+        blocks.append(_toggle_heading3_block("Questions I Might Get Asked", children))
 
         # 7. Questions to Ask — use preserved if available
         ask_items = preserved.get("Questions to Ask", [])
@@ -930,9 +870,7 @@ class NotionTracker:
             children = []
         if not children:
             children = [_bullet_block("")]
-        blocks.append(
-            _toggle_heading3_block("Questions to Ask", children)
-        )
+        blocks.append(_toggle_heading3_block("Questions to Ask", children))
 
         self._request(
             "PATCH",
@@ -1000,7 +938,7 @@ class NotionTracker:
                 },
             },
         )
-        return result["id"]
+        return str(result["id"])
 
     def update(self, app: Application) -> None:
         """Update an existing tracker entry."""
@@ -1050,29 +988,22 @@ class NotionTracker:
             {"properties": {"Follow on Linkedin": _select("No")}},
         )
 
-    def set_interview_questions(
-        self, app_id: str, questions: list[dict[str, str]]
-    ) -> None:
+    def set_interview_questions(self, app_id: str, questions: list[dict[str, str]]) -> None:
         """Replace 'Questions I Might Get Asked' section.
 
         Each dict has 'question' and 'answer' keys. Rendered as a bullet
         for the question with a nested sub-bullet for the answer.
         """
         page_id = app_id.replace("-", "")
-        blocks = [
-            _qa_bullet_block(q["question"], q["answer"]) for q in questions
-        ]
+        blocks = [_qa_bullet_block(q["question"], q["answer"]) for q in questions]
         self._append_section(page_id, "Questions I Might Get Asked", blocks, toggle=True)
 
     def set_job_description(self, app_id: str, job_description: str) -> None:
         """Replace 'Job Description' toggle section with posting text."""
         page_id = app_id.replace("-", "")
-        paragraphs = [
-            p.strip() for p in job_description.split("\n\n") if p.strip()
-        ]
-        if not paragraphs:
-            paragraphs = [job_description]
-        blocks = [_paragraph_block(p) for p in paragraphs]
+        blocks = _markdown_to_blocks(job_description)
+        if not blocks:
+            blocks = [_paragraph_block(job_description)]
         self._append_section(page_id, "Job Description", blocks, toggle=True)
 
     def set_fit_assessment(self, app_id: str, scoring: ScoringResult) -> None:
@@ -1088,9 +1019,9 @@ class NotionTracker:
         )
 
     @staticmethod
-    def _scoring_result_blocks(scoring: ScoringResult) -> list[dict]:
+    def _scoring_result_blocks(scoring: ScoringResult) -> list[dict[str, Any]]:
         """Build Notion blocks from a ScoringResult for the Fit Assessment section."""
-        blocks: list[dict] = []
+        blocks: list[dict[str, Any]] = []
         blocks.append(_paragraph_block(f"Score: {scoring.score}/100"))
         if scoring.reasoning:
             blocks.append(_paragraph_block(scoring.reasoning))
@@ -1133,7 +1064,7 @@ class NotionTracker:
             if block.get("type") == "child_database":
                 title = block.get("child_database", {}).get("title", "")
                 if title == "Interviews":
-                    return block["id"]
+                    return str(block["id"])
         return None
 
     def _find_interview_entry(
@@ -1146,17 +1077,21 @@ class NotionTracker:
 
         Returns the row's page ID or None.
         """
-        filters: list[dict] = []
+        filters: list[dict[str, Any]] = []
         if interviewer:
-            filters.append({
-                "property": "Interviewer Name and Role",
-                "title": {"contains": interviewer},
-            })
+            filters.append(
+                {
+                    "property": "Interviewer Name and Role",
+                    "title": {"contains": interviewer},
+                }
+            )
         if date:
-            filters.append({
-                "property": "Date",
-                "date": {"equals": date},
-            })
+            filters.append(
+                {
+                    "property": "Date",
+                    "date": {"equals": date},
+                }
+            )
         if not filters:
             return None
 
@@ -1190,24 +1125,22 @@ class NotionTracker:
                     "options": [
                         {"name": n}
                         for n in [
-                            "Phone Screen", "Technical", "System Design",
-                            "Behavioral", "Panel", "Hiring Manager",
-                            "Executive", "Take-Home",
+                            "Phone Screen",
+                            "Technical",
+                            "System Design",
+                            "Behavioral",
+                            "Panel",
+                            "Hiring Manager",
+                            "Executive",
+                            "Take-Home",
                         ]
                     ]
                 }
             },
-            "Vibe": {
-                "select": {
-                    "options": [{"name": str(i)} for i in range(1, 6)]
-                }
-            },
+            "Vibe": {"select": {"options": [{"name": str(i)} for i in range(1, 6)]}},
             "Outcome": {
                 "select": {
-                    "options": [
-                        {"name": n}
-                        for n in ["Passed", "Rejected", "Pending", "Withdrawn"]
-                    ]
+                    "options": [{"name": n} for n in ["Passed", "Rejected", "Pending", "Withdrawn"]]
                 }
             },
         }
@@ -1233,17 +1166,68 @@ class NotionTracker:
                 rt = block.get("heading_3", {}).get("rich_text", [])
                 text = rt[0].get("text", {}).get("content", "") if rt else ""
                 if text.lower() == heading_lower:
-                    self._request(
-                        "DELETE", f"{NOTION_BASE_URL}/blocks/{block['id']}"
-                    )
+                    self._request("DELETE", f"{NOTION_BASE_URL}/blocks/{block['id']}")
                     return
 
-    def _build_debrief_body(self, interview: Interview) -> list[dict]:
+    # Section headings that overlap between the debrief narrative text
+    # and the structured fields (questions_they_asked, questions_i_asked,
+    # follow_up).  When both are populated, strip these sections from
+    # the narrative to avoid duplication.
+    _DEBRIEF_STRIP_SECTIONS = {
+        "questions they asked",
+        "questions i asked",
+        "follow-up",
+        "follow-up needed",
+    }
+
+    def _strip_debrief_sections(self, text: str, interview: Interview) -> str:
+        """Remove sections from debrief markdown that will be added from fields.
+
+        Only strips a section if its corresponding structured field is populated.
+        This way, if someone writes a full narrative debrief with ## headings but
+        doesn't populate the separate JSON fields, everything still renders.
+        """
+        import re
+
+        # Build set of section names to strip (only if field is populated)
+        to_strip: set[str] = set()
+        if interview.questions_they_asked:
+            to_strip.update({"questions they asked"})
+        if interview.questions_i_asked:
+            to_strip.update({"questions i asked"})
+        if interview.follow_up:
+            to_strip.update({"follow-up", "follow-up needed"})
+
+        if not to_strip:
+            return text
+
+        lines = text.split("\n")
+        result: list[str] = []
+        skipping = False
+
+        for line in lines:
+            stripped = line.strip()
+            # Check if this line is a heading matching a strip section
+            heading_match = re.match(r"^#{1,3}\s+(.+)$", stripped)
+            if heading_match:
+                heading_text = heading_match.group(1).strip().lower()
+                if heading_text in to_strip:
+                    skipping = True
+                    continue
+                else:
+                    skipping = False
+            if not skipping:
+                result.append(line)
+
+        return "\n".join(result)
+
+    def _build_debrief_body(self, interview: Interview) -> list[dict[str, Any]]:
         """Build the block children for a Debrief toggle section."""
-        children: list[dict] = []
+        children: list[dict[str, Any]] = []
 
         if interview.debrief:
-            children.extend(_markdown_to_blocks(interview.debrief))
+            cleaned = self._strip_debrief_sections(interview.debrief, interview)
+            children.extend(_markdown_to_blocks(cleaned))
 
         if interview.questions_they_asked:
             children.append(_heading3_block("Questions They Asked"))
@@ -1280,9 +1264,7 @@ class NotionTracker:
 
         properties: dict[str, Any] = {}
         if interview.interviewers:
-            properties["Interviewer Name and Role"] = _title(
-                ", ".join(interview.interviewers)
-            )
+            properties["Interviewer Name and Role"] = _title(", ".join(interview.interviewers))
         if interview.date:
             properties["Date"] = _date(interview.date)
         if interview.interview_type:
@@ -1299,7 +1281,7 @@ class NotionTracker:
         result = self._request("POST", f"{NOTION_BASE_URL}/pages", payload)
         entry_id = result["id"]
 
-        body_blocks: list[dict] = []
+        body_blocks: list[dict[str, Any]] = []
         if interview.prep_notes:
             children = _markdown_to_blocks(interview.prep_notes)
             if not children:
@@ -1313,9 +1295,7 @@ class NotionTracker:
             or interview.follow_up
         ):
             debrief_children = self._build_debrief_body(interview)
-            body_blocks.append(
-                _toggle_heading3_block("Debrief", debrief_children)
-            )
+            body_blocks.append(_toggle_heading3_block("Debrief", debrief_children))
 
         if body_blocks:
             self._request(
@@ -1324,11 +1304,9 @@ class NotionTracker:
                 {"children": body_blocks},
             )
 
-        return entry_id
+        return str(entry_id)
 
-    def update_interview_entry(
-        self, entry_id: str, interview: Interview
-    ) -> None:
+    def update_interview_entry(self, entry_id: str, interview: Interview) -> None:
         """Update an existing Interviews DB row.
 
         Updates properties via PATCH. For page body content, uses
@@ -1361,9 +1339,7 @@ class NotionTracker:
             self._request(
                 "PATCH",
                 f"{NOTION_BASE_URL}/blocks/{entry_id}/children",
-                {"children": [
-                    _toggle_heading3_block("Prep Notes", children)
-                ]},
+                {"children": [_toggle_heading3_block("Prep Notes", children)]},
             )
 
         if (
@@ -1377,21 +1353,17 @@ class NotionTracker:
             self._request(
                 "PATCH",
                 f"{NOTION_BASE_URL}/blocks/{entry_id}/children",
-                {"children": [
-                    _toggle_heading3_block("Debrief", debrief_children)
-                ]},
+                {"children": [_toggle_heading3_block("Debrief", debrief_children)]},
             )
 
     @staticmethod
-    def _blocks_to_text(blocks: list[dict]) -> str:
+    def _blocks_to_text(blocks: list[dict[str, Any]]) -> str:
         """Convert Notion blocks back to plain text (lossy)."""
         parts: list[str] = []
         for block in blocks:
             block_type = block.get("type", "")
             rt_data = block.get(block_type, {}).get("rich_text", [])
-            text = "".join(
-                seg.get("text", {}).get("content", "") for seg in rt_data
-            )
+            text = "".join(seg.get("text", {}).get("content", "") for seg in rt_data)
             if not text:
                 continue
             if block_type == "bulleted_list_item":
@@ -1404,7 +1376,7 @@ class NotionTracker:
 
     @staticmethod
     def _parse_debrief_body(
-        children: list[dict],
+        children: list[dict[str, Any]],
     ) -> tuple[str, list[str], list[str], str]:
         """Parse Debrief toggle children into structured fields.
 
@@ -1422,16 +1394,12 @@ class NotionTracker:
 
             if child_type == "heading_3":
                 rt = child.get("heading_3", {}).get("rich_text", [])
-                text = "".join(
-                    seg.get("text", {}).get("content", "") for seg in rt
-                )
+                text = "".join(seg.get("text", {}).get("content", "") for seg in rt)
                 current_section = text
                 continue
 
             rt_data = child.get(child_type, {}).get("rich_text", [])
-            text = "".join(
-                seg.get("text", {}).get("content", "") for seg in rt_data
-            )
+            text = "".join(seg.get("text", {}).get("content", "") for seg in rt_data)
             if not text:
                 continue
 
@@ -1464,7 +1432,7 @@ class NotionTracker:
 
         url = f"{NOTION_BASE_URL}/databases/{db_id}/query"
         payload: dict[str, Any] = {"page_size": 100}
-        rows: list[dict] = []
+        rows: list[dict[str, Any]] = []
 
         while True:
             result = self._request("POST", url, payload)
@@ -1478,14 +1446,8 @@ class NotionTracker:
             props = row.get("properties", {})
 
             # Title (interviewer)
-            title_list = props.get(
-                "Interviewer Name and Role", {}
-            ).get("title", [])
-            interviewer = (
-                title_list[0].get("text", {}).get("content", "")
-                if title_list
-                else ""
-            )
+            title_list = props.get("Interviewer Name and Role", {}).get("title", [])
+            interviewer = title_list[0].get("text", {}).get("content", "") if title_list else ""
 
             # Date
             date_val = props.get("Date", {}).get("date")
@@ -1509,32 +1471,18 @@ class NotionTracker:
             follow_up = ""
 
             try:
-                row_url = (
-                    f"{NOTION_BASE_URL}/blocks/{row['id']}"
-                    f"/children?page_size=100"
-                )
-                row_children = self._request("GET", row_url).get(
-                    "results", []
-                )
+                row_url = f"{NOTION_BASE_URL}/blocks/{row['id']}/children?page_size=100"
+                row_children = self._request("GET", row_url).get("results", [])
                 for block in row_children:
                     if block.get("type") != "heading_3":
                         continue
                     rt = block.get("heading_3", {}).get("rich_text", [])
-                    heading = (
-                        rt[0].get("text", {}).get("content", "")
-                        if rt
-                        else ""
-                    )
+                    heading = rt[0].get("text", {}).get("content", "") if rt else ""
                     if not block.get("has_children"):
                         continue
 
-                    toggle_url = (
-                        f"{NOTION_BASE_URL}/blocks/{block['id']}"
-                        f"/children?page_size=100"
-                    )
-                    toggle_children = self._request(
-                        "GET", toggle_url
-                    ).get("results", [])
+                    toggle_url = f"{NOTION_BASE_URL}/blocks/{block['id']}/children?page_size=100"
+                    toggle_children = self._request("GET", toggle_url).get("results", [])
 
                     if heading == "Prep Notes":
                         prep_notes = self._blocks_to_text(toggle_children)
@@ -1565,14 +1513,14 @@ class NotionTracker:
 
         return interviews
 
-    def migrate_all_interviews_dbs(self) -> list[dict]:
+    def migrate_all_interviews_dbs(self) -> list[dict[str, Any]]:
         """Add Type/Vibe/Outcome columns to all existing Interviews DBs.
 
         Idempotent — delegates to _ensure_interviews_db_schema() per page.
         For pages without an Interviews DB, creates one.
         """
         all_apps = self.list_all()
-        results: list[dict] = []
+        results: list[dict[str, Any]] = []
 
         for app in all_apps:
             if not app.page_id:
@@ -1580,12 +1528,14 @@ class NotionTracker:
             page_id = app.page_id.replace("-", "")
             had_db = self._find_interviews_db(page_id) is not None
             db_id = self._ensure_interviews_db_schema(page_id)
-            results.append({
-                "name": app.name,
-                "page_id": page_id,
-                "action": "patched_existing_db" if had_db else "created_new_db",
-                "db_id": db_id,
-            })
+            results.append(
+                {
+                    "name": app.name,
+                    "page_id": page_id,
+                    "action": "patched_existing_db" if had_db else "created_new_db",
+                    "db_id": db_id,
+                }
+            )
 
         return results
 
@@ -1610,7 +1560,7 @@ class NotionTracker:
     # --- Page → Application mapping ---
 
     @staticmethod
-    def _page_to_application(page: dict) -> Application:
+    def _page_to_application(page: dict[str, Any]) -> Application:
         """Convert a Notion page object to an Application."""
         props = page.get("properties", {})
 
@@ -1718,7 +1668,7 @@ class NotionTracker:
         except Exception as exc:
             return {"file": filename, "status": "error", "message": str(exc)}
 
-    def _queue_create(self, task: dict, filename: str) -> dict:
+    def _queue_create(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
         app = self._task_to_application(task)
         was_existing = self._find_page(app.name) is not None
         page_id, sections_written = self.create(app)
@@ -1734,7 +1684,7 @@ class NotionTracker:
             "sections_written": sections_written,
         }
 
-    def _queue_update(self, task: dict, filename: str) -> dict:
+    def _queue_update(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
         page_id = task.get("page_id")
         if not page_id:
             raise ValueError("update command requires page_id")
@@ -1748,7 +1698,7 @@ class NotionTracker:
             "page_id": page_id.replace("-", ""),
         }
 
-    def _queue_highlights(self, task: dict, filename: str) -> dict:
+    def _queue_highlights(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
         page_id = task.get("page_id")
         if not page_id:
             raise ValueError("highlights command requires page_id")
@@ -1763,10 +1713,8 @@ class NotionTracker:
             "page_id": page_id.replace("-", ""),
         }
 
-    def _queue_research(self, task: dict, filename: str) -> dict:
-        page_id = self._resolve_page_id(
-            task.get("page_id"), task.get("name")
-        )
+    def _queue_research(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
+        page_id = self._resolve_page_id(task.get("page_id"), task.get("name"))
         research = task.get("research", [])
         if not research:
             raise ValueError("research command requires research list")
@@ -1778,10 +1726,8 @@ class NotionTracker:
             "page_id": page_id,
         }
 
-    def _queue_outreach(self, task: dict, filename: str) -> dict:
-        page_id = self._resolve_page_id(
-            task.get("page_id"), task.get("name")
-        )
+    def _queue_outreach(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
+        page_id = self._resolve_page_id(task.get("page_id"), task.get("name"))
         raw_contacts = task.get("contacts", [])
         if not raw_contacts:
             raise ValueError("outreach command requires contacts list")
@@ -1803,10 +1749,8 @@ class NotionTracker:
             "page_id": page_id,
         }
 
-    def _queue_interview_questions(self, task: dict, filename: str) -> dict:
-        page_id = self._resolve_page_id(
-            task.get("page_id"), task.get("name")
-        )
+    def _queue_interview_questions(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
+        page_id = self._resolve_page_id(task.get("page_id"), task.get("name"))
         questions = task.get("questions", [])
         if not questions:
             raise ValueError("interview_questions command requires questions list")
@@ -1818,10 +1762,8 @@ class NotionTracker:
             "page_id": page_id,
         }
 
-    def _queue_questions_to_ask(self, task: dict, filename: str) -> dict:
-        page_id = self._resolve_page_id(
-            task.get("page_id"), task.get("name")
-        )
+    def _queue_questions_to_ask(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
+        page_id = self._resolve_page_id(task.get("page_id"), task.get("name"))
         questions = task.get("questions", [])
         if not questions:
             raise ValueError("questions_to_ask command requires questions list")
@@ -1833,10 +1775,8 @@ class NotionTracker:
             "page_id": page_id,
         }
 
-    def _queue_job_description(self, task: dict, filename: str) -> dict:
-        page_id = self._resolve_page_id(
-            task.get("page_id"), task.get("name")
-        )
+    def _queue_job_description(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
+        page_id = self._resolve_page_id(task.get("page_id"), task.get("name"))
         job_description = task.get("job_description", "")
         if not job_description:
             raise ValueError("job_description command requires job_description text")
@@ -1848,10 +1788,8 @@ class NotionTracker:
             "page_id": page_id,
         }
 
-    def _queue_fit_assessment(self, task: dict, filename: str) -> dict:
-        page_id = self._resolve_page_id(
-            task.get("page_id"), task.get("name")
-        )
+    def _queue_fit_assessment(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
+        page_id = self._resolve_page_id(task.get("page_id"), task.get("name"))
         scoring = self._task_to_scoring_result(task)
         self.set_fit_assessment(page_id, scoring)
         return {
@@ -1861,10 +1799,8 @@ class NotionTracker:
             "page_id": page_id,
         }
 
-    def _queue_interview_prep(self, task: dict, filename: str) -> dict:
-        page_id = self._resolve_page_id(
-            task.get("page_id"), task.get("name")
-        )
+    def _queue_interview_prep(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
+        page_id = self._resolve_page_id(task.get("page_id"), task.get("name"))
         interviewer = task.get("interviewer", "")
         interview_date = task.get("date", "")
         if not interview_date:
@@ -1896,9 +1832,7 @@ class NotionTracker:
 
         # Optionally populate page-level "Questions I Might Get Asked"
         if task.get("interview_questions"):
-            self.set_interview_questions(
-                page_id, task["interview_questions"]
-            )
+            self.set_interview_questions(page_id, task["interview_questions"])
 
         return {
             "file": filename,
@@ -1908,10 +1842,8 @@ class NotionTracker:
             "entry_id": entry_id,
         }
 
-    def _queue_debrief(self, task: dict, filename: str) -> dict:
-        page_id = self._resolve_page_id(
-            task.get("page_id"), task.get("name")
-        )
+    def _queue_debrief(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
+        page_id = self._resolve_page_id(task.get("page_id"), task.get("name"))
         interviewer = task.get("interviewer", "")
         interview_date = task.get("date", "")
         if not interview_date:
@@ -1957,7 +1889,7 @@ class NotionTracker:
             "entry_id": entry_id,
         }
 
-    def _queue_migrate_interviews(self, task: dict, filename: str) -> dict:
+    def _queue_migrate_interviews(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
         results = self.migrate_all_interviews_dbs()
         return {
             "file": filename,
@@ -1969,7 +1901,7 @@ class NotionTracker:
 
     # --- Follow-up cadence monitor ---
 
-    def check_followups(self, threshold_days: int = 5) -> list[dict]:
+    def check_followups(self, threshold_days: int = 5) -> list[dict[str, Any]]:
         """Check all 'In Progress (Interviewing)' entries for staleness.
 
         For each active company, reads the Interviews DB to find the most
@@ -2002,11 +1934,9 @@ class NotionTracker:
             "page_size": 100,
         }
         response = self._request("POST", url, payload)
-        pages = [
-            p for p in response.get("results", []) if not p.get("archived")
-        ]
+        pages = [p for p in response.get("results", []) if not p.get("archived")]
 
-        results: list[dict] = []
+        results: list[dict[str, Any]] = []
 
         for page in pages:
             app = self._page_to_application(page)
@@ -2019,35 +1949,37 @@ class NotionTracker:
                 days = None
                 if app.start_date:
                     days = (today - app.start_date).days
-                results.append({
-                    "name": app.name,
-                    "page_id": page_id,
-                    "status": "no_data",
-                    "days_since": days,
-                    "last_date": None,
-                    "last_interviewer": None,
-                    "last_type": None,
-                    "follow_up": None,
-                    "threshold": threshold_days,
-                })
+                results.append(
+                    {
+                        "name": app.name,
+                        "page_id": page_id,
+                        "status": "no_data",
+                        "days_since": days,
+                        "last_date": None,
+                        "last_interviewer": None,
+                        "last_type": None,
+                        "follow_up": None,
+                        "threshold": threshold_days,
+                    }
+                )
                 continue
 
             # Find most recent interview by date
-            dated = [
-                iv for iv in interviews if iv.date
-            ]
+            dated = [iv for iv in interviews if iv.date]
             if not dated:
-                results.append({
-                    "name": app.name,
-                    "page_id": page_id,
-                    "status": "no_data",
-                    "days_since": None,
-                    "last_date": None,
-                    "last_interviewer": None,
-                    "last_type": None,
-                    "follow_up": None,
-                    "threshold": threshold_days,
-                })
+                results.append(
+                    {
+                        "name": app.name,
+                        "page_id": page_id,
+                        "status": "no_data",
+                        "days_since": None,
+                        "last_date": None,
+                        "last_interviewer": None,
+                        "last_type": None,
+                        "follow_up": None,
+                        "threshold": threshold_days,
+                    }
+                )
                 continue
 
             most_recent = max(dated, key=lambda iv: iv.date)
@@ -2062,24 +1994,24 @@ class NotionTracker:
             else:
                 status = "active"
 
-            results.append({
-                "name": app.name,
-                "page_id": page_id,
-                "status": status,
-                "days_since": days_since,
-                "last_date": most_recent.date,
-                "last_interviewer": (
-                    most_recent.interviewers[0]
-                    if most_recent.interviewers
-                    else None
-                ),
-                "last_type": most_recent.interview_type or None,
-                "follow_up": most_recent.follow_up or None,
-                "threshold": threshold_days,
-            })
+            results.append(
+                {
+                    "name": app.name,
+                    "page_id": page_id,
+                    "status": status,
+                    "days_since": days_since,
+                    "last_date": most_recent.date,
+                    "last_interviewer": (
+                        most_recent.interviewers[0] if most_recent.interviewers else None
+                    ),
+                    "last_type": most_recent.interview_type or None,
+                    "follow_up": most_recent.follow_up or None,
+                    "threshold": threshold_days,
+                }
+            )
 
         # Sort: stale first (by days_since desc), then active, upcoming, no_data
-        def _sort_key(r: dict) -> tuple:
+        def _sort_key(r: dict[str, Any]) -> tuple[int, int]:
             order = {"stale": 0, "active": 1, "upcoming": 2, "no_data": 3}
             days = r.get("days_since")
             return (order.get(r["status"], 4), -(days or 0))
@@ -2087,9 +2019,7 @@ class NotionTracker:
         results.sort(key=_sort_key)
         return results
 
-    def format_followup_report(
-        self, results: list[dict], threshold_days: int = 5
-    ) -> str:
+    def format_followup_report(self, results: list[dict[str, Any]], threshold_days: int = 5) -> str:
         """Format check_followups() results into a readable report."""
         from datetime import date as date_type
 
@@ -2107,9 +2037,7 @@ class NotionTracker:
         if stale:
             lines.append(f"### Needs Attention ({len(stale)} companies)\n")
             for r in stale:
-                lines.append(
-                    f"**{r['name']}** — {r['days_since']} days since last contact"
-                )
+                lines.append(f"**{r['name']}** — {r['days_since']} days since last contact")
                 parts = []
                 if r["last_type"]:
                     parts.append(r["last_type"])
@@ -2126,9 +2054,7 @@ class NotionTracker:
         if active:
             lines.append(f"### Recently Active ({len(active)} companies)\n")
             for r in active:
-                lines.append(
-                    f"**{r['name']}** — {r['days_since']} days since last contact"
-                )
+                lines.append(f"**{r['name']}** — {r['days_since']} days since last contact")
                 parts = []
                 if r["last_type"]:
                     parts.append(r["last_type"])
@@ -2144,9 +2070,7 @@ class NotionTracker:
             lines.append(f"### Upcoming Interviews ({len(upcoming)} companies)\n")
             for r in upcoming:
                 days_until = abs(r["days_since"])
-                lines.append(
-                    f"**{r['name']}** — interview in {days_until} days"
-                )
+                lines.append(f"**{r['name']}** — interview in {days_until} days")
                 parts = []
                 if r["last_type"]:
                     parts.append(r["last_type"])
@@ -2161,7 +2085,7 @@ class NotionTracker:
         if no_data:
             lines.append(f"### No Interview Data ({len(no_data)} companies)\n")
             for r in no_data:
-                line = f"**{r['name']}** — Status is \"In Progress\" but no interviews logged"
+                line = f'**{r["name"]}** — Status is "In Progress" but no interviews logged'
                 if r["days_since"] is not None:
                     line += f" (tracked {r['days_since']} days)"
                 lines.append(line)
@@ -2176,7 +2100,7 @@ class NotionTracker:
         return "\n".join(lines)
 
     @staticmethod
-    def _task_to_scoring_result(task: dict) -> ScoringResult:
+    def _task_to_scoring_result(task: dict[str, Any]) -> ScoringResult:
         """Convert a queue task JSON dict to a ScoringResult."""
         return ScoringResult(
             score=task.get("score", 0),
@@ -2188,7 +2112,7 @@ class NotionTracker:
         )
 
     @staticmethod
-    def _task_to_application(task: dict) -> Application:
+    def _task_to_application(task: dict[str, Any]) -> Application:
         """Convert a queue task JSON dict to an Application."""
         status = None
         if task.get("status"):
@@ -2211,7 +2135,7 @@ class NotionTracker:
         return Application(
             name=task.get("name", ""),
             position=task.get("position", ""),
-            status=status,
+            status=status or Status.TARGETED,
             start_date=start_date,
             url=task.get("url", ""),
             environment=task.get("environment", []),
@@ -2231,5 +2155,7 @@ class NotionTracker:
                 red_flags=task.get("red_flags", []),
                 gaps=task.get("gaps", []),
                 keywords_missing=task.get("keywords_missing", []),
-            ) if task.get("score") is not None else None,
+            )
+            if task.get("score") is not None
+            else None,
         )
