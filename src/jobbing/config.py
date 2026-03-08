@@ -61,9 +61,7 @@ def _load_key(name: str, env_path: Path) -> str:
         or _load_key_from_secrets(name)
     )
     if not value:
-        raise ValueError(
-            f"{name} not found in environment, .env, or ~/.zshrc-secrets"
-        )
+        raise ValueError(f"{name} not found in environment, .env, or ~/.zshrc-secrets")
     return value
 
 

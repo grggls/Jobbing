@@ -13,7 +13,6 @@ from datetime import date
 from enum import Enum
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -63,7 +62,9 @@ class Interview:
     """
 
     date: str  # ISO date
-    interview_type: str = ""  # Phone Screen, Technical, System Design, Behavioral, Panel, Hiring Manager, Executive, Take-Home
+    # Phone Screen, Technical, System Design, Behavioral, Panel,
+    # Hiring Manager, Executive, Take-Home
+    interview_type: str = ""
     interviewers: list[str] = field(default_factory=list)
     prep_notes: str = ""
     questions_to_ask: list[str] = field(default_factory=list)

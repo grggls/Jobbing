@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
@@ -22,8 +23,7 @@ from reportlab.pdfbase.pdfmetrics import registerFontFamily
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
-from jobbing.models import CLData, CVData, CompanyData
-
+from jobbing.models import CLData, CompanyData, CVData
 
 # ---------------------------------------------------------------------------
 # Font configuration
@@ -215,9 +215,7 @@ class PDFGenerator:
     """Generates CV and cover letter PDFs from CompanyData."""
 
     def __init__(self) -> None:
-        font_regular, font_bold, font_italic, font_bold_italic = (
-            self._register_fonts()
-        )
+        font_regular, font_bold, font_italic, font_bold_italic = self._register_fonts()
         self._styles = PDFStyles(font_regular, font_bold, font_italic, font_bold_italic)
 
     @staticmethod
@@ -277,24 +275,14 @@ class PDFGenerator:
         )
 
         s = self._styles
-        story: list = []
+        story: list[Any] = []
 
         # Header
         story.append(Paragraph(cv.name, s.cv_name))
         story.append(Paragraph(cv.location, s.cv_location))
-        story.append(
-            Paragraph(
-                f'<a href="mailto:{cv.email}">{cv.email}</a>', s.cv_link
-            )
-        )
-        story.append(
-            Paragraph(f'<a href="{cv.github}">{cv.github}</a>', s.cv_link)
-        )
-        story.append(
-            Paragraph(
-                f'<a href="{cv.linkedin}">{cv.linkedin}</a>', s.cv_link
-            )
-        )
+        story.append(Paragraph(f'<a href="mailto:{cv.email}">{cv.email}</a>', s.cv_link))
+        story.append(Paragraph(f'<a href="{cv.github}">{cv.github}</a>', s.cv_link))
+        story.append(Paragraph(f'<a href="{cv.linkedin}">{cv.linkedin}</a>', s.cv_link))
         story.append(Spacer(1, 0.1 * inch))
 
         # Summary
@@ -344,11 +332,7 @@ class PDFGenerator:
         # Skills
         story.append(Paragraph("SKILLS", s.cv_heading))
         for category, items in cv.skills.items():
-            story.append(
-                Paragraph(
-                    f"<b>{category}:</b> {items}", s.cv_skill_category
-                )
-            )
+            story.append(Paragraph(f"<b>{category}:</b> {items}", s.cv_skill_category))
 
         doc.build(story)
         return output_path
@@ -369,7 +353,7 @@ class PDFGenerator:
         )
 
         s = self._styles
-        story: list = []
+        story: list[Any] = []
 
         # Date
         story.append(Paragraph(cl.date, s.cl_date))

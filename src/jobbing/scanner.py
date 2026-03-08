@@ -17,8 +17,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from jobbing.config import Config
-
 logger = logging.getLogger(__name__)
 
 # Max chars to keep per page after cleaning
@@ -125,13 +123,9 @@ def _fetch_one(bookmark: Bookmark, timeout: int = 30) -> FetchedBoard:
             charset = resp.headers.get_content_charset() or "utf-8"
             raw = resp.read().decode(charset, errors="replace")
             content = _clean_html(raw)
-            return FetchedBoard(
-                bookmark=bookmark, content=content, char_count=len(content)
-            )
+            return FetchedBoard(bookmark=bookmark, content=content, char_count=len(content))
     except Exception as e:
-        return FetchedBoard(
-            bookmark=bookmark, content="", char_count=0, error=str(e)
-        )
+        return FetchedBoard(bookmark=bookmark, content="", char_count=0, error=str(e))
 
 
 def fetch_boards(
@@ -144,18 +138,14 @@ def fetch_boards(
     failed = 0
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {
-            executor.submit(_fetch_one, bm, timeout): bm for bm in bookmarks
-        }
+        futures = {executor.submit(_fetch_one, bm, timeout): bm for bm in bookmarks}
         for future in as_completed(futures):
             result = future.result()
             if result.error:
                 failed += 1
                 logger.warning("Failed: %s — %s", result.bookmark.label, result.error)
             else:
-                logger.info(
-                    "Fetched: %s (%d chars)", result.bookmark.label, result.char_count
-                )
+                logger.info("Fetched: %s (%d chars)", result.bookmark.label, result.char_count)
             fetched.append(result)
 
     # Sort by original bookmark order

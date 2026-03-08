@@ -9,9 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import asdict
 from datetime import date
-from pathlib import Path
 from typing import Any
 
 from jobbing.config import Config
@@ -29,7 +27,8 @@ class JsonFileTracker:
         """Load the tracker file, creating it if needed."""
         if self._path.is_file():
             with open(self._path) as f:
-                return json.load(f)
+                result: dict[str, Any] = json.load(f)
+                return result
         return {"applications": {}}
 
     def _save(self) -> None:
@@ -178,6 +177,5 @@ class JsonFileTracker:
     def list_all(self) -> list[Application]:
         """List all tracked applications."""
         return [
-            self._dict_to_app(app_id, data)
-            for app_id, data in self._data["applications"].items()
+            self._dict_to_app(app_id, data) for app_id, data in self._data["applications"].items()
         ]

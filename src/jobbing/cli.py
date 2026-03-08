@@ -19,23 +19,22 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import shutil
 import sys
 import time
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from jobbing.config import Config
 from jobbing.models import Application, Contact, LinkedInStatus, Status
-
 
 # ---------------------------------------------------------------------------
 # Status/LinkedIn choice values (for argparse validation)
 # ---------------------------------------------------------------------------
 
 VALID_STATUSES = [s.value for s in Status]
-VALID_LINKEDIN = [l.value for l in LinkedInStatus]
+VALID_LINKEDIN = [ls.value for ls in LinkedInStatus]
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +140,7 @@ def _track_outreach(args: argparse.Namespace, config: Config) -> None:
     from jobbing.tracker import get_tracker
 
     # Load contacts from JSON file
-    contacts_data: list[dict] = []
+    contacts_data: list[dict[str, Any]] = []
     if args.contacts_json:
         with open(args.contacts_json) as f:
             contacts_data = json.load(f)
@@ -302,7 +301,7 @@ def _cmd_scan(args: argparse.Namespace, config: Config) -> None:
 
 def _scan_bookmarks(args: argparse.Namespace, config: Config) -> None:
     """List parsed bookmarks from BOOKMARKS.md."""
-    from jobbing.scanner import parse_bookmarks
+    from jobbing.scanner import Bookmark, parse_bookmarks
 
     bookmarks = parse_bookmarks(config.bookmarks_path)
 
@@ -312,7 +311,7 @@ def _scan_bookmarks(args: argparse.Namespace, config: Config) -> None:
         bookmarks = [b for b in bookmarks if b.category.lower() in cat_lower]
 
     # Group by category
-    by_cat: dict[str, list] = {}
+    by_cat: dict[str, list[Bookmark]] = {}
     for b in bookmarks:
         by_cat.setdefault(b.category, []).append(b)
 
@@ -375,7 +374,9 @@ def _scan_existing(args: argparse.Namespace, config: Config) -> None:
         tracker = get_tracker(config.tracker_backend, config)
         apps = tracker.list_all()
     except Exception as e:
-        logging.getLogger(__name__).warning("Tracker query failed (%s), falling back to companies/ directory", e)
+        logging.getLogger(__name__).warning(
+            "Tracker query failed (%s), falling back to companies/ directory", e
+        )
         source = "companies/"
         companies_dir = config.companies_dir
         if companies_dir.is_dir():
@@ -431,9 +432,9 @@ def _args_to_application(args: argparse.Namespace) -> Application:
     )
 
 
-def _preview_application(app: Application) -> dict:
+def _preview_application(app: Application) -> dict[str, Any]:
     """Build a preview dict for dry-run output."""
-    d: dict = {"name": app.name}
+    d: dict[str, Any] = {"name": app.name}
     if app.position:
         d["position"] = app.position
     if app.status:
@@ -455,7 +456,11 @@ def _preview_application(app: Application) -> dict:
     if app.highlights:
         d["highlights"] = app.highlights
     if app.job_description:
-        d["job_description"] = app.job_description[:100] + "..." if len(app.job_description) > 100 else app.job_description
+        d["job_description"] = (
+            app.job_description[:100] + "..."
+            if len(app.job_description) > 100
+            else app.job_description
+        )
     return d
 
 
@@ -526,8 +531,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # track followup
     p_followup = track_subs.add_parser("followup", help="Check for stale interview processes")
-    p_followup.add_argument("--threshold", type=int, help="Days before flagging as stale (default: from .env or 5)")
-    p_followup.add_argument("--save", action="store_true", help="Save report to notion_queue_results/")
+    p_followup.add_argument(
+        "--threshold",
+        type=int,
+        help="Days before flagging as stale (default: from .env or 5)",
+    )
+    p_followup.add_argument(
+        "--save",
+        action="store_true",
+        help="Save report to notion_queue_results/",
+    )
 
     # track outreach
     p_outreach = track_subs.add_parser("outreach", help="Replace outreach contacts")

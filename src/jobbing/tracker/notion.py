@@ -279,43 +279,32 @@ def _markdown_to_blocks(text: str) -> list[dict[str, Any]]:
     """
     blocks: list[dict[str, Any]] = []
     lines = text.split("\n")
-    paragraph_lines: list[str] = []
-
-    def _flush_paragraph() -> None:
-        if paragraph_lines:
-            blocks.append(_paragraph_block("\n".join(paragraph_lines)))
-            paragraph_lines.clear()
 
     for line in lines:
         stripped = line.strip()
         if not stripped:
-            _flush_paragraph()
             continue
         # Check ### before ## before # to avoid prefix collisions
         if stripped.startswith("### "):
-            _flush_paragraph()
             blocks.append(_heading3_block(stripped[4:]))
         elif stripped.startswith("## "):
-            _flush_paragraph()
             blocks.append(_heading3_block(stripped[3:]))
         elif stripped.startswith("# "):
-            _flush_paragraph()
             blocks.append(_heading2_block(stripped[2:]))
         elif stripped.startswith("- ") and line != line.lstrip():
             # Indented bullet → nested child of preceding bullet
-            _flush_paragraph()
             child = _bullet_block(stripped[2:])
             if blocks and blocks[-1].get("type") == "bulleted_list_item":
                 blocks[-1]["bulleted_list_item"].setdefault("children", []).append(child)
             else:
                 blocks.append(child)
         elif stripped.startswith("- "):
-            _flush_paragraph()
             blocks.append(_bullet_block(stripped[2:]))
         else:
-            paragraph_lines.append(stripped)
+            # Each line becomes its own paragraph to avoid <br> artifacts
+            # in Notion when single \n separates non-bullet lines.
+            blocks.append(_paragraph_block(stripped))
 
-    _flush_paragraph()
     return blocks
 
 
@@ -476,6 +465,55 @@ class NotionTracker:
         for block_id in ids_to_delete:
             self._request("DELETE", f"{NOTION_BASE_URL}/blocks/{block_id}")
 
+    def _find_insert_after(self, page_id: str, heading: str) -> str | None:
+        """Find the block ID after which *heading* should be inserted.
+
+        Walks the page children and uses MANAGED_SECTIONS order to find
+        the correct predecessor. Falls back to the divider block
+        (separator between Interviews DB and content sections) if the
+        target is the first managed section, or None if nothing found.
+        """
+        url = f"{NOTION_BASE_URL}/blocks/{page_id}/children?page_size=100"
+        result = self._request("GET", url)
+        children = result.get("results", [])
+
+        # Build lookup: lowercased heading → canonical name
+        managed_lower = {s.lower(): s for s in self.MANAGED_SECTIONS}
+        for alias_lower, canon in self.SECTION_ALIASES.items():
+            managed_lower[alias_lower] = canon
+
+        # Map canonical section name → block ID of the heading
+        section_block_ids: dict[str, str] = {}
+        divider_id: str | None = None
+
+        for block in children:
+            block_type = block.get("type", "")
+            if block_type == "divider":
+                divider_id = block["id"]
+            elif block_type in ("heading_2", "heading_3"):
+                rt = block.get(block_type, {}).get("rich_text", [])
+                text = rt[0].get("text", {}).get("content", "") if rt else ""
+                canonical = managed_lower.get(text.lower())
+                if canonical:
+                    section_block_ids[canonical] = block["id"]
+
+        # Find the target's position in MANAGED_SECTIONS
+        heading_canonical = managed_lower.get(heading.lower(), heading)
+        try:
+            target_idx = self.MANAGED_SECTIONS.index(heading_canonical)
+        except ValueError:
+            return None
+
+        # Walk backward from target position to find the nearest existing
+        # preceding section. Its heading block is our insertion anchor.
+        for i in range(target_idx - 1, -1, -1):
+            prev_section = self.MANAGED_SECTIONS[i]
+            if prev_section in section_block_ids:
+                return section_block_ids[prev_section]
+
+        # No preceding section — insert after the divider
+        return divider_id
+
     def _append_section(
         self,
         page_id: str,
@@ -484,12 +522,18 @@ class NotionTracker:
         heading_level: int = 3,
         toggle: bool = False,
     ) -> None:
-        """Remove then re-append a section with heading + blocks.
+        """Remove then re-insert a section at its canonical position.
 
         Uses heading_3 by default to match the page body convention.
         When toggle=True, uses a toggleable heading with blocks as children.
+        Inserts at the correct position per MANAGED_SECTIONS order using
+        the Notion API's ``after`` parameter.
         """
         self._remove_section(page_id, heading)
+
+        # Find the correct insertion point
+        after_id = self._find_insert_after(page_id, heading)
+
         if toggle:
             all_blocks = [_toggle_heading3_block(heading, blocks)]
         else:
@@ -497,10 +541,15 @@ class NotionTracker:
                 _heading2_block(heading) if heading_level == 2 else _heading3_block(heading)
             )
             all_blocks = [heading_block] + blocks
+
+        payload: dict[str, Any] = {"children": all_blocks}
+        if after_id:
+            payload["after"] = after_id
+
         self._request(
             "PATCH",
             f"{NOTION_BASE_URL}/blocks/{page_id}/children",
-            {"children": all_blocks},
+            payload,
         )
 
     # --- Managed section ordering ---
@@ -596,8 +645,7 @@ class NotionTracker:
         _flush_flat()
         return existing
 
-    @staticmethod
-    def _parse_section_children(section_name: str, children: list[dict[str, Any]]) -> Any:
+    def _parse_section_children(self, section_name: str, children: list[dict[str, Any]]) -> Any:
         """Parse toggle children into the appropriate Python structure."""
         if section_name == "Job Description":
             paragraphs: list[str] = []
@@ -617,13 +665,18 @@ class NotionTracker:
                     question = "".join(seg.get("text", {}).get("content", "") for seg in rt)
                     if not question:
                         continue
-                    # Try to get nested answer sub-bullet
+                    # Fetch nested answer sub-bullet
                     answer = ""
                     if child.get("has_children"):
-                        # Sub-bullets are included in the block response
-                        # only if fetched separately — we have toggle
-                        # children already, but sub-bullets need another fetch
-                        pass  # Answer extraction handled below
+                        sub_url = f"{NOTION_BASE_URL}/blocks/{child['id']}/children?page_size=100"
+                        sub_result = self._request("GET", sub_url)
+                        for sub in sub_result.get("results", []):
+                            if sub.get("type") == "bulleted_list_item":
+                                sub_rt = sub.get("bulleted_list_item", {}).get("rich_text", [])
+                                answer = "".join(
+                                    seg.get("text", {}).get("content", "") for seg in sub_rt
+                                )
+                                break
                     qa_list.append({"question": question, "answer": answer})
             return qa_list if qa_list else []
 
