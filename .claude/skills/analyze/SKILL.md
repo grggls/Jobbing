@@ -53,6 +53,7 @@ Analyze a job posting for fit against Greg's profile. This is always the first s
 5. **Pass scoring data forward.** When Greg says go and `/apply` runs, the scoring output (score, reasoning, green/red flags, gaps, keywords) must be included in the Notion `create` queue JSON so it populates the "Fit Assessment" section and Score property. Keep the scoring data available for the `/apply` step.
 
 ## Critical Rules
+- **Use Greg's browser to fetch JDs.** LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, and most job boards are blocked from web fetch/search tools. The only reliable way to read job postings is via Greg's Chrome browser (Claude in Chrome MCP tools). Always use the browser — don't attempt web fetch and then report "couldn't find it." Go look.
 - **Chronology is sacred.** Solo Recon and Modern Electric are CURRENT roles (2024–present). Never lead with Mobimeo as most recent.
 - **People management started mid-2017.** That's 8+ years as of 2026. Never write "6+ years."
 - **No fake metrics.** Don't invent percentages or impact numbers not in CONTEXT.md.

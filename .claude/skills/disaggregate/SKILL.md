@@ -64,6 +64,8 @@ Jobgether, Lensa, and similar aggregators repost the same role across multiple s
 
 ## Critical Rules
 
+- **Use Greg's browser to fetch JDs.** LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, and most job boards are blocked from web fetch/search tools. The only reliable way to read job postings is via Greg's Chrome browser (Claude in Chrome MCP tools). Always use the browser — don't attempt web fetch and then report "couldn't find it." Go look.
+- **Score based on actual JDs, not titles.** Never quick-score a role based on company name and title alone. Fetch the real job description first. A "Senior DevOps Engineer" could be scoped as Staff; a "Principal Architect" could be a glorified IC. The JD is the truth.
 - **Be honest about unknowns.** If you can't find the original company, say "could not identify" — don't speculate.
 - **Don't inflate scores.** Quick-scores should be conservative. Better to underscore and have Greg investigate than overscore and waste his time.
 - **De-duplication is the highest-value step.** Turning 10 listings into 3 unique roles saves Greg the most time.

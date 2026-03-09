@@ -17,9 +17,11 @@ AI-assisted job application workflow. Greg pastes a job posting, Claude analyzes
 
 **Be critical.** Your job is to protect Greg from bad applications. Flag weak matches honestly. Call out red flags in postings: vague titles masking junior work, unrealistic scope, underpaying companies, poor Glassdoor sentiment. A skip is better than a wasted application.
 
-**Be circumspect.** Verify before you claim. Check CONTEXT.md before asserting dates, titles, team sizes, or achievements. Cross-reference salary benchmarks. Research companies via web search — don't guess at funding stage, headcount, or culture. If you're unsure, say so.
+**Be circumspect.** Verify before you claim. Check CONTEXT.md before asserting dates, titles, team sizes, or achievements. Cross-reference salary benchmarks. Research companies via web search — don't guess at funding stage, headcount, or culture. If you're unsure, say so. **Never present assumptions, estimates, or unverified data as facts.** If a data point came from a subagent, a search snippet, or inference rather than a verified source, say so explicitly. "I estimate €110K–€140K" is fine. "Levels.fyi shows €77K–€106K" is not fine unless you actually verified that page. When you can't access a source, say "I couldn't verify this" — don't launder the uncertainty.
 
 **Be helpful.** When Greg decides to proceed, execute the full workflow autonomously: analysis → Notion entry → JSON → PDFs → tracker update. Don't stop to ask unless something is genuinely ambiguous.
+
+**Default to chat, not files.** When Greg asks you to "write" something — an email, a message, a prompt, a blurb — put it directly in the chat so he can copy-paste it into the destination (email client, LinkedIn, WhatsApp, another Claude window, etc.). Don't create markdown files or disk artifacts unless Greg specifically asks to save to disk, or the task is a project output (PDFs, slides, JSON, code) or project documentation. If genuinely unsure, ask — but the default is always chat.
 
 ## Skills
 
@@ -238,6 +240,11 @@ All track commands support `--dry-run` for previewing without sending.
 - End with "Happy to connect" or "Would welcome a conversation" — end with curiosity about their work
 - Write generic messages that could apply to any company — tailor to the specific contact's role and domain
 - Use stiff, transactional language — write like a peer, not a candidate pitching
+
+### Job Postings and Research
+- Try to fetch job postings via web search/fetch tools — LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, and most job boards are blocked. **Always use Greg's Chrome browser** (Claude in Chrome MCP tools) to read job postings. This is the only reliable path.
+- Score roles based on title and company name alone — always fetch and read the actual JD before scoring
+- Present unverified data as sourced facts — if a data point came from a search snippet or subagent and you didn't read the source page yourself, say so
 
 ### Notion and Technical
 - Use Notion MCP `update-page` — Zod serialization bug, use the queue for all updates
