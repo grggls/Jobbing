@@ -1120,6 +1120,19 @@ class NotionTracker:
                     return str(block["id"])
         return None
 
+    @staticmethod
+    def _extract_name(interviewer: str) -> str:
+        """Extract the person's name from 'Name — Role' or 'Name - Role'.
+
+        Splits on em dash, en dash, or hyphen surrounded by spaces.
+        Returns the name portion (stripped), or the full string if no
+        separator is found.
+        """
+        import re
+
+        parts = re.split(r"\s*[—–]\s*|\s+-\s+", interviewer, maxsplit=1)
+        return parts[0].strip()
+
     def _find_interview_entry(
         self,
         db_id: str,
@@ -1128,14 +1141,17 @@ class NotionTracker:
     ) -> str | None:
         """Find an interview row by interviewer name and/or date.
 
+        Searches by the person's name only (ignoring role/title suffix)
+        to avoid mismatches from dash/em-dash/en-dash separator differences.
         Returns the row's page ID or None.
         """
         filters: list[dict[str, Any]] = []
         if interviewer:
+            name_only = self._extract_name(interviewer)
             filters.append(
                 {
                     "property": "Interviewer Name and Role",
-                    "title": {"contains": interviewer},
+                    "title": {"contains": name_only},
                 }
             )
         if date:

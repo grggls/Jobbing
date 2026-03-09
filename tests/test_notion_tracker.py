@@ -1885,6 +1885,29 @@ class TestEnsureInterviewsDbSchema:
 
 
 # ---------------------------------------------------------------------------
+# _extract_name
+# ---------------------------------------------------------------------------
+
+
+class TestExtractName:
+    """Tests for _extract_name — separator-agnostic name extraction."""
+
+    @pytest.mark.parametrize(
+        "full, expected",
+        [
+            ("Arnaldo Tema — Head of Engineering", "Arnaldo Tema"),
+            ("Arnaldo Tema - Head of Engineering", "Arnaldo Tema"),
+            ("Arnaldo Tema – Head of Engineering", "Arnaldo Tema"),
+            ("Jane Smith", "Jane Smith"),
+            ("Jean-Pierre Dupont — CTO", "Jean-Pierre Dupont"),
+            ("  Amy Lee — VP Eng  ", "Amy Lee"),
+        ],
+    )
+    def test_extract_name(self, full: str, expected: str) -> None:
+        assert NotionTracker._extract_name(full) == expected
+
+
+# ---------------------------------------------------------------------------
 # _find_interview_entry
 # ---------------------------------------------------------------------------
 
@@ -1930,6 +1953,35 @@ class TestFindInterviewEntry:
     def test_no_filters(self, tracker: NotionTracker) -> None:
         result = tracker._find_interview_entry("db-1")
         assert result is None
+
+    @pytest.mark.parametrize(
+        "interviewer",
+        [
+            "Arnaldo Tema — Head of Engineering",
+            "Arnaldo Tema - Head of Engineering",
+            "Arnaldo Tema – Head of Engineering",
+        ],
+    )
+    def test_queries_name_only_regardless_of_separator(
+        self, tracker: NotionTracker, interviewer: str
+    ) -> None:
+        """The Notion contains filter should receive 'Arnaldo Tema', not the
+        full string with role suffix, so em-dash/hyphen/en-dash mismatches
+        between the payload and existing rows don't cause missed lookups."""
+        with patch.object(
+            tracker,
+            "_request",
+            return_value={"results": [{"id": "found"}]},
+        ) as mock_req:
+            result = tracker._find_interview_entry("db-1", interviewer, "2026-03-15")
+            assert result == "found"
+            payload = mock_req.call_args[0][2]
+            title_filter = next(
+                f
+                for f in payload["filter"]["and"]
+                if f.get("property") == "Interviewer Name and Role"
+            )
+            assert title_filter["title"]["contains"] == "Arnaldo Tema"
 
 
 # ---------------------------------------------------------------------------
