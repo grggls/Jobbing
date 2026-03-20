@@ -1,5 +1,14 @@
 {
   "promptDelete": false,
+  "cssTheme": "Things",
+  "baseFontSize": 16,
+  "interfaceFontFamily": "",
+  "textFontFamily": "",
+  "monospaceFontFamily": "",
+  "readableLineLength": true,
+  "maxWidth": "720px",
+  "showInlineTitle": true,
+  "showViewHeader": true,
   "pdfExportSettings": {
     "pageSize": "Letter",
     "landscape": false,
