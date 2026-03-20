@@ -9,8 +9,8 @@ Re-score an application after interviews reveal new information. The original `/
 
 ## Prerequisites
 
-- An existing tracker page with a Fit Assessment (from `/analyze`)
-- At least one debrief in the Interviews DB (from `/debrief`), OR Greg providing verbal input on what's changed
+- Company hub exists at `kanban/companies/{Company}.md` with a Fit Assessment (from `/analyze`)
+- At least one interview file with a populated `## Debrief` section (from `/debrief`), OR Greg providing verbal input on what's changed
 
 ## Instructions
 
@@ -21,17 +21,22 @@ Re-score an application after interviews reveal new information. The original `/
 
 ### Step 2: Gather Existing Data
 
-Use Notion MCP read tools (`notion-fetch`, `notion-search`) to collect:
+Read `kanban/companies/{Company}.md` to collect:
 
-1. **Existing Fit Assessment** — the current score, reasoning, green/red flags, gaps, and missing keywords from the tracker page's "Fit Assessment" toggle section
-2. **All debrief notes** — read the Interviews DB on the tracker page. For each interview row with a Debrief toggle, extract:
-   - What they asked and what the role actually involves
-   - What landed and what stumbled
-   - What Greg learned about the team, tech stack, culture, scope
-   - Vibe ratings
-   - Any follow-up notes that reveal new information
-3. **Company Research** — the existing research section, plus any new intel Greg mentions
-4. **Experience to Highlight** — what was originally identified as relevant
+1. **Current score** — the `score:` field in YAML frontmatter
+2. **Existing Fit Assessment** — the `## Fit Assessment` section: current reasoning, green/red flags, gaps, and missing keywords
+3. **Experience to Highlight** — what was originally identified as relevant
+4. **Company Research** — existing research plus any new intel Greg mentions
+5. **Interviews section** — the list of wikilinks to interview files
+
+For each interview file listed in `## Interviews`:
+- Read `kanban/interviews/{Company}/{filename}.md`
+- Extract from the `## Debrief` section:
+  - What they asked and what the role actually involves
+  - What landed and what stumbled
+  - What Greg learned about the team, tech stack, culture, scope
+  - `vibe:` rating from YAML frontmatter
+  - Any follow-up notes that reveal new information
 
 ### Step 3: Get Greg's Input
 
@@ -79,7 +84,7 @@ Generate a revised Fit Assessment with:
 - **Updated gaps** — some gaps may have been resolved ("they don't actually need Rust experience") or new ones may have appeared ("they want someone who's done SOC 2 from scratch, not just maintained it")
 - **Updated keywords** — adjust based on what the interviews revealed about actual priorities
 
-### Step 6: Present for Review
+### Step 6: Present for Review — CHECKPOINT
 
 Show Greg the updated assessment with a clear before/after:
 
@@ -97,24 +102,14 @@ Updated reasoning: ...
 
 Wait for Greg's approval before writing.
 
-### Step 7: Write to Notion
+### Step 7: Write to Hub File
 
-After Greg approves, write a queue file using the existing `fit_assessment` command:
+After Greg approves:
 
-```json
-{
-  "command": "fit_assessment",
-  "name": "CompanyName",
-  "score": 81,
-  "reasoning": "Original score: 72 (Feb 15). Updated to 81 after two interview rounds. Technical match improved: actual stack is GCP/Terraform-heavy with Kubernetes migration planned, closer to Greg's core than the Python-focused posting suggested. Company signals improved: CTO interview revealed strong engineering culture and clear platform vision despite mixed Glassdoor reviews.",
-  "green_flags": ["Updated flag 1", "Updated flag 2"],
-  "red_flags": ["Updated flag 1"],
-  "gaps": ["Updated gap 1"],
-  "keywords_missing": ["Updated keyword 1"]
-}
-```
+1. Use the Edit tool to replace the content of the `## Fit Assessment` section in `kanban/companies/{Company}.md` with the updated assessment
+2. Use the Edit tool to update the `score:` field in the YAML frontmatter to the new score
 
-Save to `notion_queue/` — the launchd agent processes it automatically. This replaces the existing Fit Assessment section and updates the Score property.
+The updated Fit Assessment section should contain the full reasoning including the before/after comparison so the history is preserved inline.
 
 ## Reassessment Delta Tracking
 
@@ -142,7 +137,6 @@ This helps calibrate the initial scoring over time. Greg reviews these notes and
 - Ignore negative signals from debriefs to keep the score high
 - Re-derive the score from scratch without reference to the original — this is an update, not a fresh analysis
 - Write reasoning that's vague about what changed — "score improved based on interviews" is not acceptable; name the specific new information
-- Use Notion MCP write tools — use the queue system for all writes
 - Invent metrics, team sizes, or achievements not confirmed by Greg or the debrief data
 - Proceed without reading the existing Fit Assessment first — you need the baseline
 

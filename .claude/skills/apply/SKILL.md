@@ -1,11 +1,11 @@
 ---
 name: apply
-description: Execute the full application workflow after /analyze approval. Creates Notion tracker entry, generates tailored CV and cover letter JSON, renders PDFs, and runs ATS keyword check.
+description: Execute the full application workflow after /analyze approval. Creates Obsidian hub file, adds board card, generates tailored CV and cover letter JSON, renders PDFs, and runs ATS keyword check.
 ---
 
 # Generate Application Documents
 
-Execute the full application workflow: Notion entry, tailored JSON, PDFs, and ATS check. Run this after `/analyze` and Greg's go decision.
+Execute the full application workflow: hub file creation, tailored JSON, PDFs, and ATS check. Run this after `/analyze` and Greg's go decision.
 
 ## Prerequisites
 - `/analyze` has been run and Greg has approved the Experience to Highlight bullets
@@ -13,45 +13,92 @@ Execute the full application workflow: Notion entry, tailored JSON, PDFs, and AT
 
 ## Instructions
 
-### Step 1: Create Notion Tracker Entry
+### Step 1: Create Hub File and Board Card
 
-Write a `create` JSON to `notion_queue/`. The launchd agent processes it automatically and creates the page with all properties, Experience to Highlight bullets, and the "Questions to ask during an interview" section — matching the Notion template structure.
+**1a. Create the company hub file** at `kanban/companies/{Company Name}.md`:
 
-```json
-{
-  "command": "create",
-  "name": "CompanyName",
-  "position": "Role Title",
-  "date": "YYYY-MM-DD",
-  "url": "https://...",
-  "environment": ["Remote", "Berlin office"],
-  "salary": "€130K–€170K",
-  "focus": ["Domain1", "Domain2"],
-  "vision": "Company vision",
-  "mission": "Company mission",
-  "highlights": ["Bullet 1", "Bullet 2", "Bullet 3"],
-  "job_description": "Full job posting text here...",
-  "research": ["Company intel bullet 1", "Company intel bullet 2"],
-  "score": 75,
-  "reasoning": "2-3 sentence summary of the fit score from /analyze",
-  "green_flags": ["Strong alignment signal 1", "Signal 2"],
-  "red_flags": ["Concern 1"],
-  "gaps": ["Missing skill 1"],
-  "keywords_missing": ["keyword1", "keyword2"]
-}
+```markdown
+---
+company: Company Name
+position: Role Title
+status: Targeted
+date: YYYY-MM-DD
+url: https://...
+environment: Remote, Berlin office
+salary: €130K–€170K
+focus:
+  - Domain1
+  - Domain2
+vision: Company vision statement
+mission: Company mission statement
+score: 75
+conclusion: ""
+---
+
+## Documents
+
+<!-- Updated automatically by `jobbing pdf {company}` -->
+
+## Interviews
+
+<!-- Interview files linked here as they are created -->
+
+## Fit Assessment
+
+**Score: 75**
+
+2–3 sentence summary of fit reasoning from /analyze.
+
+**Green flags:**
+- Strong alignment signal 1
+- Signal 2
+
+**Red flags:**
+- Concern 1
+
+**Gaps:**
+- Missing skill 1
+
+**Keywords missing:** keyword1, keyword2
+
+## Company Research
+
+- Founded 20XX, Series X ($XM raised)
+- Headcount, HQ location
+- Glassdoor rating, culture notes
+
+## Experience to Highlight
+
+- Approved bullet 1 from /analyze
+- Approved bullet 2
+- Approved bullet 3
+
+## Job Description
+
+Full job posting text here...
+
+## Outreach Contacts
+
+<!-- Populated by /outreach -->
+
+## Questions I Might Get Asked
+
+<!-- Populated by /prep -->
+
+## Questions to Ask
+
+<!-- Populated by /prep -->
+
+## Conclusion
+
+<!-- Populated when closing out the application -->
 ```
 
-Save the page ID from the queue result (check `notion_queue_results/`) for subsequent operations.
+**1b. Add a board card** to `kanban/Job Tracker.md` in the Targeted lane:
 
-The queue `create` command builds 6 heading_3 toggle sections automatically:
-1. **Job Description** — toggle containing the posting text
-2. **Fit Assessment** — toggle with score, reasoning, green/red flags, gaps, keywords (from `/analyze`)
-3. **Company Research** — bulleted list from research (or empty placeholder)
-4. **Experience to Highlight** — bulleted list from highlights
-5. **Questions I Might Get Asked** — empty placeholder (populated later)
-6. **Questions To Ask In An Interview** — empty placeholder (populated later)
-
-The `score` field also sets the **Score** number property on the database page.
+```
+- [ ] [[companies/Company Name|Company Name]] — Role Title · Score: 75 · YYYY-MM-DD
+```
 
 ### Step 2: Present Tailoring Plan — CHECKPOINT
 
@@ -103,6 +150,8 @@ jobbing pdf {company}
 
 Or if not installed: `.venv/bin/python3 -m jobbing.cli pdf {company}`
 
+This command automatically updates the `## Documents` section of the hub file with the generated PDF paths.
+
 ### Step 5: ATS Check
 
 Extract text from the generated PDF and verify:
@@ -117,11 +166,13 @@ Show Greg:
 - ATS keyword frequency summary
 - Any concerns about the documents
 
-**Do NOT auto-mark as "Applied."** Status updates are Greg's decision. When Greg says to mark as Applied, write:
+**Do NOT auto-mark as "Applied."** Status updates are Greg's decision. When Greg says to mark as Applied, edit the hub file's frontmatter:
 
-```json
-{"command": "update", "page_id": "PAGE_ID", "status": "Applied"}
+```yaml
+status: Applied
 ```
+
+And update the board card in `kanban/Job Tracker.md` — move it to the Applied lane or check its checkbox as appropriate.
 
 ## Critical Rules
 - **"Most recently" = Solo Recon/Modern Electric.** Never lead with Mobimeo as most recent.
@@ -129,14 +180,14 @@ Show Greg:
 - **No AI tells.** No "aligns perfectly" or summative self-congratulation. Show, don't tell.
 - **No fake metrics.** Only use numbers from CONTEXT.md.
 - **No TODO comments or placeholder content** in the JSON.
-- **Queue for all Notion writes.** Write JSON to `notion_queue/` for creates, updates, highlights, research, and outreach. The queue `create` command builds template scaffolding automatically. Do NOT use Notion MCP write tools (they have Zod serialization bugs).
+- **All tracker writes are direct file edits.** Edit the hub file at `kanban/companies/{Company}.md` using Read/Edit/Write tools. No queue files, no launchd, no Notion MCP.
 
 ## Do Not
 ### Process
 - Skip the tailoring plan checkpoint (Step 2) — present the strategy and STOP until Greg approves
 - Generate the JSON before Greg has reviewed and approved the tailoring plan
 - Skip reading `examples/example_company.json` before generating JSON — it's the structural template
-- Auto-mark "Applied" or change any Notion status without Greg's explicit instruction
+- Auto-mark "Applied" or change any status without Greg's explicit instruction
 - Claim you included a domain signal or keyword and then not actually include it — verify your own work (Step 3.4)
 
 ### CV Writing
@@ -163,6 +214,5 @@ Show Greg:
 ### Technical
 - Leave TODO, FIXME, or placeholder comments in the JSON
 - Generate JSON that doesn't match the example_company.json schema structure
-- Write Notion queue JSON with incorrect property names (check the schema)
-- Use Notion MCP write tools (`create-pages`, `update-page`) — they have Zod serialization bugs. Use the queue for all writes.
-- Forget to check `notion_queue_results/` for the page ID — it's needed for subsequent queue operations
+- Use Notion MCP tools or queue files for any writes — all tracker writes are direct file edits
+- Write to `notion_queue/` — the queue system is retired; use Read/Edit/Write on hub files directly

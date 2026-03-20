@@ -9,30 +9,41 @@ Check all active interview processes for staleness. Surface companies where the 
 
 ## Prerequisites
 
-- At least one application with status "In Progress (Interviewing)" in the tracker
-- Interviews DB entries with dates (created via `/prep` or `/debrief`)
+- At least one application with status "In Progress (Interviewing)" in the board
+- Interview files in `kanban/interviews/` with dates (created via `/prep` or `/debrief`)
 
 ## Instructions
 
 ### Step 1: Load Context
 
 - Read WORKFLOW.md and CONTEXT.md if not already loaded this session
-- This skill reads directly from the Notion tracker — no queue writes needed
+- Read `kanban/Job Tracker.md` to find all companies listed in the "In Progress (Interviewing)" lane
 
 ### Step 2: Gather Active Interview Processes
 
-Query the tracker for all applications with status "In Progress (Interviewing)":
+For each company in the "In Progress (Interviewing)" lane:
 
-1. Use `notion-search` or `notion-fetch` on the tracker database to find all pages with status "In Progress (Interviewing)"
-2. For each page, read the Interviews inline database to find all interview entries
-3. Extract the most recent interview date, interviewer name, and interview type from the Interviews DB
-4. Also check the "Follow-Up Needed" field from the most recent debrief (if any) for pending action items
+1. Read `kanban/companies/{Company}.md`
+2. Parse the `## Interviews` section for wikilinks — these point to interview files
+3. Extract the interview file names from the wikilinks (the filename encodes the date and interviewer)
 
-### Step 3: Calculate Staleness
+### Step 3: Read Interview Files
+
+For each wikilink found in Step 2:
+
+1. Derive the full path: `kanban/interviews/{Company}/{filename}.md`
+2. Read the file to extract:
+   - `date:` from YAML frontmatter (the interview date)
+   - `interviewer:` from YAML frontmatter
+   - `type:` from YAML frontmatter
+   - `outcome:` from YAML frontmatter
+   - Any follow-up items in the `## Debrief` section
+
+### Step 4: Calculate Staleness
 
 For each active company:
 
-- **Last activity date**: The most recent interview date from the Interviews DB. If no interviews exist in the DB, use the page's "Start Date" property as fallback.
+- **Last activity date**: The most recent date across all interview files for this company. If no interview files exist, use the `date:` frontmatter field from the hub file as fallback.
 - **Days since last activity**: Today's date minus the last activity date
 - **Threshold**: Default 5 days, configurable via `FOLLOWUP_THRESHOLD_DAYS` in `.env`
 
@@ -40,9 +51,9 @@ Categorize each company:
 
 - **Stale** (above threshold): Needs attention — suggest follow-up action
 - **Active** (at or below threshold): Recently active, no action needed
-- **No data**: Has "In Progress (Interviewing)" status but no interview dates — flag as needing review
+- **No data**: Has "In Progress (Interviewing)" status but no interview files — flag as needing review
 
-### Step 4: Generate Follow-Up Suggestions
+### Step 5: Generate Follow-Up Suggestions
 
 For each stale company, suggest a specific follow-up action based on context:
 
@@ -50,9 +61,9 @@ For each stale company, suggest a specific follow-up action based on context:
 - **After a technical/system design round**: "Follow up with recruiter on [company] — technical round was [N] days ago"
 - **After a hiring manager conversation**: "Check in with [interviewer] at [company] — last contact was [date]"
 - **Pending action items**: If the most recent debrief has follow-up items, surface those specifically: "Outstanding action: [follow-up text]"
-- **No interviews recorded**: "No interviews logged for [company] despite 'In Progress' status — verify timeline or update status"
+- **No interviews recorded**: "No interview files found for [company] despite 'In Progress' status — verify timeline or update status"
 
-### Step 5: Present the Summary
+### Step 6: Present the Summary
 
 Format the output as a staleness report, sorted by days since last activity (most stale first):
 
@@ -78,13 +89,13 @@ Format the output as a staleness report, sorted by days since last activity (mos
 
 ### No Interview Data (N companies)
 
-**CompanyName** — Status is "In Progress" but no interviews logged
-  Suggested: Log interviews or update status if process has ended
+**CompanyName** — Status is "In Progress" but no interview files found
+  Suggested: Run /prep or /debrief to log interviews, or update status if process has ended
 ```
 
 If no companies are stale, say so plainly: "All active interview processes have recent activity. Nothing needs follow-up right now."
 
-### Step 6: Offer Actions
+### Step 7: Offer Actions
 
 After presenting the summary, ask Greg if he wants to:
 
@@ -96,7 +107,7 @@ Do NOT take any of these actions automatically — wait for Greg's instruction.
 
 ## CLI Mode (Optional)
 
-When invoked via `jobbing track followup`, output a plain-text summary to stdout (same format as Step 5) and optionally write to `notion_queue_results/followup-YYYY-MM-DD.md`.
+When invoked via `jobbing track followup`, output a plain-text summary to stdout (same format as Step 6) and optionally write to `kanban/followup-YYYY-MM-DD.md`.
 
 ## Threshold Configuration
 
@@ -110,25 +121,24 @@ The threshold applies uniformly to all companies. If Greg finds certain companie
 
 ## Critical Rules
 
-- Read-only — this skill does NOT write to Notion or the queue. It only reads and presents information.
+- Read-only — this skill does NOT write any files. It only reads and presents information.
 - Today's date comes from the system, not from assumptions. Use the current date for all calculations.
-- Do not fabricate interview dates or interviewer names — only surface what's actually in the Interviews DB
+- Do not fabricate interview dates or interviewer names — only surface what's actually in the interview files
 - Do not auto-update any status — status changes are Greg's decision
-- If a company has "In Progress (Interviewing)" status but no Interviews DB entries, flag it as anomalous rather than assuming everything is fine
+- If a company has "In Progress (Interviewing)" status in the board but no interview files, flag it as anomalous rather than assuming everything is fine
 - Sort by staleness (most stale first) so the most urgent items are at the top
 
 ## Do Not
 
-- Write to Notion or the queue — this is a read-only skill
+- Write to any files — this is a read-only skill
 - Auto-send follow-up emails or messages — only suggest actions
 - Change any application status without Greg's explicit instruction
-- Assume interview outcomes — if the debrief says "Pending", it's still pending
+- Assume interview outcomes — if the file says "Pending", it's still pending
 - Ignore companies with no interview data — they need attention too
-- Use Notion MCP write tools — this skill doesn't write anything, but if Greg asks for a status update afterward, use the queue
 
 ## Related Skills
 
-- `/prep` — Interview prep generation (run before interviews)
+- `/prep` — Interview prep generation (run before interviews; creates interview files)
 - `/debrief` — Post-interview debrief capture (provides the data this skill reads)
 - `/track` — Status updates (use after reviewing follow-up summary)
 - `/analyze` — Fit assessment (referenced for company context)

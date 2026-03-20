@@ -1,6 +1,6 @@
 ---
 name: compare
-description: Side-by-side comparison of two or more active opportunities across weighted dimensions. Reads tracker pages, Fit Assessments, debrief notes, and company research. Read-only — produces a Markdown comparison document, no Notion writes.
+description: Side-by-side comparison of two or more active opportunities across weighted dimensions. Reads hub files, Fit Assessments, debrief notes, and company research. Read-only — produces a Markdown comparison document, no file writes to hub files.
 ---
 
 # Decision Comparison Framework
@@ -9,8 +9,8 @@ Compare two or more active opportunities when offers overlap or Greg needs a str
 
 ## Prerequisites
 
-- Two or more tracker pages with at least a Fit Assessment (from `/analyze`)
-- Richer output when debrief data (from `/debrief`) and reassessed scores (from `/reassess`) exist, but not required
+- Two or more company hub files at `kanban/companies/{Company}.md` with at least a Fit Assessment (from `/analyze`)
+- Richer output when interview files with debriefs exist (from `/debrief`) and scores have been reassessed (from `/reassess`), but not required
 
 ## Instructions
 
@@ -23,31 +23,37 @@ Compare two or more active opportunities when offers overlap or Greg needs a str
 
 Greg says something like "compare Bandcamp and Cozero" or "compare my top three." Parse the company names from the request.
 
-If Greg says "compare my active ones" or similar, query the tracker for all "In Progress (Interviewing)" pages and compare those.
+If Greg says "compare my active ones" or similar, read `kanban/Job Tracker.md` to find all companies in the "In Progress (Interviewing)" lane and compare those.
 
 ### Step 3: Gather Data for Each Company
 
-Use Notion MCP read tools (`notion-fetch`, `notion-search`) to collect from each tracker page:
+For each company, read `kanban/companies/{Company}.md` in parallel to collect:
 
-1. **Properties** — Status, Open Position, Salary (Range), Environment, Company Focus, Score
-2. **Fit Assessment** — Score, reasoning, green/red flags, gaps
-3. **Company Research** — Funding, headcount, Glassdoor, tech stack, recent news
-4. **Experience to Highlight** — What was identified as relevant
-5. **Interviews DB** — All interview entries with debrief data, vibe ratings, outcomes
-6. **Outreach Contacts** — Who Greg has connected with (signals relationship depth)
+1. **Frontmatter properties** — `status:`, `position:`, `salary:`, `environment:`, `focus:`, `score:`
+2. **`## Fit Assessment`** — Score, reasoning, green/red flags, gaps
+3. **`## Company Research`** — Funding, headcount, Glassdoor, tech stack, recent news
+4. **`## Experience to Highlight`** — What was identified as relevant
+5. **`## Outreach Contacts`** — Who Greg has connected with (signals relationship depth)
+6. **`## Interviews`** — Wikilinks to interview files
+
+For each interview file listed in `## Interviews`, read `kanban/interviews/{Company}/{filename}.md` to extract:
+- `vibe:` from YAML frontmatter
+- `outcome:` from YAML frontmatter
+- `type:` and `date:` from YAML frontmatter
+- Debrief content from `## Debrief` section
 
 ### Step 4: Score Each Dimension
 
-Evaluate each company across seven weighted dimensions. Use evidence from the tracker data — don't speculate.
+Evaluate each company across seven weighted dimensions. Use evidence from the hub and interview files — don't speculate.
 
 | Dimension | Weight | What to Evaluate |
 |-----------|--------|------------------|
-| Compensation | High | Salary property, negotiation signals from debriefs, equity/VSOP if mentioned, benefits |
+| Compensation | High | `salary:` property, negotiation signals from debriefs, equity/VSOP if mentioned, benefits |
 | Technical Fit | High | Fit Assessment score, tech stack match from research, debrief impressions of engineering quality |
 | Team & Culture | Medium | Debrief vibe scores (averaged), interviewer quality impressions, company research (Glassdoor, culture signals) |
-| Mission Alignment | Medium | Company Focus tags, domain match to Greg's interests (cleantech, sustainability, platform eng), Vision/Mission properties |
+| Mission Alignment | Medium | `focus:` tags, domain match to Greg's interests (cleantech, sustainability, platform eng), `vision:` and `mission:` properties |
 | Growth Trajectory | Medium | Role scope from debriefs (did it expand or shrink?), company funding/headcount trajectory from research, career path signals |
-| Remote & Location | Low | Environment property, entity/visa situation, timezone compatibility, any location changes surfaced in interviews |
+| Remote & Location | Low | `environment:` property, entity/visa situation, timezone compatibility, any location changes surfaced in interviews |
 | Risk Factors | Low | Red flags from Fit Assessment, Glassdoor concerns, debrief red flags, attrition signals, funding runway concerns |
 
 For each dimension, assign a qualitative rating:
@@ -80,7 +86,7 @@ A quick-scan grid with each dimension scored per company:
 
 **2. Dimension Deep-Dives**
 
-For each dimension, a paragraph per company with specific evidence from the tracker:
+For each dimension, a paragraph per company with specific evidence from the hub and interview files:
 
 ```
 ### Compensation
@@ -105,14 +111,14 @@ Write the comparison to `companies/comparison-{company1}-vs-{company2}-{date}.md
 
 For three or more companies: `companies/comparison-{date}.md`.
 
-This is a **read-only analysis** — no Notion writes.
+This is the only file written by this skill — hub files and interview files are not modified.
 
 ### Step 7: Present and Discuss
 
 Show Greg the comparison and discuss. He may want to:
 
 - Adjust dimension weights ("location matters more to me than you think")
-- Add context the tracker doesn't capture ("Company A's CEO reached out personally")
+- Add context the files don't capture ("Company A's CEO reached out personally")
 - Request a revised comparison with updated weights or new information
 - Use this as input for a negotiation strategy
 
@@ -120,7 +126,7 @@ Show Greg the comparison and discuss. He may want to:
 
 ### Compensation (High Weight)
 
-- Primary: Salary (Range) property vs Greg's €135K floor
+- Primary: `salary:` property vs Greg's €135K floor
 - Secondary: equity/VSOP signals from debriefs or research
 - Tertiary: benefits, bonus structure if mentioned
 - Context: Berlin vs US compensation norms (see CONTEXT.md salary benchmarks)
@@ -134,15 +140,15 @@ Show Greg the comparison and discuss. He may want to:
 
 ### Team & Culture (Medium Weight)
 
-- Primary: average vibe rating across all debriefs for this company
+- Primary: average vibe rating across all interview files for this company
 - Secondary: Glassdoor sentiment from company research
 - Tertiary: interviewer quality (did they ask good questions? were they prepared?)
 - Signal: multiple vibe 4-5 ratings = strong culture fit; mixed or low = concern
 
 ### Mission Alignment (Medium Weight)
 
-- Primary: Company Focus tags vs Greg's interests (cleantech, sustainability, developer tooling, platform eng)
-- Secondary: Vision/Mission properties
+- Primary: `focus:` tags vs Greg's interests (cleantech, sustainability, developer tooling, platform eng)
+- Secondary: `vision:` and `mission:` properties from hub frontmatter
 - Tertiary: domain excitement signals from debriefs ("I was genuinely interested in their approach to...")
 
 ### Growth Trajectory (Medium Weight)
@@ -153,31 +159,31 @@ Show Greg the comparison and discuss. He may want to:
 
 ### Remote & Location (Low Weight)
 
-- Primary: Environment property (remote, hybrid, on-site)
+- Primary: `environment:` property (remote, hybrid, on-site)
 - Secondary: timezone compatibility, travel expectations
 - Tertiary: entity/visa situation (EU vs US entity, any sponsorship complications)
 
 ### Risk Factors (Low Weight)
 
-- Aggregate red flags from: Fit Assessment, debrief concerns, company research
+- Aggregate red flags from: Fit Assessment section, debrief concerns, company research
 - Examples: high attrition, recent layoffs, unclear funding runway, management churn, "the last two people in this role left within a year"
 
 ## Critical Rules
 
-- **Read-only** — this skill does NOT write to Notion. Output is a Markdown file only.
-- **Evidence over opinion** — every rating must cite specific tracker data (debrief quote, property value, research finding). If there's no data, rate as "Unknown," not "Neutral."
+- **Read-only on hub and interview files** — this skill only writes the comparison output document
+- **Evidence over opinion** — every rating must cite specific file data (debrief quote, property value, research finding). If there's no data, rate as "Unknown," not "Neutral."
 - **Greg decides** — present tradeoffs, not a winner. The recommendation section should say "Company A looks stronger on X and Y, while Company B is better on Z" — not "you should take Company A."
 - **Compensation floor is sacred** — any company below Greg's €135K floor gets "Concern" on Compensation regardless of other strengths. Note this explicitly.
-- **No fabrication** — if salary, headcount, or other data wasn't captured in the tracker or debriefs, say "not available" rather than guessing.
+- **No fabrication** — if salary, headcount, or other data wasn't captured in the hub files or debriefs, say "not available" rather than guessing.
 
 ## Do Not
 
-- Write to Notion or the queue — this is read-only
+- Write to hub files or interview files — output goes to `companies/comparison-*.md` only
 - Declare a winner — present structured tradeoffs for Greg to weigh
 - Ignore compensation floor — €135K minimum is non-negotiable
-- Speculate on data not in the tracker — use "Unknown" rating and note the gap
+- Speculate on data not in the files — use "Unknown" rating and note the gap
 - Weight all dimensions equally — follow the High/Medium/Low weights
-- Produce a generic comparison that could apply to any two companies — every claim must reference specific tracker data
+- Produce a generic comparison that could apply to any two companies — every claim must reference specific file data
 - Skip companies Greg asked to compare because they have less data — compare what's available and flag gaps
 
 ## Related Skills

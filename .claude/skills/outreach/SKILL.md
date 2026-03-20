@@ -10,6 +10,7 @@ Research LinkedIn contacts for follow-up after Greg submits an application. Run 
 ## Prerequisites
 - Application has been submitted (or Greg has decided to proceed with outreach)
 - Company name and role are known from the `/analyze` + `/apply` workflow
+- Hub file exists at `kanban/companies/{Company Name}.md`
 
 ## Instructions
 
@@ -46,29 +47,28 @@ For each contact, capture:
 
 Present the contacts and messages to Greg for review before saving. Greg may want to adjust messaging or add/remove contacts.
 
-### Step 4: Save to Notion
+### Step 4: Save to Hub File
 
-After Greg approves, write to `notion_queue/`:
+After Greg approves, edit the `## Outreach Contacts` section in `kanban/companies/{Company Name}.md`:
 
-```json
-{
-  "command": "outreach",
-  "name": "CompanyName",
-  "contacts": [
-    {
-      "name": "Jane Smith",
-      "title": "VP Engineering",
-      "linkedin": "https://www.linkedin.com/in/janesmith",
-      "note": "Leads the Platform org. Ex-Google SRE. 2nd connection via Alex.",
-      "message": "Hi Jane — I applied for the Platform Lead role at CompanyName. I built an IDP at 1KOMMA5° and led 23 engineers at Mobimeo. Would love to learn more about what you're building."
-    }
-  ]
-}
+```markdown
+## Outreach Contacts
+
+- **Jane Smith** — VP Engineering · [LinkedIn](https://www.linkedin.com/in/janesmith)
+  - Note: Leads the Platform org. Ex-Google SRE. 2nd connection via Alex.
+  - Message: "Hi Jane — I applied for the Platform Lead role at CompanyName. I built an IDP at 1KOMMA5° and led 23 engineers at Mobimeo. Would love to learn more about what you're building."
+
+- **Tom Chen** — Technical Recruiter · [LinkedIn](https://www.linkedin.com/in/tomchen)
+  - Note: Posts most of the engineering roles at CompanyName. Active on LinkedIn.
+  - Message: "Hi Tom — I applied for the Platform Lead role at CompanyName. 20+ years in platform and infrastructure, most recently VP-level at 1KOMMA5° and Mobimeo. Happy to share more context if helpful."
 ```
 
-This sets "Follow on LinkedIn" to "No" (contacts identified, outreach pending).
+Read the hub file first, locate the `## Outreach Contacts` section, replace its contents with the approved contacts, and write the file back.
 
-Or use the CLI directly: `jobbing track outreach --name "CompanyName" --contacts-json contacts.json`
+CLI equivalent (for bulk imports from a JSON file):
+```bash
+jobbing track outreach --name "Company Name" --contacts-json contacts.json
+```
 
 ## Do Not
 - Write messages over 300 characters — LinkedIn connection requests have a hard limit
@@ -79,7 +79,8 @@ Or use the CLI directly: `jobbing track outreach --name "CompanyName" --contacts
 - Use AI tells: "aligns perfectly", "uniquely positioned", "proven track record", "I'm confident that..."
 - List Greg's entire resume in a 300-char message — pick the 1-2 things most relevant to this specific contact
 - Send the same message template to hiring managers, recruiters, and peers — each category gets a different angle
-- Skip the review checkpoint — present contacts and messages to Greg before saving to Notion
+- Skip the review checkpoint — present contacts and messages to Greg before saving to the hub file
 - Fabricate LinkedIn profile URLs — if you can't find the real URL, say so and leave the field for Greg to fill
 - Invent mutual connections or shared interests that don't exist
-- Save to Notion before Greg approves the contacts and messages
+- Write to the hub file before Greg approves the contacts and messages
+- Use Notion MCP tools or queue files — write directly to the hub file using Read/Edit/Write tools

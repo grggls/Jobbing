@@ -39,7 +39,7 @@ Analyze a job posting for fit against Greg's profile. This is always the first s
 - Be specific — don't guess at headcount, funding, or culture
 
 ### Experience to Highlight
-- Draft bullet points for the Notion tracker's "Experience to Highlight" section
+- Draft bullet points for the hub file's "Experience to Highlight" section
 - Pay special attention to:
   - Cleantech and sustainability experience (1KOMMA5°/Modern Electric, energy sector work)
   - Education background and how it maps to the role
@@ -48,9 +48,9 @@ Analyze a job posting for fit against Greg's profile. This is always the first s
 
 3. **Present the analysis and Experience to Highlight bullets explicitly.** This is a review checkpoint — wait for Greg's feedback before proceeding. Greg may correct, reframe, or add items.
 
-4. **Greg decides: proceed or skip.** If proceeding, use `/apply` next.
+4. **Greg decides: proceed or skip.** If proceeding, run `/apply` next. The `/apply` skill will create the Obsidian hub file at `kanban/companies/{Company}.md` and populate it with the fit assessment data, company research, job description, and Experience to Highlight bullets.
 
-5. **Pass scoring data forward.** When Greg says go and `/apply` runs, the scoring output (score, reasoning, green/red flags, gaps, keywords) must be included in the Notion `create` queue JSON so it populates the "Fit Assessment" section and Score property. Keep the scoring data available for the `/apply` step.
+5. **Keep scoring data available for `/apply`.** When Greg says go, the scoring output (score, reasoning, green/red flags, gaps, keywords) must be ready for `/apply` to write into the hub file's `## Fit Assessment` section and `score:` frontmatter field.
 
 ## Critical Rules
 - **Use Greg's browser to fetch JDs.** LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, and most job boards are blocked from web fetch/search tools. The only reliable way to read job postings is via Greg's Chrome browser (Claude in Chrome MCP tools). Always use the browser — don't attempt web fetch and then report "couldn't find it." Go look.

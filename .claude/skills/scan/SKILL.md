@@ -99,4 +99,4 @@ For any posting Greg wants to pursue:
 - Call the Anthropic API directly — you ARE the LLM, just read the content and score it
 - Present roles for companies already in the tracker
 - Filter out roles solely because the title says "Senior" — read the scope first
-- Create Notion entries automatically — matches go through `/analyze` first
+- Create hub files automatically — matches go through `/analyze` first

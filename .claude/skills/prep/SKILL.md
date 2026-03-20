@@ -1,15 +1,15 @@
 ---
 name: prep
-description: Generate interview prep material for an upcoming interview. Researches the interviewer, generates likely questions, talking points, and questions to ask. Writes prep notes to the Interviews DB via the queue system.
+description: Generate interview prep material for an upcoming interview. Researches the interviewer, generates likely questions, talking points, and questions to ask. Creates an interview file in kanban/interviews/ and updates the company hub.
 ---
 
 # Interview Prep Generation
 
-Generate targeted prep material when Greg has an upcoming interview. Reads existing tracker context, researches the interviewer, and produces prep tailored to the interview type and the specific person.
+Generate targeted prep material when Greg has an upcoming interview. Reads existing hub context, researches the interviewer, and produces prep tailored to the interview type and the specific person.
 
 ## Prerequisites
 
-- Company is tracked in Notion (created via `/analyze` + `/apply`)
+- Company hub exists at `kanban/companies/{Company}.md` (created via `/analyze` + `/apply`)
 - Greg provides: company name, interviewer name/title, interview date, interview type
 
 ## Instructions
@@ -17,24 +17,26 @@ Generate targeted prep material when Greg has an upcoming interview. Reads exist
 ### Step 1: Load Context
 
 - Read WORKFLOW.md and CONTEXT.md if not already loaded this session
-- Look up the company page in Notion via `notion-search` (by company name)
-- Read the company page via `notion-fetch` to pull:
-  - Experience to Highlight (the approved bullets from `/analyze`)
-  - Company Research (funding, headcount, domain)
-  - Fit Assessment (score, green/red flags, gaps)
-  - Job Description (the original posting)
-  - Questions I Might Get Asked (if populated)
-  - Questions to Ask (if populated)
-- If the company does not exist in the tracker, STOP and tell Greg to run `/analyze` and `/apply` first. Prep requires existing tracker data.
+- Read `kanban/companies/{Company}.md` to pull:
+  - `position:` from frontmatter
+  - `score:` from frontmatter
+  - `## Fit Assessment` section (score, green/red flags, gaps)
+  - `## Experience to Highlight` section (the approved bullets from `/analyze`)
+  - `## Company Research` section (funding, headcount, domain)
+  - `## Job Description` section (the original posting)
+  - `## Questions I Might Get Asked` section (if populated)
+  - `## Questions to Ask` section (if populated)
+  - `## Interviews` section (existing wikilinks — check for prior interview files)
+- If the hub file does not exist, STOP and tell Greg to run `/analyze` and `/apply` first. Prep requires existing hub data.
 
 ### Step 2: Parse the Trigger
 
 Extract from Greg's natural language input:
 
-- **Company name** (required) — match to existing tracker entry
+- **Company name** (required) — match to existing hub file
 - **Interviewer name and title** (required) — e.g., "Thomas Roton, VP Engineering"
 - **Interview date** (required) — resolve relative dates ("Thursday", "next Tuesday") to ISO date using today's date
-- **Interview type** (required) — infer from context and map to a valid Notion select value: Phone Screen, Technical, System Design, Behavioral, Panel, Hiring Manager, Executive, Take-Home
+- **Interview type** (required) — infer from context and map to a valid type: Phone Screen, Technical, System Design, Behavioral, Panel, Hiring Manager, Executive, Take-Home
 
 If any field is ambiguous, ask Greg to clarify before proceeding.
 
@@ -97,7 +99,7 @@ For each question, include bullet-point answer guidance drawn from CONTEXT.md an
 
 **4. Questions to Ask This Interviewer**
 
-Start by reading the existing "Questions to Ask" section from the Notion page. These are Greg's accumulated questions about the company — technical, organizational, business, cultural. Filter them:
+Start by reading the `## Questions to Ask` section from the hub file. These are Greg's accumulated questions about the company — technical, organizational, business, cultural. Filter them:
 
 - **Include** questions this interviewer can actually answer given their role and domain knowledge
 - **Exclude** questions outside their scope (don't ask a recruiter about architecture decisions; don't ask a Staff Engineer about comp structure)
@@ -107,47 +109,63 @@ The result should be a short, prioritized list (5–8 questions) that Greg can r
 
 ### Step 5: Present for Review — CHECKPOINT
 
-Present the full prep material organized in the four sections above. This is a mandatory review checkpoint — wait for Greg's feedback before writing anything to Notion. Greg may:
+Present the full prep material organized in the four sections above. This is a mandatory review checkpoint — wait for Greg's feedback before writing any files. Greg may:
 
 - Correct factual errors about the interviewer
 - Add or remove talking points
 - Adjust emphasis based on inside knowledge
 - Refine the questions to ask
 
-### Step 6: Write to Notion
+### Step 6: Write Files
 
-After Greg approves, write to `notion_queue/`:
+After Greg approves:
 
-**a) Interview prep** — the prep notes to the Interviews DB row:
+**a) Create the interview file**
 
-```json
-{
-  "command": "interview_prep",
-  "name": "CompanyName",
-  "date": "2026-03-15",
-  "interviewer": "Jane Smith — VP Engineering",
-  "interview_type": "Hiring Manager",
-  "prep_notes": "## Interviewer Background\n...\n\n## Likely Questions\n...\n\n## Talking Points\n...\n\n## Questions to Ask\n...",
-  "questions_to_ask": ["Q1?", "Q2?"]
-}
+Derive the file path:
+- `kanban/interviews/{Company}/{date}-{FirstName-LastName}.md`
+- Example: `kanban/interviews/Bandcamp/2026-03-15-Thomas-Roton.md`
+
+Create the directory if it doesn't exist. Write the interview file:
+
+```markdown
+---
+company: "Company Name"
+interviewer: "Thomas Roton"
+role: "VP Engineering"
+type: "Hiring Manager"
+date: 2026-03-15
+vibe: —
+outcome: "Pending"
+---
+
+# Thomas Roton — Hiring Manager · 2026-03-15
+**Company:** [[Company Name]] · **Outcome:** Pending · **Vibe:** —
+
+## Prep Notes
+
+[Full prep content here — all four sections]
+
+## Debrief
+
+## Transcript / Raw Notes
 ```
 
-Queue file naming: `YYYYMMDD_companyname_interview_prep.json`
+**b) Update the hub Interviews section**
 
-**b) Questions I Might Get Asked** (conditional) — if this section on the Notion page is empty or contains only placeholder bullets, auto-populate it from the Likely Questions output:
+In `kanban/companies/{Company}.md`, append a wikilink to the `## Interviews` section:
 
-```json
-{
-  "command": "interview_questions",
-  "name": "CompanyName",
-  "questions": [
-    {"question": "How did you scale the platform org?", "answer": "Mobimeo: 8 to 23 engineers across Platform, SRE, Security, Data..."},
-    {"question": "Tell me about a production incident", "answer": "1KOMMA5°: uptime was 95% when I joined. Standardized on-call, SLOs..."}
-  ]
-}
+```
+- [[2026-03-15-Thomas-Roton|Thomas Roton — Hiring Manager · Pending · Vibe —]]
 ```
 
-Do NOT write this if "Questions I Might Get Asked" already has substantive content from a previous `/prep` run or manual entry.
+Use the Edit tool to append this line.
+
+**c) Auto-populate Questions I Might Get Asked (conditional)**
+
+If the `## Questions I Might Get Asked` section in the hub file is empty or contains only placeholder text, populate it with the Likely Questions from this prep run. Use the Edit tool to replace the placeholder content with the questions and answer guidance.
+
+Do NOT overwrite this section if it already has substantive content from a previous `/prep` run or manual entry.
 
 ## Critical Rules
 
@@ -155,7 +173,6 @@ Do NOT write this if "Questions I Might Get Asked" already has substantive conte
 - Chronology is sacred — Solo Recon and Modern Electric are current roles (2024-present). "Most recently" always means these.
 - People management started mid-2017 — that's 8+ years as of 2026
 - Interviewer research must be real — if you can't find information, say so. Do not fabricate LinkedIn profiles, conference talks, or blog posts.
-- Interview type must be one of the 8 valid Notion select values — do not invent new ones
 - Prep notes are for Greg's eyes only — they can be more direct and strategic than external-facing documents
 - No AI tells — no "aligns perfectly", "uniquely positioned", "proven track record"
 - No fake metrics — only use numbers that appear in CONTEXT.md
@@ -164,21 +181,19 @@ Do NOT write this if "Questions I Might Get Asked" already has substantive conte
 
 ## Do Not
 
-- Skip the review checkpoint — present prep to Greg and wait for feedback before writing to Notion
-- Generate prep without reading the company's Notion page first — prep must build on existing tracker context
+- Skip the review checkpoint — present prep to Greg and wait for feedback before writing any files
+- Generate prep without reading the company hub first — prep must build on existing hub context
 - Fabricate interviewer information — no public profile found is an honest answer
 - Write generic prep that could apply to any company — every section must reference the specific company, role, and interviewer
 - Auto-populate "Questions I Might Get Asked" without checking whether it already has content
 - Use the same question set for every interview type — Phone Screen prep is fundamentally different from System Design prep
-- Create prep for a company not yet tracked in Notion — tell Greg to run `/analyze` + `/apply` first
+- Create prep for a company not yet tracked in Obsidian — tell Greg to run `/analyze` + `/apply` first
 - Invent mutual connections between Greg and the interviewer
-- Run without knowing the interview date — date is required for the Interviews DB row
-- Use Notion MCP write tools — queue system only for all writes
+- Run without knowing the interview date — date is required for the interview filename
 
 ## Related Skills
 
 - `/analyze` — Fit assessment (must be run before `/prep`)
 - `/apply` — Full application workflow (must be run before `/prep`)
-- `/track` — Manual interview prep and debrief via queue commands
 - `/outreach` — LinkedIn contact research (may provide interviewer context)
 - `/debrief` — Post-interview debrief capture (run after the interview)
