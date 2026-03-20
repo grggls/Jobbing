@@ -334,6 +334,21 @@ When Greg has an upcoming interview, use `/prep` to generate targeted preparatio
 
 **Output:** Prep Notes toggle in the Interviews DB row page body, via `interview_prep` queue command. If "Questions I Might Get Asked" is empty, auto-populates that section too.
 
+### Staff/Principal Interview Performance Standards
+
+All interview prep at Greg's level must address the **Four Pillars** — the specific areas where Staff/Principal candidates most commonly fail. Based on direct recruiter feedback on rejection reasons. These apply across all companies and interview types, not just technical rounds.
+
+1. **Quantified Impact** — The #1 rejection reason. Every story must connect technical work to hard business metrics (revenue, latency, efficiency, cost). "I don't know the numbers" is a red flag at this level.
+2. **Architectural Decision Making** — Walk through real ADRs with trade-offs, buy-in process, and long-term risk mitigation. No hypotheticals — concrete decisions seen through to completion.
+3. **Analytical Depth & Root Cause** — Incidents need a systematic elimination chain + architectural prevention. If the root cause was simple, it's not a Principal-level story.
+4. **Executive Communication** — STAR format, under 4 minutes per answer. Systems-wide framing, not niche. Self-awareness when pushed on weak areas, not defensiveness.
+
+**Quick prep checklist (apply to every interview):**
+- Every story has a hard number
+- At least one ADR walk-through ready
+- Every incident story has methodology + systemic prevention
+- Each answer deliverable in under 4 minutes
+
 ## Step 6: Post-Interview Debrief
 
 After an interview, use `/debrief` to capture what happened while the conversation is fresh. Greg dumps raw thoughts; Claude structures them into the Interviews DB row.

@@ -92,6 +92,7 @@ For any posting Greg wants to pursue:
 - **Be honest.** A board full of junior roles or frontend jobs is a "no matches" — say so.
 - **Skip JS-rendered boards.** If page content is mostly boilerplate with no job listings, note it and move on.
 - **Check for duplicates.** Same company+role across multiple boards = one result.
+- **Use Chrome MCP.** Use my browser when you run into robots.txt that prevents your scraping.
 
 ## Do Not
 
@@ -99,4 +100,3 @@ For any posting Greg wants to pursue:
 - Present roles for companies already in the tracker
 - Filter out roles solely because the title says "Senior" — read the scope first
 - Create Notion entries automatically — matches go through `/analyze` first
-- Spend time on boards that clearly returned no job content (JS-only, login walls)

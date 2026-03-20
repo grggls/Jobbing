@@ -50,9 +50,27 @@ Use WebSearch to research the interviewer:
 
 Build a concise profile that gives Greg context on who they're talking to. If WebSearch returns nothing useful, say "No public profile found" plainly and focus on role-based preparation instead.
 
+### Step 3.5: Apply the Staff/Principal Interview Framework
+
+Every prep at this level must address the **Four Pillars** — the specific areas where Staff/Principal candidates most commonly fail interviews. These are based on direct recruiter feedback on rejection reasons and apply to all interview types, not just technical rounds.
+
+**Pillar 1: Quantified Impact ("Own It")** — The #1 rejection reason. Every story Greg tells must connect technical work to hard business metrics: revenue impact, latency reduction (with numbers), efficiency multipliers, cost savings, team velocity improvements. "I don't know the numbers" or "we didn't formally measure it" is a major red flag at this level. When generating prep, pair every talking point with the specific metric from CONTEXT.md. If no metric exists for a story, flag it as a gap so Greg can either find the number or choose a different story.
+
+**Pillar 2: Architectural Decision Making** — Greg must be able to walk through real ADRs: what trade-offs were considered (build vs. buy, monolith vs. federated, etc.), how he secured buy-in from other senior engineers or leadership, and long-term risks identified with mitigations. No hypotheticals — only concrete decisions he made and saw through to completion. When generating likely questions, include at least one ADR-style question.
+
+**Pillar 3: Analytical Depth & Root Cause ("Dive Deep")** — When discussing incidents or failures, the expectation is a systematic elimination chain (rollback → log analysis → profiling → code trace), not heroics. Every incident story must include the architectural prevention: what changed so this *class* of error can't recur? If the root cause was simple, it's not a Staff/Principal-level story. When generating prep, ensure incident stories have both the investigation methodology and the systemic fix.
+
+**Pillar 4: Executive Communication & Breadth** — Answers must be under 4 minutes using STAR format. If the interviewer has to accelerate the candidate, it counts as a negative signal for communication. Even specialized answers should be framed in terms of system-wide impact and end-user experience. Self-awareness about knowledge boundaries is expected — defensiveness when pushed on a weak answer is a red flag. When generating prep, include timing guidance and flag any stories that risk going long.
+
+**Quick Checklist (include in every prep):**
+1. Does every story have a hard number? (Pillar 1)
+2. Is there at least one ADR walk-through ready? (Pillar 2)
+3. Does every incident story have investigation methodology + systemic prevention? (Pillar 3)
+4. Can each answer be delivered in under 4 minutes? (Pillar 4)
+
 ### Step 4: Generate Prep Material
 
-Generate four sections, each tailored to the interview type and interviewer:
+Generate four sections, each tailored to the interview type and interviewer. Apply the Four Pillars framework to every section — ensure each talking point and answer includes quantified impact, and flag any gaps.
 
 **1. Interviewer Background**
 - Who they are, what they care about, their technical/business focus

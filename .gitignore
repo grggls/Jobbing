@@ -9,7 +9,14 @@ __pycache__/
 
 # OS / editor
 .DS_Store
-.obsidian/
+
+# Obsidian — commit config, exclude machine-specific state
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+
+# Kanban — exclude large derived-data snapshot
+kanban/snapshot.json
 
 # Personal data — never commit
 CONTEXT.md

@@ -1728,6 +1728,8 @@ class NotionTracker:
                 return self._queue_debrief(task, filename)
             elif command == "migrate_interviews_schema":
                 return self._queue_migrate_interviews(task, filename)
+            elif command == "custom_section":
+                return self._queue_custom_section(task, filename)
             else:
                 return {
                     "file": filename,
@@ -1966,6 +1968,48 @@ class NotionTracker:
             "action": "migrate_interviews_schema",
             "pages_processed": len(results),
             "details": results,
+        }
+
+    def _queue_custom_section(self, task: dict[str, Any], filename: str) -> dict[str, Any]:
+        """Add or replace an arbitrary toggle heading_3 section on a page.
+
+        Queue JSON format:
+            {"command": "custom_section", "name": "Company",
+             "heading": "Section Title", "content": "Markdown content..."}
+
+        The content is parsed via _markdown_to_blocks(). The section is
+        appended after the last managed section (or at the end of the page).
+        If a section with the same heading already exists, it is replaced.
+        """
+        page_id = self._resolve_page_id(task.get("page_id"), task.get("name"))
+        heading = task.get("heading", "")
+        content = task.get("content", "")
+        if not heading:
+            raise ValueError("custom_section command requires heading")
+        if not content:
+            raise ValueError("custom_section command requires content")
+
+        blocks = _markdown_to_blocks(content)
+
+        # Remove existing section with the same heading (if any)
+        self._remove_section(page_id, heading)
+
+        # Build toggle heading_3 with children
+        toggle_block = _toggle_heading3_block(heading, blocks)
+
+        # Append at the end of the page (after managed sections)
+        self._request(
+            "PATCH",
+            f"{NOTION_BASE_URL}/blocks/{page_id}/children",
+            {"children": [toggle_block]},
+        )
+
+        return {
+            "file": filename,
+            "status": "ok",
+            "action": "custom_section_written",
+            "page_id": page_id,
+            "heading": heading,
         }
 
     # --- Follow-up cadence monitor ---

@@ -1,0 +1,18 @@
+---
+company: "Verda (formerly Datacrunch)"
+position: "Principal SRE"
+status: "Followed-Up"
+url: "https://datacrunch.jobs.personio.com/job/2437837?display=en"
+environment: [Remote, Remote work for 30 days per year]
+salary: "Thomas said up to 120K, but maybe we can inch that up. "
+focus: [Green Datacenters, HPC, AI]
+notion_id: "30c5de3c-370f-80d0-8824-d9be835ea432"
+synced: 2026-03-20T11:02:10
+---
+
+# Verda (formerly Datacrunch)
+**Position:** Principal SRE
+
+**Status:** Followed-Up · **Salary:** Thomas said up to 120K, but maybe we can inch that up.  · **Environment:** Remote, Remote work for 30 days per year · **Focus:** Green Datacenters, HPC, AI
+
+[Job Posting](https://datacrunch.jobs.personio.com/job/2437837?display=en)
