@@ -8,8 +8,7 @@ environment: [Hybrid, Ireland]
 salary: "$180K–$259K (US) / Unknown (Ireland)"
 focus: [HR Tech, Enterprise SaaS, Workforce Management]
 conclusion: "Job was closed before I could apply"
-notion_id: "3105de3c-370f-8185-95aa-ece7b898f95b"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # UKG

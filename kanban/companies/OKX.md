@@ -8,8 +8,7 @@ environment: [Remote]
 salary: "$230,000 to $335,000 - published in the job posting on greenhouse.io"
 focus: [Crypto, Web3, Fintech]
 conclusion: "No response. You sent lots of messages to recruiters and a VP on linkedin"
-notion_id: "f1c6151b-4782-426e-9ae5-82ce01f396d6"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # OKX

@@ -8,8 +8,7 @@ environment: [Remote]
 salary: "$113K–$176K"
 focus: [Nonprofit, Open Source, Data Infrastructure]
 conclusion: "Below scoring threshold (60/100): Senior IC below leadership level, below-market comp ($109K-$169K), culture fit concerns after research. Decided against pursuing."
-notion_id: "c50d64fe-ccbf-4b04-893d-dfa597b5332c"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Wikimedia Foundation

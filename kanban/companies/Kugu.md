@@ -7,8 +7,7 @@ url: "https://kugu.jobs.personio.de/job/885057?language=en&display=en"
 environment: [On-site]
 salary: "120k and up"
 focus: [Green Building]
-notion_id: "1205de3c-370f-80bc-8057-f8af94499a9c"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Kugu

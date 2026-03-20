@@ -7,8 +7,7 @@ url: "https://jobs.smartrecruiters.com/Flink3/743999836655041-engineering-manage
 environment: [Hybrid, Remote work for 30 days per year]
 focus: [Food Delivery]
 conclusion: "Received an email from the recruiter turning me down. Strange, I never got a first technical interview. Only spoke with the recruiter, who appeared to be severely hungover."
-notion_id: "652746f6-b172-47b8-a0b5-cf3229be0890"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Flink

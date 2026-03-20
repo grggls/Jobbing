@@ -7,8 +7,7 @@ url: "https://power.cloud/en/jobs/head-of-architecture-gn/"
 environment: [Remote with a Berlin office]
 salary: "135k is what you asked for, I think?"
 focus: [Renewable Energy]
-notion_id: "857c0b4d-a0bb-4b88-a042-98583eb2228a"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Powercloud

@@ -8,8 +8,7 @@ environment: [Remote, Remote - US]
 salary: "$201K–$235K"
 focus: [Healthcare, SaaS]
 conclusion: "Skip — product engineering director role (care delivery/staffing software), not platform/infrastructure. Title matched but substance didn't."
-notion_id: "30d5de3c-370f-81e1-8df2-c9da0b350c61"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Honor

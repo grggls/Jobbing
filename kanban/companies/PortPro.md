@@ -8,8 +8,7 @@ url: "https://jobs.lever.co/portpro/e9957969-aba7-4237-9811-939b2fef5bb9"
 environment: [Remote]
 salary: "Not listed"
 focus: [Logistics, SaaS, TMS]
-notion_id: "31e5de3c-370f-813c-a93c-df25aa6f33a8"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # PortPro

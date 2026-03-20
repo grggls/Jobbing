@@ -7,8 +7,7 @@ url: "https://jobs.ashbyhq.com/authzed/c03b5462-5a69-4b38-bb09-bf81a7de9131"
 environment: [Remote, US/Canada/Europe]
 salary: "$170K–$210K + equity (est.)"
 focus: [Authorization Infrastructure, Open Source, Cloud Platform]
-notion_id: "30d5de3c-370f-81a2-9a9c-f14fdc8374e0"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # AuthZed

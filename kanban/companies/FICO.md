@@ -9,8 +9,7 @@ environment: [Remote, US]
 salary: "$146,000–$229,000"
 focus: [Analytics, Credit Scoring, Fraud Detection, Financial Services]
 conclusion: "Not hiring for any infra/platform roles in EMEA at the moment. Product Engineers only."
-notion_id: "3105de3c-370f-815b-955c-f6a0464dde92"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # FICO

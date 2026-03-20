@@ -8,8 +8,7 @@ environment: [Remote currently office in Berlin coming next year]
 salary: "asked for 135k"
 focus: [ClimateTech, Renewable Energy]
 conclusion: "I GOT THE JOB!!!!!!!"
-notion_id: "87f37791-8e28-45c2-a8ea-3a1b806b0b67"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # 1KOMMA5

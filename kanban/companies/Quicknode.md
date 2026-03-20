@@ -8,8 +8,7 @@ environment: [Fully Remote]
 salary: "€160-190k "
 focus: [Crypto, Not Green]
 conclusion: "They hired someone with a better fit/set of skills. The noreply rejection email said they really wanted to hire me though."
-notion_id: "5765a891-463a-413b-9de0-862bf2de2af4"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Quicknode

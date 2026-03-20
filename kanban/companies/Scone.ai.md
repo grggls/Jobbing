@@ -7,8 +7,7 @@ url: "* Dirk Collin contacted you on Linkedin and gave you a JD and asked if you
 environment: [Remote, Euro Business Hours]
 focus: [Monitoring, Net-Zero]
 conclusion: "Working through a pool of candidates with more aligned experience"
-notion_id: "dc8e5ecc-3eaa-4443-8963-92d6fdc59028"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Scone.ai

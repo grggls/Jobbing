@@ -7,9 +7,9 @@ date: 2026-02-10
 url: "https://www.kevala.com/career/staff-site-reliability-engineer-01122026"
 environment: [Remote, US]
 salary: "$136K–$180K + equity"
-notion_id: "3095de3c-370f-808d-a4f9-e470c56af607"
-synced: 2026-03-20T11:02:10
+
 ---
+
 # Kevala
 **Position:** Staff Site Reliability Engineer
 

@@ -7,8 +7,7 @@ url: "https://songtradr.bamboohr.com/careers/150"
 environment: [Remote, London]
 salary: "£85K quoted by Richard Frost - ~€98K … I came back with €135K … Richard will see if they can land in the middle at €120K"
 focus: [Music Tech, e-commerce, Creator Platform]
-notion_id: "3135de3c-370f-816f-9776-c4ae30b2028b"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Bandcamp (Songtradr)

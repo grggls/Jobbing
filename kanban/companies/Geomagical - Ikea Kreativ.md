@@ -8,8 +8,7 @@ environment: [Remote]
 salary: "$195,000 to $260,000"
 focus: [Consumer]
 conclusion: "Declined to interview there. Wasn’t a good fit in terms of industry or expectations. Young person I’d be reporting to. Agency feel. And the understanding that I’d relocate to the US."
-notion_id: "2df5de3c-370f-80b8-a61d-d849b3006b00"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Geomagical / Ikea Kreativ

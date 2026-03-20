@@ -7,8 +7,7 @@ url: "https://www.linkedin.com/jobs/view/3407695548/?refId=wltvtb9XR30jkuMssM6Bn
 environment: [Fully Remote]
 focus: [Renewable Energy, Distributed Energy]
 conclusion: "Fizzled"
-notion_id: "cac4a5a4-37fd-459b-8265-b2f3a8ca7a99"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Equilibrium Energy

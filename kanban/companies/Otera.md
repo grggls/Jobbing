@@ -7,8 +7,7 @@ url: "https://app.screenloop.com/careers/otera/job_posts/8013"
 environment: [Remote, Europe]
 salary: "€120K–€160K (estimate)"
 focus: [Agentic AI, Enterprise Automation, B2B SaaS, No-Code]
-notion_id: "30c5de3c-370f-81af-9d2a-e3cf47d462de"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Otera

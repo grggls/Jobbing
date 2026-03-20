@@ -1,3 +1,7 @@
 {
-  "theme": "obsidian"
+  "theme": "Things",
+  "mode": "dark",
+  "interfaceFontFamily": "Inter",
+  "textFontFamily": "Inter",
+  "monospaceFontFamily": "JetBrains Mono"
 }

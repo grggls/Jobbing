@@ -8,8 +8,7 @@ environment: [Remote, Remote - US]
 salary: "$150K–$230K"
 focus: [Enterprise SaaS, Cloud Platform, SRE/Devops]
 conclusion: "Skip — core requirement is deep OS kernel internals (sysctl tuning, cgroups, filesystem tuning, SELinux/AppArmor). Greg's career is cloud-native platform engineering, not low-level systems work."
-notion_id: "30d5de3c-370f-81f3-b5d8-caa239afc4f1"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # NinjaOne

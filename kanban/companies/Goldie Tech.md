@@ -7,8 +7,7 @@ url: "https://www.linkedin.com/company/goldie-tech-gmbh/"
 environment: [Berlin office, Dubai office, Remote]
 salary: "tbd"
 focus: [Gold-as-a-Service]
-notion_id: "3105de3c-370f-80bd-a703-c198a1b86336"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Goldie Tech

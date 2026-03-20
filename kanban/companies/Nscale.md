@@ -8,8 +8,7 @@ environment: [Remote]
 salary: "160-200k"
 focus: [AI, Data Centers]
 conclusion: "They hired someone with lots of data center / GPU experience"
-notion_id: "2b65de3c-370f-8015-8113-e2777d537198"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Nscale

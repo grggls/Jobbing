@@ -8,8 +8,7 @@ environment: [Remote, Overlap with EST]
 salary: "Depends on Location - ask for 165k euro"
 focus: [Blockchain, Oracle Network]
 conclusion: "Blew the system design interview"
-notion_id: "17093579-93f6-4260-ad2f-d336c0e51fd9"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Chainlink Labs

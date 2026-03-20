@@ -7,8 +7,7 @@ url: "https://jobs.ashbyhq.com/cointracker/0e9e7749-d24a-438d-8b35-42c7181b15ef"
 environment: [Fully Remote, not in Germany]
 salary: "US$235-275k base (222-260k euro)"
 focus: [Compliance, Taxes, Crypto]
-notion_id: "0e4dad49-4426-4488-ac01-93707aadeaaf"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Cointracker

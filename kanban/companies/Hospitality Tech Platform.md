@@ -6,8 +6,7 @@ date: 2025-10-27
 environment: [Remote]
 salary: "up to $225K + Equity"
 focus: [Travel]
-notion_id: "2a25de3c-370f-802f-af59-fbc55f8e2b17"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Hospitality Tech Platform

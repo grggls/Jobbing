@@ -7,8 +7,7 @@ url: "https://www.linkedin.com/jobs/view/3520238812/"
 environment: [Fully Remote, Not necessarily in Germany]
 salary: "The salary range for candidates in the US is $248,500-273,500."
 focus: [Fintech, Not Green, Carbon Markets]
-notion_id: "5df37591-6a04-4a10-a5f1-aba0245c5e0f"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Mercury

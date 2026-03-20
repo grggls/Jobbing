@@ -7,8 +7,7 @@ url: "https://jobs.lever.co/1inch/7bf88a06-2c35-4373-91c3-78fb4bb22bb7"
 environment: [Remote, Dubai, Germany]
 salary: "Not listed"
 focus: [DeFi, Crypto, DEX Aggregator]
-notion_id: "30f5de3c-370f-8115-9812-f653270488ac"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # 1inch

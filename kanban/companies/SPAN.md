@@ -8,8 +8,7 @@ environment: [On-site]
 salary: "US$125-225k"
 focus: [Electrification]
 conclusion: "They have a problem with hiring a full-time fully-remote candidate. Asked about consulting opportunities."
-notion_id: "0dbd684a-b6bd-4478-9251-2bf0fd487253"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # SPAN

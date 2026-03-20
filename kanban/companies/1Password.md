@@ -8,8 +8,7 @@ url: "https://jobs.ashbyhq.com/1password/ff98345b-cc1a-4be9-8fd8-89ed85c7bf89"
 environment: [Remote]
 salary: "$272K–$408K + RSUs"
 focus: [Security, Identity, Platform Infrastructure]
-notion_id: "31e5de3c-370f-8138-8e5f-e09fce167283"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # 1Password

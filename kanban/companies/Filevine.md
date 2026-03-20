@@ -8,8 +8,7 @@ url: "https://jobs.lever.co/filevine/8d03b991-1aeb-454e-90a8-b2ac33113d8b"
 environment: [Remote, US]
 salary: "$260K–$360K base"
 focus: [Legal Tech, AI, SRE, Platform Engineering]
-notion_id: "31b5de3c-370f-8131-90d3-e87d8120affe"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Filevine

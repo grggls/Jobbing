@@ -7,8 +7,7 @@ url: "https://www.linkedin.com/jobs/view/3388074512"
 environment: [Remote]
 focus: [Food Waste]
 conclusion: "Only able to pay 90,000 euro per annum"
-notion_id: "cbca5a24-5dbb-4048-8d51-9d7877bd1731"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # FreshFlow

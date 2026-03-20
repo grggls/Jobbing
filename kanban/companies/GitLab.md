@@ -7,8 +7,7 @@ url: "https://job-boards.greenhouse.io/gitlab/jobs/8403472002"
 environment: [Remote, US]
 salary: "$230K–$340K base + bonus (estimated from Glassdoor VP Eng data)"
 focus: [DevSecOps, Developer Tooling, AI, Open Source]
-notion_id: "30d5de3c-370f-813c-8112-f8c05ad3f7af"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # GitLab

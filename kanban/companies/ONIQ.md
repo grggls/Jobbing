@@ -8,8 +8,7 @@ environment: [Remote, Cologne office]
 salary: "€90K–€120K (estimate)"
 focus: [Manufacturing, AI, Sustainability, B2B SaaS]
 conclusion: "Didn’t apply. They wanted transcripts and references"
-notion_id: "30c5de3c-370f-8100-a679-cd945d0a5c0d"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # ONIQ

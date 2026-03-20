@@ -8,8 +8,7 @@ environment: [Remote]
 salary: "$150K–$215K"
 focus: [Fraud Detection, Developer Tools, SaaS]
 conclusion: "Cancelled by recruiter — unable to hire out of Germany due to labor law restrictions."
-notion_id: "30d5de3c-370f-81a1-9391-efd2a5335360"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Fingerprint

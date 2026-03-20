@@ -7,8 +7,7 @@ url: "https://www.celonis.com/careers/jobs/details/?jobId=4905785003"
 environment: [Remote in Berlin ok, Office in Munich]
 salary: "120k-135k base possible, tbd"
 focus: [Process Mining]
-notion_id: "64311a38-09a0-446b-a80e-045fb9107a90"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Celonis

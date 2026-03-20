@@ -7,8 +7,7 @@ url: "https://www.linkedin.com/safety/go?url=https%3A%2F%2Fwww.datarobot.com%2Fc
 environment: [Remote]
 focus: [Not Green]
 conclusion: "Skipped the interview, didn’t follow up. They’re not green, it’s an engineering manager position. Good growth prospects, but I’m holding out for something better."
-notion_id: "fedf6ed5-0000-4aa0-8c9c-216f3627f5f6"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Data Robot

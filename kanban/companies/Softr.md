@@ -7,8 +7,7 @@ environment: [Remote]
 salary: "€120k + stocks + performance bonus"
 focus: [No Code Platform]
 conclusion: "They ghosted me"
-notion_id: "2f5910c9-b841-47c0-ad57-3b33f12740c7"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Softr

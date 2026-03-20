@@ -8,8 +8,7 @@ environment: [On-site, NYC]
 salary: "200-250k"
 focus: [Crypto, Finance]
 conclusion: "Didn’t progress past the first stage"
-notion_id: "1d75de3c-370f-8022-b312-c9b2efd30608"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Galaxy

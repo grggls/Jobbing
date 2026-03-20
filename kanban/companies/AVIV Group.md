@@ -7,8 +7,7 @@ url: "https://www.linkedin.com/jobs/view/3605383014/?refId=e2a61757-9ca9-423a-83
 environment: [Remote, Hybrid, Travel once a month]
 focus: [Real Estate, Not Green]
 conclusion: "Denied. After 3 months and 8 interviews. Highly complex merger, multiple teams. They might want to hire someone internally. The job remains open."
-notion_id: "365e05fb-025b-42e0-8560-956de5843975"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # AVIV Group

@@ -7,8 +7,7 @@ url: "https://careers.distribusion.com/o/engineering-manager-risk-reliability-al
 environment: [Remote]
 focus: [transportation]
 conclusion: "After an initial chat with Talent Acquisition, they decided not to proceed further with the interview process"
-notion_id: "e1e88c0e-6c2b-4af3-b208-2a6c8cf61d7f"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Distribusion

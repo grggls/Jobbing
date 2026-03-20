@@ -7,8 +7,7 @@ url: "https://pliant.bamboohr.com/careers/381"
 environment: [Remote with a Berlin office]
 salary: "130-170K (estimated)"
 focus: [Fintech]
-notion_id: "30c5de3c-370f-8016-8399-f018be4a075b"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Pliant

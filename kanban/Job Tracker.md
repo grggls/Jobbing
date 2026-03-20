@@ -1,7 +1,5 @@
 ---
-
-kanban-plugin: board
-
+kanban-plugin: basic
 ---
 
 ## Targeted
@@ -12,9 +10,7 @@ kanban-plugin: board
 - [ ] [[companies/1Password|1Password]] — Senior Director Engineering, Identity Security Platform Infrastructure · Score: 74 · 2026-03-09
 - [ ] [[companies/PortPro|PortPro]] — Director of DevOps · Score: 71 · 2026-03-09
 
-
 ## Applied
-
 
 
 ## Followed-Up
@@ -40,7 +36,6 @@ kanban-plugin: board
 - [ ] [[companies/Verda (formerly Datacrunch)|Verda (formerly Datacrunch)]] — Principal SRE
 - [ ] [[companies/terralayr|terralayr]] — Engineering Manager · 2026-02-25
 
-
 ## In Progress (Interviewing)
 
 - [ ] [[companies/Kevala|Kevala]] — Staff Site Reliability Engineer · Score: 88 · 2026-02-10
@@ -50,7 +45,7 @@ kanban-plugin: board
 - [ ] [[companies/Goldie Tech|Goldie Tech]] — CTO · 2026-02-20
 - [ ] [[companies/Parloa|Parloa]] — Principal Software Engineer · 2026-02-19
 - [ ] [[companies/ReflexAI|ReflexAI]] — Lead Platform Engineer · 2026-02-09
-
+- [ ] [[companies/tem|tem]] — Senior Staff Engineer · 2026-03-20
 
 ## Done
 
@@ -238,7 +233,7 @@ kanban-plugin: board
 - [ ] [[companies/Upvest|Upvest]] — Tech Lead Platform Infrastructure · 2023-01-24
 - [ ] [[companies/Verdant|Verdant]] — N/A · 2023-10-23
 - [ ] [[companies/Wallround|Wallround]]
-- [ ] [[companies/Wand AI|Wand AI]] — Engineering Manager Devops
+- [ ] [[companies/Wand AI|Wand AI]] — Engineering Manager Devops 
 - [ ] [[companies/WeaveGrid|WeaveGrid]] — 2023-05-10
 - [ ] [[companies/Wikimedia Foundation|Wikimedia Foundation]] — Senior Site Reliability Engineer, Data Platform Engineering · 2026-02-23
 - [ ] [[companies/Y42|Y42]] — (Senior) Engineering Manager · 2023-09-06
@@ -252,10 +247,13 @@ kanban-plugin: board
 - [ ] [[companies/trawa|trawa]] — Engineering Manager — Platform · 2026-02-15
 
 
-
-
 %% kanban:settings
 ```
-{"kanban-plugin":"board","lane-width":280,"show-checkboxes":false,"show-relative-date":true,"full-list-lane-width":false,"move-dates":false,"date-display-format":"DD-MM-YY","date-picker-week-start":1}
+{
+  "kanban-plugin": "basic",
+  "lane-width": 280,
+  "show-checkboxes": false,
+  "show-relative-date": true
+}
 ```
 %%

@@ -7,8 +7,7 @@ url: "https://www.linkedin.com/jobs/collections/recommended/?currentJobId=436721
 environment: [Hybrid, Remote, Berlin office]
 salary: "€180K–€200K base + bonus + VSOP"
 focus: [AI, Enterprise SaaS, Contact Center]
-notion_id: "3025de3c-370f-803b-bcd8-eefb93b821c0"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Parloa

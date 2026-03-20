@@ -8,8 +8,7 @@ environment: [Remote]
 salary: "Unknown"
 focus: [Privacy, Open Source, Infrastructure]
 conclusion: "Below scoring threshold (61/100): Senior IC scoped to single project (Immich), narrow scope, unknown comp, Rust required. Small founder-funded org (20-40 people)."
-notion_id: "3105de3c-370f-8186-b9e0-dd4f2bd570f0"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # FUTO

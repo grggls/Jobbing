@@ -8,8 +8,7 @@ url: "https://reveleer.breezy.hr/p/114ad776e091-director-infrastructure"
 environment: [Remote]
 salary: "$175K–$225K"
 focus: [Healthcare, AI, SaaS]
-notion_id: "31e5de3c-370f-8186-a3d3-dbe367276bb6"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Reveleer

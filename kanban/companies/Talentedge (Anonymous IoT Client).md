@@ -4,8 +4,7 @@ position: "Principal Platform Engineer (AWS)"
 status: "Targeted"
 score: 78
 date: 2026-03-09
-notion_id: "31e5de3c-370f-8117-a472-fa426bb08c61"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Talentedge (Anonymous IoT Client)

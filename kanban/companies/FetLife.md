@@ -8,8 +8,7 @@ environment: [Remote, Remote - US]
 salary: "$182k-$272k CAD"
 focus: [Community, Social Networking]
 conclusion: "No active engineering postings found since 2019. Dead lead."
-notion_id: "30d5de3c-370f-81d6-8873-fe2698205be0"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # FetLife

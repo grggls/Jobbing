@@ -7,8 +7,7 @@ url: "https://chainloop.dev/careers/founding-engineering-manager/"
 environment: [Remote, EMEA]
 salary: "$140K–$170K + equity"
 focus: [DevSecOps, Software Supply Chain Security, Developer Tooling, Open Source]
-notion_id: "31a5de3c-370f-81cc-8711-ffe523421f83"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Chainloop

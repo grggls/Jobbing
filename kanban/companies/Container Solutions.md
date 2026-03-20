@@ -7,8 +7,7 @@ url: "https://jobs.lever.co/container-solutions/239e6636-cb15-48aa-a7b3-7c387cfa
 environment: [Hybrid]
 focus: [Consulting, Cloud Native]
 conclusion: "Pay is way too low. Half of what I could be making. Too bad as the mental health aspects of what this job might offer are tempting."
-notion_id: "a8abc4fc-5fd6-46ab-875d-7822658a7394"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Container Solutions

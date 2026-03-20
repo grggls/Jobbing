@@ -7,8 +7,7 @@ url: "https://remoteok.com/remote-jobs/remote-observability-engineer-devops-stak
 environment: [Remote]
 focus: [Crypto]
 conclusion: "Shifting priorities and markets. They closed the position without filling it, apparently."
-notion_id: "a407af9d-baa9-442f-8508-cb4edf2b8794"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Kraken

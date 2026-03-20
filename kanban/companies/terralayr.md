@@ -7,8 +7,7 @@ url: "https://www.trlyr.com/careers/"
 environment: [Remote, Berlin office]
 salary: "€120K–€150K (estimated) + ESOP"
 focus: [Energy Storage, Renewables, Grid Flexibility, CleanTech]
-notion_id: "30f5de3c-370f-819c-931e-d6e22ca1c703"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # terralayr

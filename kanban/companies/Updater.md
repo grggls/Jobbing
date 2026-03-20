@@ -9,8 +9,7 @@ environment: [Remote US]
 salary: "$180K–$215K + stock options"
 focus: [Platform Engineering, Developer Experience, B2B SaaS, Sales Enablement]
 conclusion: "Scored 72/100. Strong tech match (AWS, K8s, Terraform, Datadog, Prometheus, Flux) but passed application deadline (Feb 28), weak Glassdoor signals (3.6/5, 2.8 career opps, 41% positive outlook, layoff mentions), seniority step-down (Lead IC vs Director/Head), and US-remote likely requires US residence. DoD connection via MoveHQ subsidiary flagged. Not pursuing."
-notion_id: "3105de3c-370f-8176-a468-cc0757958299"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Updater

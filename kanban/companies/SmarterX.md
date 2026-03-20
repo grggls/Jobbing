@@ -7,8 +7,7 @@ url: "https://www.linkedin.com/jobs/view/senior-director-devops-at-smarterx-3483
 environment: [Remote, based in the US, interim transition from living in Europe is fine]
 salary: "US$180,000 and up"
 focus: [recycling, Compliance]
-notion_id: "f68d3260-5cfd-4778-85a3-214780ab9590"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # SmarterX

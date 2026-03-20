@@ -5,8 +5,7 @@ status: "Done"
 date: 2026-03-07
 url: "https://example.com/test"
 conclusion: "Dummy test run — data preservation and interviews DB verified"
-notion_id: "31b5de3c-370f-81af-a714-c065fd13de90"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # ZZ-Test-Dummy

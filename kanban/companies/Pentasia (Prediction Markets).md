@@ -8,8 +8,7 @@ environment: [Remote, US time zones]
 salary: "Salary DOE — igaming infra leadership likely $200K–$300K+ based on industry benchmarks"
 focus: [Prediction Markets, Trading Systems, igaming, Infrastructure]
 conclusion: "Skip. Anonymous client (can't verify company, funding, or culture). igaming/prediction markets in active US regulatory crossfire. Strong technical match but domain is gambling-adjacent with no way to diligence the actual employer."
-notion_id: "31b5de3c-370f-817c-8ee4-c80d1bd00e3d"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Pentasia (Prediction Markets)

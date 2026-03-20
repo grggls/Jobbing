@@ -8,8 +8,7 @@ environment: [Hybrid]
 salary: "US$132,500 to $212,000"
 focus: [Oceanography]
 conclusion: "Didn’t pursue it. Didn’t want to work that Wolf and Lamb guy."
-notion_id: "86274115-e310-4823-9f25-67deff843732"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Saildrone

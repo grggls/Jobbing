@@ -8,8 +8,7 @@ environment: [Hybrid]
 salary: "90-100k base + 20-25% variable bonus"
 focus: [AI]
 conclusion: "Didn’t pass the technical interview"
-notion_id: "1ce5de3c-370f-80dc-9e02-d726a5efed4b"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Multiverse Computing

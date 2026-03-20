@@ -7,8 +7,7 @@ url: "https://jobs.lever.co/regrow.ag/c1aff6ae-6934-433a-9ad8-7834e01463da"
 environment: [Remote, West Coast Timezone]
 focus: [Carbon Credits, Regenerative Agriculture, Remote Sensing]
 conclusion: "Never had an interview. They made an offer to someone else. "
-notion_id: "d78ece24-e4df-4e9f-b353-6ec524687599"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Regrow Ag

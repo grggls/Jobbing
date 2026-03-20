@@ -8,8 +8,7 @@ environment: [Hybrid, lots of work on-site but remote periods are fine]
 salary: "110k + extensive benefits"
 focus: [Crypto]
 conclusion: "Nothing moved. One call with them. Never heard back. Didn’t pursue it either iirc."
-notion_id: "1d15de3c-370f-8011-8035-f29a4ed69bdc"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Clavium

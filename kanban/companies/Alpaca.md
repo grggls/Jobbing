@@ -7,8 +7,7 @@ url: "https://job-boards.greenhouse.io/alpaca/jobs/4970600004"
 environment: [Remote]
 salary: "$150K–$180K (estimate)"
 focus: [Fintech, Brokerage Infrastructure, Crypto, Trading API]
-notion_id: "3095de3c-370f-80af-a50a-cfd67b613e36"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Alpaca

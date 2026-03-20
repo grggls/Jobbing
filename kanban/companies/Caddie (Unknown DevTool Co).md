@@ -8,8 +8,7 @@ url: "https://www.linkedin.com/jobs/view/4374807175/"
 environment: [Remote, Europe-based, EMEA time zones]
 salary: "$150K–$220K USD"
 focus: [Developer Tooling, Observability, Cloud Infrastructure]
-notion_id: "3135de3c-370f-81a6-8e82-eeb707e8824d"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Caddie (Unknown DevTool Co)

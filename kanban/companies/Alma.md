@@ -7,8 +7,7 @@ url: "https://job-boards.greenhouse.io/alma/jobs/8148175002"
 environment: [Remote, Contiguous US]
 salary: "$260K–$290K"
 focus: [Mental Health, Healthcare, B2B SaaS, Insurance]
-notion_id: "30c5de3c-370f-819a-af79-c1f2e01e859d"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Alma

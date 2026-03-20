@@ -7,8 +7,7 @@ date: 2026-01-26
 url: "https://golem.network/careers"
 focus: [Blockchain]
 conclusion: "Withdrew before Round 2. B2B contract (not employment), no platform team, aggressive September mainnet deadline, and crypto market uncertainty made this a poor fit relative to stronger opportunities in pipeline. Two offers in hand (Acto, ReflexAI) at the time of withdrawal."
-notion_id: "2fa5de3c-370f-8037-8532-c85636286d6e"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Golem / Arkiv

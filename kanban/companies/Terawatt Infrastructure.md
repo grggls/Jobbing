@@ -7,8 +7,7 @@ url: "https://jobs.lever.co/terawattinfrastructure/1bcf80a3-3c01-4f4b-a3ac-7dbfc
 environment: [Remote]
 focus: [Electric Vehicles, fleet electrification, charging infrastructure]
 conclusion: "They want someone who can work US hours"
-notion_id: "7580b16d-1dbe-42b0-a714-aa2f0478cdd3"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Terawatt Infrastructure

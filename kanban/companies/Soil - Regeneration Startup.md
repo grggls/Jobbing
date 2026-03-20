@@ -8,8 +8,7 @@ environment: [???, PST]
 salary: "up to $225k"
 focus: [Regenerative Agriculture]
 conclusion: "Ghosted by the recruiter Nathaniel Smith, who didn’t bother to show up to our first conversation or send a note as to why"
-notion_id: "989186c0-56e4-4b7a-bd7e-3a6b8426986d"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Soil / Regeneration Startup

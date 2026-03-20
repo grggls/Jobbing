@@ -8,8 +8,7 @@ environment: [Remote]
 salary: "$127K–$181K"
 focus: [Climate Tech, Earth Observation, Satellite Imagery]
 conclusion: "Skipped — defense contract exposure (MDA SHIELD, German gov security contracts) conflicts with exclusion criteria. Also genuinely below level: 'Software Engineer' title with no senior/staff qualifier, $127K–$181K range, execution-scoped responsibilities."
-notion_id: "3105de3c-370f-8165-92a6-cf0b24c4f580"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Planet Labs

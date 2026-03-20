@@ -13,8 +13,7 @@ Wishing you all the best with the pilot and your future efforts.
 
 Warmly,
 Gregory"
-notion_id: "1b55de3c-370f-8048-af59-e06042ccc522"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # FIDgate

@@ -7,8 +7,7 @@ url: "https://jobs.ashbyhq.com/cyberhaven/ead29df5-0a3c-4d19-8fee-6ba66d838a32"
 environment: [Remote - US]
 salary: "250-300k + equity + bonus"
 focus: [Cybersecurity]
-notion_id: "3095de3c-370f-8056-9c08-e4444c22e312"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Cyberhaven

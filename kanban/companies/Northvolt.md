@@ -8,8 +8,7 @@ environment: [On-site]
 salary: "50-95K SEK per month"
 focus: [Batteries, Manufacturing]
 conclusion: "Ghosted them. Wasn’t ready to commit to a move to Stockholm. Salary was pretty low, too"
-notion_id: "8a98d3a0-f8cd-4231-b6b8-ddc6373341dc"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Northvolt

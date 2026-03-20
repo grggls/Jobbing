@@ -7,8 +7,7 @@ url: "https://static1.squarespace.com/static/5f086efa6c5356607fd69dbd/t/6434bd93
 salary: "US$150-200k"
 focus: [Healthtech, AI]
 conclusion: "Recruiter cancelled our interview"
-notion_id: "5cb5e6f3-1d22-41d9-a55f-825dac6382e1"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Dandelion Health

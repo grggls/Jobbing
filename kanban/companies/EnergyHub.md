@@ -8,8 +8,7 @@ environment: [Remote - US]
 salary: "200k-225k base"
 focus: [Energy Transition, VPP]
 conclusion: "ghosted by the recruiter"
-notion_id: "2da5de3c-370f-80dc-a0de-f967b647ff66"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # EnergyHub

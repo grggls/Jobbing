@@ -8,8 +8,7 @@ environment: [Berlin office, On-site]
 salary: "€120K–€150K base (est.)"
 focus: [Fintech, Neobroker, Savings Platform]
 conclusion: "Rejected after screening call with Ed Posinitskii (Staff Engineer, Application Platform). Likely gap: programming depth — Ed's last question probed languages and app-building experience. Narrow role (networking/VPNs/BGPs + observability ops), not a great fit anyway. Culture red flags (Glassdoor bottom-10% cuts, amp-it-up pressure) and ~300-person company with bank compliance overhead. No regrets."
-notion_id: "30c5de3c-370f-81e5-8d51-f4d22786db71"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Trade Republic

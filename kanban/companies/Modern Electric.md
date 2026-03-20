@@ -7,8 +7,7 @@ url: "https://modernelectric.co/"
 environment: [Remote at first onsite in Austin thereafter]
 focus: [residential solar]
 conclusion: "I’m working on this pro-bono until we get funding. Also looking at other roles in the meantime."
-notion_id: "1275de3c-370f-80b0-8261-f78dab733dd8"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Modern Electric

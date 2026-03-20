@@ -8,8 +8,7 @@ environment: [Remote, Europe, US/Canada/Europe]
 salary: "$181K–$228K"
 focus: [Developer Tools, Cloud Native, Open Source]
 conclusion: "Skip — all roles are building the IaC product (SDKs, cloud platform). Greg is an IaC user, not an IaC builder. Domain mismatch."
-notion_id: "30d5de3c-370f-81aa-9490-c9d5aba93b81"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # Pulumi

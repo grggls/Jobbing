@@ -5,8 +5,7 @@ status: "Done"
 date: 2022-05-06
 focus: [Healthtech, Not Green]
 conclusion: "Denied"
-notion_id: "cb811f61-bdfe-4746-af28-9b641d082a69"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # cara.care

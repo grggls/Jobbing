@@ -8,8 +8,7 @@ environment: [Remote, Globally dispersed, Deel]
 salary: "US$135K - 165K … you told him that 165k was just barely enough to say yes to, and you’re interested in perks, bonuses, etc. to balance it out."
 focus: [DeFi]
 conclusion: "Trail went cold"
-notion_id: "609b93de-6364-4e40-baba-04d78b7d83fc"
-synced: 2026-03-20T11:02:10
+
 ---
 
 # dYdX
