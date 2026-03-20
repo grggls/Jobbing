@@ -334,7 +334,7 @@ Periodically check all active interview processes for staleness. Use `/followup`
 ```bash
 jobbing track followup                    # default threshold (5 days)
 jobbing track followup --threshold 7      # custom threshold
-jobbing track followup --save             # save report to notion_queue_results/
+jobbing track followup --save             # save report to disk
 ```
 
 ## Step 8: Living Fit Assessment
