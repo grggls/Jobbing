@@ -80,7 +80,7 @@ class Config:
     notion_database_id: str = "734d746c-43b1-4929-8993-464f5ccc23e7"
 
     # Tracker
-    tracker_backend: str = "notion"  # "notion" | "json"
+    tracker_backend: str = "obsidian"  # "obsidian" | "notion" | "json"
 
     # Scoring
     score_threshold: int = 60
@@ -112,7 +112,7 @@ class Config:
         threshold = int(os.environ.get("SCORE_THRESHOLD", "60"))
 
         # Tracker backend from env
-        backend = os.environ.get("TRACKER_BACKEND", "notion")
+        backend = os.environ.get("TRACKER_BACKEND", "obsidian")
 
         # Follow-up cadence threshold
         followup_days = int(
@@ -137,6 +137,22 @@ class Config:
     @property
     def companies_dir(self) -> Path:
         return self.project_dir / "companies"
+
+    @property
+    def kanban_dir(self) -> Path:
+        return self.project_dir / "kanban"
+
+    @property
+    def kanban_companies_dir(self) -> Path:
+        return self.kanban_dir / "companies"
+
+    @property
+    def kanban_interviews_dir(self) -> Path:
+        return self.kanban_dir / "interviews"
+
+    @property
+    def kanban_board_path(self) -> Path:
+        return self.kanban_dir / "Job Tracker.md"
 
     @property
     def queue_dir(self) -> Path:

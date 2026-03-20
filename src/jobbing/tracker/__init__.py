@@ -44,6 +44,10 @@ class TrackerBackend(Protocol):
 
 def get_tracker(backend: str, config: Config) -> TrackerBackend:
     """Factory: instantiate the configured tracker backend."""
+    if backend == "obsidian":
+        from jobbing.tracker.obsidian import ObsidianTracker
+
+        return ObsidianTracker(config)
     if backend == "notion":
         from jobbing.tracker.notion import NotionTracker
 
