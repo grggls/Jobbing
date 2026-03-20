@@ -502,6 +502,424 @@ def generate_kanban_board(companies: list[TrackedCompany]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Interview migration (--include-interviews)
+# ---------------------------------------------------------------------------
+
+
+INTERVIEWS_DIR = KANBAN_DIR / "interviews"
+
+
+@dataclass
+class InterviewData:
+    """Minimal interview record extracted from the Notion Interviews DB."""
+
+    interviewer: str = ""
+    role: str = ""
+    interview_type: str = ""
+    date: str = ""
+    vibe: int = 0
+    outcome: str = ""
+    prep_notes: str = ""
+    debrief: str = ""
+
+
+def _interview_name_slug(interviewer: str) -> str:
+    """Convert an interviewer name to a filename-safe slug.
+
+    'Richard Frost' → 'Richard-Frost'
+    'Anna Russo Kennedy' → 'Anna-Russo-Kennedy'
+    Strips anything after a dash/em-dash separator (role suffix).
+    """
+    import re
+
+    # Split on em dash, en dash, or ' - ' to strip role suffix
+    name_only = re.split(r"\s*[—–]\s*|\s+-\s+", interviewer, maxsplit=1)[0].strip()
+    # Replace non-alphanumeric characters (except spaces) with nothing
+    safe = re.sub(r"[^\w\s-]", "", name_only)
+    # Replace spaces with dashes
+    return re.sub(r"\s+", "-", safe.strip())
+
+
+def _interview_filename(
+    date_str: str,
+    interviewer: str,
+    existing: set[str],
+) -> str:
+    """Generate a unique interview filename.
+
+    Format: {date}-{Slug}.md  e.g. 2026-02-26-Richard-Frost.md
+    Falls back to 'unknown-date' or 'unknown-interviewer' if empty.
+    Appends '-2', '-3' etc. for duplicates within the same company.
+    """
+    date_part = date_str or "unknown-date"
+    name_part = _interview_name_slug(interviewer) if interviewer else "unknown-interviewer"
+    base = f"{date_part}-{name_part}"
+    filename = f"{base}.md"
+    if filename not in existing:
+        return filename
+    # Deduplicate
+    counter = 2
+    while f"{base}-{counter}.md" in existing:
+        counter += 1
+    return f"{base}-{counter}.md"
+
+
+def _rich_text_to_plain(rt_list: list[dict]) -> str:
+    """Extract plain text from a Notion rich_text array."""
+    return "".join(
+        seg.get("text", {}).get("content", "") or seg.get("plain_text", "")
+        for seg in rt_list
+    )
+
+
+def _blocks_to_markdown(blocks: list[dict], indent: int = 0) -> str:
+    """Convert Notion blocks to simple markdown text for migration output."""
+    lines: list[str] = []
+    prefix = "  " * indent
+
+    for block in blocks:
+        btype = block.get("type", "")
+        if btype == "paragraph":
+            text = _rich_text_to_plain(block.get("paragraph", {}).get("rich_text", []))
+            lines.append(f"{prefix}{text}" if text else "")
+        elif btype == "bulleted_list_item":
+            text = _rich_text_to_plain(block.get("bulleted_list_item", {}).get("rich_text", []))
+            lines.append(f"{prefix}- {text}")
+        elif btype == "numbered_list_item":
+            text = _rich_text_to_plain(block.get("numbered_list_item", {}).get("rich_text", []))
+            lines.append(f"{prefix}1. {text}")
+        elif btype in ("heading_1", "heading_2", "heading_3"):
+            level = int(btype[-1])
+            text = _rich_text_to_plain(block.get(btype, {}).get("rich_text", []))
+            lines.append(f"{'#' * level} {text}")
+        elif btype == "toggle":
+            text = _rich_text_to_plain(block.get("toggle", {}).get("rich_text", []))
+            lines.append(f"{prefix}**{text}**")
+        elif btype == "divider":
+            lines.append("---")
+
+        if "children" in block:
+            child_text = _blocks_to_markdown(block["children"], indent + 1)
+            if child_text:
+                lines.append(child_text)
+
+    return "\n".join(lines)
+
+
+def _fetch_interview_row_content(token: str, row_id: str) -> tuple[str, str]:
+    """Fetch Prep Notes and Debrief from an interview row's page body.
+
+    Returns (prep_notes_md, debrief_md).
+    """
+    url = f"{NOTION_BASE_URL}/blocks/{row_id}/children?page_size=100"
+    try:
+        result = _notion_request("GET", url, token)
+    except RuntimeError:
+        return "", ""
+
+    prep_notes = ""
+    debrief = ""
+
+    for block in result.get("results", []):
+        if block.get("type") != "heading_3":
+            continue
+        rt = block.get("heading_3", {}).get("rich_text", [])
+        heading = _rich_text_to_plain(rt).strip()
+        if not block.get("has_children"):
+            continue
+
+        children_url = f"{NOTION_BASE_URL}/blocks/{block['id']}/children?page_size=100"
+        try:
+            children = _notion_request("GET", children_url, token).get("results", [])
+        except RuntimeError:
+            children = []
+
+        text = _blocks_to_markdown(children).strip()
+        if heading == "Prep Notes":
+            prep_notes = text
+        elif heading == "Debrief":
+            debrief = text
+
+    return prep_notes, debrief
+
+
+def fetch_interviews_for_page(
+    token: str,
+    page_id: str,
+) -> list[InterviewData]:
+    """Fetch all interview rows from a page's inline Interviews database.
+
+    Returns an empty list if no Interviews DB exists.
+    """
+    # Find the Interviews child_database block
+    page_id = page_id.replace("-", "")
+    url = f"{NOTION_BASE_URL}/blocks/{page_id}/children?page_size=100"
+    try:
+        result = _notion_request("GET", url, token)
+    except RuntimeError:
+        return []
+
+    db_id: str | None = None
+    for block in result.get("results", []):
+        if block.get("type") == "child_database":
+            title = block.get("child_database", {}).get("title", "")
+            if title == "Interviews":
+                db_id = block["id"]
+                break
+
+    if not db_id:
+        return []
+
+    # Query all rows in the Interviews DB
+    query_url = f"{NOTION_BASE_URL}/databases/{db_id}/query"
+    rows: list[dict] = []
+    payload: dict = {"page_size": 100}
+    while True:
+        try:
+            r = _notion_request("POST", query_url, token, payload)
+        except RuntimeError:
+            break
+        rows.extend(r.get("results", []))
+        if not r.get("has_more"):
+            break
+        payload["start_cursor"] = r["next_cursor"]
+
+    interviews: list[InterviewData] = []
+    for row in rows:
+        props = row.get("properties", {})
+
+        title_list = props.get("Interviewer Name and Role", {}).get("title", [])
+        interviewer_full = _rich_text_to_plain(title_list)
+
+        # Split 'Name — Role' or 'Name - Role'
+        import re
+        parts = re.split(r"\s*[—–]\s*|\s+-\s+", interviewer_full, maxsplit=1)
+        interviewer_name = parts[0].strip()
+        interviewer_role = parts[1].strip() if len(parts) > 1 else ""
+
+        date_val = props.get("Date", {}).get("date")
+        interview_date = date_val.get("start", "") if date_val else ""
+
+        type_sel = props.get("Type", {}).get("select")
+        interview_type = type_sel.get("name", "") if type_sel else ""
+
+        vibe_sel = props.get("Vibe", {}).get("select")
+        vibe = int(vibe_sel.get("name", "0")) if vibe_sel else 0
+
+        outcome_sel = props.get("Outcome", {}).get("select")
+        outcome = outcome_sel.get("name", "") if outcome_sel else ""
+
+        prep_notes, debrief = _fetch_interview_row_content(token, row["id"])
+
+        interviews.append(InterviewData(
+            interviewer=interviewer_name,
+            role=interviewer_role,
+            interview_type=interview_type,
+            date=interview_date,
+            vibe=vibe,
+            outcome=outcome,
+            prep_notes=prep_notes,
+            debrief=debrief,
+        ))
+
+    return interviews
+
+
+def generate_interview_file(company_name: str, iv: InterviewData) -> str:
+    """Generate an Obsidian interview markdown file."""
+    lines: list[str] = []
+
+    # Frontmatter
+    lines.append("---")
+    lines.append(f"company: \"{company_name}\"")
+    if iv.interviewer:
+        lines.append(f"interviewer: \"{iv.interviewer}\"")
+    if iv.role:
+        lines.append(f"role: \"{iv.role}\"")
+    if iv.interview_type:
+        lines.append(f"type: \"{iv.interview_type}\"")
+    if iv.date:
+        lines.append(f"date: {iv.date}")
+    if iv.vibe:
+        lines.append(f"vibe: {iv.vibe}")
+    if iv.outcome:
+        lines.append(f"outcome: \"{iv.outcome}\"")
+    lines.append("---")
+    lines.append("")
+
+    # Title
+    title_parts = []
+    if iv.interviewer:
+        title_parts.append(iv.interviewer)
+    if iv.interview_type:
+        title_parts.append(iv.interview_type)
+    if iv.date:
+        title_parts.append(iv.date)
+    lines.append(f"# {' — '.join(title_parts)}")
+
+    # Subtitle line
+    meta_parts = [f"**Company:** [[{company_name}]]"]
+    if iv.outcome:
+        meta_parts.append(f"**Outcome:** {iv.outcome}")
+    if iv.vibe:
+        meta_parts.append(f"**Vibe:** {iv.vibe}/5")
+    lines.append(" · ".join(meta_parts))
+    lines.append("")
+
+    # Sections
+    lines.append("## Prep Notes")
+    lines.append("")
+    if iv.prep_notes:
+        lines.append(iv.prep_notes)
+        lines.append("")
+
+    lines.append("## Debrief")
+    lines.append("")
+    if iv.debrief:
+        lines.append(iv.debrief)
+        lines.append("")
+
+    lines.append("## Transcript / Raw Notes")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def _interviews_wikilink(filename: str, iv: InterviewData) -> str:
+    """Format a wikilink line for the hub's ## Interviews section."""
+    stem = filename.replace(".md", "")
+    display_parts = []
+    if iv.interviewer:
+        display_parts.append(iv.interviewer)
+    if iv.interview_type:
+        display_parts.append(iv.interview_type)
+    if iv.outcome:
+        display_parts.append(iv.outcome)
+    if iv.vibe:
+        display_parts.append(f"Vibe {iv.vibe}/5")
+    display = " · ".join(display_parts) if display_parts else stem
+    return f"- [[{stem}|{display}]]"
+
+
+def _update_hub_interviews_section(hub_path: Path, wikilinks: list[str]) -> None:
+    """Insert or replace the ## Interviews section in a company hub file.
+
+    The section is inserted after the Documents section (if present),
+    or after the first blank line after the title block.
+    """
+    if not hub_path.is_file():
+        return
+
+    text = hub_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+
+    section_heading = "## Interviews"
+    new_section = [section_heading, ""] + wikilinks + [""]
+
+    # Check if section already exists
+    for i, line in enumerate(lines):
+        if line.strip() == section_heading:
+            # Find end of existing section (next ## heading or EOF)
+            end = i + 1
+            while end < len(lines) and not (
+                lines[end].startswith("## ") and lines[end].strip() != section_heading
+            ):
+                end += 1
+            # Replace existing section
+            updated = lines[:i] + new_section + lines[end:]
+            hub_path.write_text("\n".join(updated) + "\n", encoding="utf-8")
+            return
+
+    # Section doesn't exist — insert after ## Documents or after first heading
+    insert_after = None
+    for i, line in enumerate(lines):
+        if line.strip() == "## Documents":
+            # Find end of Documents section
+            j = i + 1
+            while j < len(lines) and not lines[j].startswith("## "):
+                j += 1
+            insert_after = j
+            break
+
+    if insert_after is None:
+        # Insert after first ## heading block (the title section)
+        for i, line in enumerate(lines):
+            if line.startswith("## "):
+                insert_after = i
+                break
+
+    if insert_after is None:
+        insert_after = len(lines)
+
+    updated = lines[:insert_after] + new_section + lines[insert_after:]
+    hub_path.write_text("\n".join(updated) + "\n", encoding="utf-8")
+
+
+def migrate_interviews(
+    token: str,
+    companies: list[TrackedCompany],
+    dry_run: bool = False,
+) -> None:
+    """Migrate all Notion Interviews DB rows to Obsidian interview files.
+
+    For each company with interviews:
+    - Writes kanban/interviews/{Company}/{date}-{Name}.md
+    - Updates kanban/companies/{Company}.md ## Interviews section
+    """
+    total_written = 0
+    total_skipped = 0
+
+    for company in companies:
+        if not company.page_id:
+            continue
+
+        print(f"  [{company.name}] fetching interviews...", end="", flush=True)
+        try:
+            interviews = fetch_interviews_for_page(token, company.page_id)
+        except Exception as e:
+            print(f" ERROR: {e}")
+            continue
+
+        if not interviews:
+            print(" (none)")
+            continue
+
+        print(f" {len(interviews)} found")
+
+        company_dir = INTERVIEWS_DIR / _sanitize_filename(company.name)
+        hub_path = COMPANIES_DIR / (_sanitize_filename(company.name) + ".md")
+        seen_filenames: set[str] = set()
+        wikilinks: list[str] = []
+
+        for iv in interviews:
+            filename = _interview_filename(iv.date, iv.interviewer, seen_filenames)
+            seen_filenames.add(filename)
+            wikilink = _interviews_wikilink(filename, iv)
+            wikilinks.append(wikilink)
+
+            interview_path = company_dir / filename
+
+            if dry_run:
+                print(f"    [DRY RUN] Would write: {interview_path}")
+                print(f"    [DRY RUN] Hub wikilink: {wikilink}")
+                total_written += 1
+                continue
+
+            company_dir.mkdir(parents=True, exist_ok=True)
+            content = generate_interview_file(company.name, iv)
+            interview_path.write_text(content, encoding="utf-8")
+            print(f"    → {interview_path.name}")
+            total_written += 1
+
+        if not dry_run and wikilinks:
+            _update_hub_interviews_section(hub_path, wikilinks)
+            print(f"    Updated hub: {hub_path.name}")
+
+    action = "Would write" if dry_run else "Wrote"
+    print(f"\n{action} {total_written} interview files ({total_skipped} skipped)")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -559,6 +977,11 @@ def main():
     parser.add_argument("--board-only", action="store_true", help="Only generate board, skip page content fetch")
     parser.add_argument("--from-json", type=str, metavar="FILE", help="Load from JSON snapshot instead of Notion API")
     parser.add_argument("--save-snapshot", action="store_true", help="Save fetched data to snapshot.json")
+    parser.add_argument(
+        "--include-interviews",
+        action="store_true",
+        help="Migrate Notion Interviews DB rows → kanban/interviews/{Company}/ files (one-time migration)",
+    )
     args = parser.parse_args()
 
     if args.from_json:
@@ -593,7 +1016,7 @@ def main():
     if not args.from_json and args.save_snapshot:
         _save_snapshot(companies, KANBAN_DIR / "snapshot.json")
 
-    if args.dry_run:
+    if args.dry_run and not args.include_interviews:
         print("\n[DRY RUN] Would write:")
         print(f"  {BOARD_FILE}")
         for c in companies:
@@ -603,6 +1026,23 @@ def main():
         print(f"\n--- Board preview (first 60 lines) ---")
         for line in board.splitlines()[:60]:
             print(line)
+        return
+
+    # Interview migration (--include-interviews, runs independently of company sync)
+    if args.include_interviews:
+        if args.from_json:
+            print("Warning: --include-interviews requires live Notion API; --from-json companies used but interviews fetched live.")
+        print("\nMigrating interview notes from Notion...")
+        # Need token for interview migration even if companies loaded from snapshot
+        if args.from_json:
+            iv_token = _load_notion_key()
+        else:
+            iv_token = token  # already loaded above
+        migrate_interviews(iv_token, companies, dry_run=args.dry_run)
+        if args.dry_run:
+            return
+
+    if args.dry_run:
         return
 
     # Write files
