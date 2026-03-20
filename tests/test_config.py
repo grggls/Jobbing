@@ -63,7 +63,7 @@ class TestConfig:
         assert config.env_path == config.project_dir / ".env"
 
     def test_defaults(self, config: Config) -> None:
-        assert config.tracker_backend == "notion"
+        assert config.tracker_backend == "obsidian"
         assert config.score_threshold == 60
         assert config.followup_threshold_days == 5
 

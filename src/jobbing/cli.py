@@ -4,14 +4,14 @@ Replaces the separate notion_update.py and generate_pdfs.py scripts
 with a single `jobbing` command:
 
     jobbing track create --name "Company" --position "Role" --date 2026-02-22
-    jobbing track update --page-id ID --status "Applied"
-    jobbing track highlights --page-id ID --highlights "Bullet 1" "Bullet 2"
+    jobbing track update --name "Company" --status "Applied"
+    jobbing track highlights --name "Company" --highlights "Bullet 1" "Bullet 2"
     jobbing track research --name "Company" --research "Finding 1" "Finding 2"
     jobbing track outreach --name "Company" --contacts-json contacts.json
-    jobbing queue [--queue-dir path] [--results-dir path]
     jobbing pdf <company> [--cv-only] [--cl-only] [--output-dir path]
     jobbing scan bookmarks [--categories CAT1 CAT2]
     jobbing scan fetch [--categories CAT1 CAT2] [--limit N]
+    jobbing scan existing
 """
 
 from __future__ import annotations
@@ -19,9 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import shutil
 import sys
-import time
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -62,8 +60,6 @@ def _track_update(args: argparse.Namespace, config: Config) -> None:
     from jobbing.tracker import get_tracker
 
     app = _args_to_application(args)
-    app.page_id = args.page_id
-
     tracker = get_tracker(config.tracker_backend, config)
 
     if args.dry_run:
@@ -71,7 +67,7 @@ def _track_update(args: argparse.Namespace, config: Config) -> None:
         return
 
     tracker.update(app)
-    print(f"Updated entry: {args.page_id}")
+    print(f"Updated entry: {app.name}")
 
 
 def _track_highlights(args: argparse.Namespace, config: Config) -> None:
@@ -81,11 +77,11 @@ def _track_highlights(args: argparse.Namespace, config: Config) -> None:
     tracker = get_tracker(config.tracker_backend, config)
 
     if args.dry_run:
-        print(json.dumps({"page_id": args.page_id, "highlights": args.highlights}, indent=2))
+        print(json.dumps({"name": args.name, "highlights": args.highlights}, indent=2))
         return
 
-    tracker.set_highlights(args.page_id, args.highlights)
-    print(f"Highlights updated on: {args.page_id}")
+    tracker.set_highlights(args.name, args.highlights)
+    print(f"Highlights updated on: {args.name}")
 
 
 def _track_research(args: argparse.Namespace, config: Config) -> None:
@@ -93,43 +89,72 @@ def _track_research(args: argparse.Namespace, config: Config) -> None:
     from jobbing.tracker import get_tracker
 
     tracker = get_tracker(config.tracker_backend, config)
-
-    # Resolve page_id from name if needed
-    page_id = args.page_id
-    if not page_id and args.name:
-        app = tracker.find_by_name(args.name)
-        if not app or not app.page_id:
-            print(f"Error: No entry found for '{args.name}'", file=sys.stderr)
-            sys.exit(1)
-        page_id = app.page_id
+    app_id = args.name
 
     if args.dry_run:
-        print(json.dumps({"page_id": page_id, "research": args.research}, indent=2))
+        print(json.dumps({"name": app_id, "research": args.research}, indent=2))
         return
 
-    tracker.set_research(page_id, args.research)
-    print(f"Research updated on: {page_id}")
+    tracker.set_research(app_id, args.research)
+    print(f"Research updated on: {app_id}")
 
 
 def _track_followup(args: argparse.Namespace, config: Config) -> None:
     """Check active interview processes for staleness."""
-    from jobbing.tracker.notion import NotionTracker
+    from datetime import date as date_type
 
-    tracker = NotionTracker(config)
+    from jobbing.tracker import get_tracker
+
+    tracker = get_tracker(config.tracker_backend, config)
     threshold = args.threshold or config.followup_threshold_days
 
-    results = tracker.check_followups(threshold_days=threshold)
-    report = tracker.format_followup_report(results, threshold_days=threshold)
+    apps = tracker.list_all()
+    in_progress = [
+        a for a in apps
+        if a.status and a.status.value == "In Progress (Interviewing)"
+    ]
 
+    if not in_progress:
+        print("No applications currently in progress.")
+        return
+
+    today = date_type.today()
+    stale: list[tuple[Application, int]] = []
+    active: list[tuple[Application, int]] = []
+
+    for app in in_progress:
+        days = (today - app.start_date).days if app.start_date else 0
+        if days >= threshold:
+            stale.append((app, days))
+        else:
+            active.append((app, days))
+
+    lines: list[str] = [
+        f"Follow-up Report (threshold: {threshold}d) — {today.isoformat()}",
+        f"In Progress: {len(in_progress)}  |  Stale (≥{threshold}d): {len(stale)}",
+        "",
+    ]
+
+    if stale:
+        lines.append("## Stale — needs follow-up")
+        lines.append("")
+        for app, days in sorted(stale, key=lambda x: -x[1]):
+            lines.append(f"- {app.name} — {app.position or '?'} ({days}d since {app.start_date})")
+        lines.append("")
+
+    if active:
+        lines.append("## Active — within threshold")
+        lines.append("")
+        for app, days in sorted(active, key=lambda x: -x[1]):
+            lines.append(f"- {app.name} — {app.position or '?'} ({days}d since {app.start_date})")
+
+    report = "\n".join(lines)
     print(report)
 
-    # Optionally write to results file
     if args.save:
-        from datetime import date as date_type
-
         results_dir = config.queue_results_dir
         results_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"followup-{date_type.today().isoformat()}.md"
+        filename = f"followup-{today.isoformat()}.md"
         filepath = results_dir / filename
         filepath.write_text(report + "\n")
         print(f"\nSaved to: {filepath}")
@@ -160,87 +185,14 @@ def _track_outreach(args: argparse.Namespace, config: Config) -> None:
     ]
 
     tracker = get_tracker(config.tracker_backend, config)
-
-    # Resolve page_id from name if needed
-    page_id = args.page_id
-    if not page_id and args.name:
-        app = tracker.find_by_name(args.name)
-        if not app or not app.page_id:
-            print(f"Error: No entry found for '{args.name}'", file=sys.stderr)
-            sys.exit(1)
-        page_id = app.page_id
+    app_id = args.name
 
     if args.dry_run:
-        print(json.dumps({"page_id": page_id, "contacts": contacts_data}, indent=2))
+        print(json.dumps({"name": app_id, "contacts": contacts_data}, indent=2))
         return
 
-    tracker.set_contacts(page_id, contacts)
-    print(f"Outreach contacts updated on: {page_id}")
-
-
-# ---------------------------------------------------------------------------
-# Queue subcommand
-# ---------------------------------------------------------------------------
-
-
-def _cmd_queue(args: argparse.Namespace, config: Config) -> None:
-    """Process all JSON files in the queue directory."""
-    from jobbing.tracker.notion import NotionTracker
-
-    queue_dir = Path(args.queue_dir) if args.queue_dir else config.queue_dir
-    results_dir = Path(args.results_dir) if args.results_dir else config.queue_results_dir
-
-    queue_dir.mkdir(parents=True, exist_ok=True)
-    results_dir.mkdir(parents=True, exist_ok=True)
-
-    files = sorted(queue_dir.glob("*.json"))
-    if not files:
-        print("No queue files to process.")
-        return
-
-    tracker = NotionTracker(config)
-    print(f"Processing {len(files)} queue file(s)...")
-
-    for filepath in files:
-        print(f"\n--- {filepath.name} ---")
-
-        # Atomic claim: rename to .processing before touching Notion API.
-        # Only one process can win the rename — losers skip gracefully.
-        claimed_path = filepath.with_suffix(".processing")
-        try:
-            filepath.rename(claimed_path)
-        except (FileNotFoundError, OSError):
-            print("  Skipped (claimed by another process)")
-            continue
-
-        result = tracker.process_queue_file(str(claimed_path))
-
-        if result["status"] == "ok":
-            print(f"  OK: {result.get('action', 'done')}")
-            if "page_id" in result:
-                print(f"  Page ID: {result['page_id']}")
-            if "url" in result:
-                print(f"  URL: {result['url']}")
-            if "sections_written" in result:
-                print(f"  Sections: {', '.join(result['sections_written'])}")
-        else:
-            print(f"  ERROR: {result.get('message', 'unknown error')}")
-
-        # Write result file and move claimed file to results
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        result_filename = f"{timestamp}_{filepath.name}"
-        result_path = results_dir / result_filename
-        with open(result_path, "w") as f:
-            json.dump(result, f, indent=2)
-
-        processed_path = results_dir / f"{timestamp}_input_{filepath.name}"
-        try:
-            shutil.move(str(claimed_path), str(processed_path))
-        except FileNotFoundError:
-            print("  Input already moved (concurrent process)")
-        print(f"  Moved to: {result_filename}")
-
-    print(f"\nDone. Results in: {results_dir}")
+    tracker.set_contacts(app_id, contacts)
+    print(f"Outreach contacts updated on: {app_id}")
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +201,7 @@ def _cmd_queue(args: argparse.Namespace, config: Config) -> None:
 
 
 def _cmd_pdf(args: argparse.Namespace, config: Config) -> None:
-    """Generate CV and/or cover letter PDFs."""
+    """Generate CV and/or cover letter PDFs, then update hub Documents section."""
     from jobbing.models import CompanyData
     from jobbing.pdf import PDFGenerator
 
@@ -276,7 +228,43 @@ def _cmd_pdf(args: argparse.Namespace, config: Config) -> None:
         size = path.stat().st_size
         print(f"{path.name}: {size:,} bytes ({size / 1024:.1f} KB)")
 
+    # Update the Obsidian hub Documents section
+    if config.tracker_backend == "obsidian" and paths:
+        _update_hub_documents(args.company, paths, config)
+
     print("\nDone.")
+
+
+def _update_hub_documents(company_input: str, paths: list[Path], config: Config) -> None:
+    """Find the hub file and update its Documents section with CV/CL wikilinks."""
+    from jobbing.tracker.obsidian import ObsidianTracker
+
+    # Case-insensitive hub file lookup
+    companies_dir = config.kanban_companies_dir
+    if not companies_dir.is_dir():
+        return
+
+    company_name = None
+    for f in companies_dir.glob("*.md"):
+        if f.stem.lower() == company_input.lower():
+            company_name = f.stem
+            break
+
+    if not company_name:
+        print(f"Warning: No hub file found for '{company_input}' in {companies_dir}", file=sys.stderr)
+        return
+
+    cv_stem = cl_stem = ""
+    for path in paths:
+        stem = path.stem
+        if stem.upper().endswith("-CV"):
+            cv_stem = stem
+        elif stem.upper().endswith("-CL"):
+            cl_stem = stem
+
+    obs_tracker = ObsidianTracker(config)
+    obs_tracker.add_documents_section(company_name, cv_stem, cl_stem)
+    print(f"Updated Documents section: {company_name}")
 
 
 # ---------------------------------------------------------------------------
@@ -500,8 +488,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # track update
     p_update = track_subs.add_parser("update", help="Update an existing entry")
-    p_update.add_argument("--page-id", required=True, help="Entry ID")
-    p_update.add_argument("--name", help="Company name")
+    p_update.add_argument("--name", required=True, help="Company name")
     p_update.add_argument("--position", help="Role title")
     p_update.add_argument("--date", help="Start date (YYYY-MM-DD)")
     p_update.add_argument("--url", help="Job posting URL")
@@ -517,15 +504,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # track highlights
     p_hl = track_subs.add_parser("highlights", help="Replace highlights")
-    p_hl.add_argument("--page-id", required=True, help="Entry ID")
+    p_hl.add_argument("--name", required=True, help="Company name")
     p_hl.add_argument("--highlights", nargs="+", required=True, help="Bullets")
     p_hl.add_argument("--dry-run", action="store_true", dest="dry_run")
 
     # track research
     p_research = track_subs.add_parser("research", help="Replace research")
-    p_research_id = p_research.add_mutually_exclusive_group(required=True)
-    p_research_id.add_argument("--page-id", help="Entry ID")
-    p_research_id.add_argument("--name", help="Company name (looks up ID)")
+    p_research.add_argument("--name", required=True, help="Company name")
     p_research.add_argument("--research", nargs="+", required=True, help="Research bullets")
     p_research.add_argument("--dry-run", action="store_true", dest="dry_run")
 
@@ -544,16 +529,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # track outreach
     p_outreach = track_subs.add_parser("outreach", help="Replace outreach contacts")
-    p_outreach_id = p_outreach.add_mutually_exclusive_group(required=True)
-    p_outreach_id.add_argument("--page-id", help="Entry ID")
-    p_outreach_id.add_argument("--name", help="Company name (looks up ID)")
+    p_outreach.add_argument("--name", required=True, help="Company name")
     p_outreach.add_argument("--contacts-json", required=True, help="Path to contacts JSON")
     p_outreach.add_argument("--dry-run", action="store_true", dest="dry_run")
-
-    # --- queue ---
-    p_queue = subparsers.add_parser("queue", help="Process queue files")
-    p_queue.add_argument("--queue-dir", help="Queue directory")
-    p_queue.add_argument("--results-dir", help="Results directory")
 
     # --- pdf ---
     p_pdf = subparsers.add_parser("pdf", help="Generate PDF documents")
@@ -603,9 +581,6 @@ def main() -> None:
         }
         handler = dispatch[args.track_command]
         handler(args, config)
-
-    elif args.command == "queue":
-        _cmd_queue(args, config)
 
     elif args.command == "pdf":
         _cmd_pdf(args, config)

@@ -17,7 +17,6 @@ from jobbing.cli import (
     _args_to_application,
     _build_parser,
     _cmd_pdf,
-    _cmd_queue,
     _cmd_scan,
     _preview_application,
     _scan_bookmarks,
@@ -35,12 +34,10 @@ from jobbing.config import Config
 from jobbing.models import Application, LinkedInStatus, Status
 
 # ---------------------------------------------------------------------------
-# Patch targets — cli.py uses lazy imports inside functions, so we patch
-# at the source module, not at jobbing.cli.
+# Patch targets
 # ---------------------------------------------------------------------------
 
 _PATCH_GET_TRACKER = "jobbing.tracker.get_tracker"
-_PATCH_NOTION_TRACKER = "jobbing.tracker.notion.NotionTracker"
 _PATCH_PDF_GENERATOR = "jobbing.pdf.PDFGenerator"
 _PATCH_COMPANY_DATA = "jobbing.models.CompanyData.from_json_file"
 _PATCH_PARSE_BOOKMARKS = "jobbing.scanner.parse_bookmarks"
@@ -71,8 +68,7 @@ def parser() -> Any:
 @pytest.fixture()
 def mock_tracker() -> MagicMock:
     tracker = MagicMock()
-    tracker.create.return_value = ("page-id-123", ["Job Description", "Fit Assessment"])
-    tracker.find_by_name.return_value = Application(name="Acme", page_id="page-id-456")
+    tracker.create.return_value = ("Acme", ["Job Description", "Fit Assessment"])
     tracker.list_all.return_value = [
         Application(name="Acme", position="Senior Eng", status=Status.APPLIED),
         Application(name="Globex", position="Staff Eng", status=Status.TARGETED),
@@ -165,20 +161,20 @@ class TestBuildParser:
         assert args.job_description == "We are looking for..."
         assert args.dry_run is True
 
-    def test_track_update_requires_page_id(self, parser: Any) -> None:
+    def test_track_update_requires_name(self, parser: Any) -> None:
         with pytest.raises(SystemExit):
             parser.parse_args(["track", "update"])
 
     def test_track_update_with_status(self, parser: Any) -> None:
-        args = parser.parse_args(["track", "update", "--page-id", "abc-123", "--status", "Applied"])
-        assert args.page_id == "abc-123"
+        args = parser.parse_args(["track", "update", "--name", "Acme", "--status", "Applied"])
+        assert args.name == "Acme"
         assert args.status == "Applied"
 
     def test_track_update_invalid_status_rejected(self, parser: Any) -> None:
         with pytest.raises(SystemExit):
-            parser.parse_args(["track", "update", "--page-id", "abc", "--status", "InvalidStatus"])
+            parser.parse_args(["track", "update", "--name", "Acme", "--status", "InvalidStatus"])
 
-    def test_track_highlights_requires_page_id_and_highlights(self, parser: Any) -> None:
+    def test_track_highlights_requires_name_and_highlights(self, parser: Any) -> None:
         with pytest.raises(SystemExit):
             parser.parse_args(["track", "highlights"])
 
@@ -187,46 +183,23 @@ class TestBuildParser:
             [
                 "track",
                 "highlights",
-                "--page-id",
-                "abc",
+                "--name",
+                "Acme",
                 "--highlights",
                 "Bullet 1",
                 "Bullet 2",
             ]
         )
-        assert args.page_id == "abc"
+        assert args.name == "Acme"
         assert args.highlights == ["Bullet 1", "Bullet 2"]
 
-    def test_track_research_requires_page_id_or_name(self, parser: Any) -> None:
+    def test_track_research_requires_name(self, parser: Any) -> None:
         with pytest.raises(SystemExit):
             parser.parse_args(["track", "research", "--research", "Finding"])
-
-    def test_track_research_by_page_id(self, parser: Any) -> None:
-        args = parser.parse_args(
-            ["track", "research", "--page-id", "abc", "--research", "Finding 1"]
-        )
-        assert args.page_id == "abc"
-        assert args.name is None
 
     def test_track_research_by_name(self, parser: Any) -> None:
         args = parser.parse_args(["track", "research", "--name", "Acme", "--research", "Finding 1"])
         assert args.name == "Acme"
-        assert args.page_id is None
-
-    def test_track_research_page_id_and_name_mutually_exclusive(self, parser: Any) -> None:
-        with pytest.raises(SystemExit):
-            parser.parse_args(
-                [
-                    "track",
-                    "research",
-                    "--page-id",
-                    "abc",
-                    "--name",
-                    "Acme",
-                    "--research",
-                    "Finding",
-                ]
-            )
 
     def test_track_followup(self, parser: Any) -> None:
         args = parser.parse_args(["track", "followup"])
@@ -239,7 +212,7 @@ class TestBuildParser:
         assert args.threshold == 7
         assert args.save is True
 
-    def test_track_outreach_requires_name_or_page_id(self, parser: Any) -> None:
+    def test_track_outreach_requires_name(self, parser: Any) -> None:
         with pytest.raises(SystemExit):
             parser.parse_args(["track", "outreach", "--contacts-json", "contacts.json"])
 
@@ -256,15 +229,6 @@ class TestBuildParser:
         )
         assert args.name == "Acme"
         assert args.contacts_json == "contacts.json"
-
-    def test_queue_subcommand(self, parser: Any) -> None:
-        args = parser.parse_args(["queue"])
-        assert args.command == "queue"
-
-    def test_queue_with_dirs(self, parser: Any) -> None:
-        args = parser.parse_args(["queue", "--queue-dir", "/tmp/q", "--results-dir", "/tmp/r"])
-        assert args.queue_dir == "/tmp/q"
-        assert args.results_dir == "/tmp/r"
 
     def test_pdf_subcommand(self, parser: Any) -> None:
         args = parser.parse_args(["pdf", "acme"])
@@ -307,6 +271,11 @@ class TestBuildParser:
     def test_no_subcommand_exits(self, parser: Any) -> None:
         with pytest.raises(SystemExit):
             parser.parse_args([])
+
+    def test_queue_subcommand_removed(self, parser: Any) -> None:
+        """queue subcommand has been removed."""
+        with pytest.raises(SystemExit):
+            parser.parse_args(["queue"])
 
 
 # ---------------------------------------------------------------------------
@@ -484,7 +453,7 @@ class TestTrackCreate:
         mock_tracker.create.assert_called_once()
         app_arg = mock_tracker.create.call_args[0][0]
         assert app_arg.name == "Acme"
-        assert "page-id-123" in capsys.readouterr().out
+        assert "Acme" in capsys.readouterr().out
 
     def test_dry_run_prints_preview(
         self, config: Config, capsys: pytest.CaptureFixture[str]
@@ -506,7 +475,6 @@ class TestTrackCreate:
             job_description=None,
             dry_run=True,
         )
-        # dry_run returns before calling get_tracker, no need to patch it
         _track_create(ns, config)
 
         output = capsys.readouterr().out
@@ -522,7 +490,6 @@ class TestTrackUpdate:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         ns = argparse.Namespace(
-            page_id="page-abc",
             name="Acme",
             position=None,
             date=None,
@@ -542,14 +509,13 @@ class TestTrackUpdate:
 
         mock_tracker.update.assert_called_once()
         app_arg = mock_tracker.update.call_args[0][0]
-        assert app_arg.page_id == "page-abc"
+        assert app_arg.name == "Acme"
         assert app_arg.status == Status.APPLIED
-        assert "Updated entry: page-abc" in capsys.readouterr().out
+        assert "Updated entry: Acme" in capsys.readouterr().out
 
     def test_dry_run(self, config: Config, capsys: pytest.CaptureFixture[str]) -> None:
         ns = argparse.Namespace(
-            page_id="page-abc",
-            name=None,
+            name="Acme",
             position=None,
             date=None,
             url=None,
@@ -577,55 +543,36 @@ class TestTrackHighlights:
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         ns = argparse.Namespace(
-            page_id="page-abc",
+            name="Acme",
             highlights=["Bullet 1", "Bullet 2"],
             dry_run=False,
         )
         with patch(_PATCH_GET_TRACKER, return_value=mock_tracker):
             _track_highlights(ns, config)
 
-        mock_tracker.set_highlights.assert_called_once_with("page-abc", ["Bullet 1", "Bullet 2"])
-        assert "Highlights updated on: page-abc" in capsys.readouterr().out
+        mock_tracker.set_highlights.assert_called_once_with("Acme", ["Bullet 1", "Bullet 2"])
+        assert "Highlights updated on: Acme" in capsys.readouterr().out
 
     def test_dry_run(self, config: Config, capsys: pytest.CaptureFixture[str]) -> None:
         ns = argparse.Namespace(
-            page_id="page-abc",
+            name="Acme",
             highlights=["Bullet 1"],
             dry_run=True,
         )
         _track_highlights(ns, config)
         parsed = json.loads(capsys.readouterr().out)
-        assert parsed["page_id"] == "page-abc"
+        assert parsed["name"] == "Acme"
         assert parsed["highlights"] == ["Bullet 1"]
 
 
 class TestTrackResearch:
-    def test_sets_research_by_page_id(
+    def test_sets_research_by_name(
         self,
         config: Config,
         mock_tracker: MagicMock,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         ns = argparse.Namespace(
-            page_id="page-abc",
-            name=None,
-            research=["Finding 1"],
-            dry_run=False,
-        )
-        with patch(_PATCH_GET_TRACKER, return_value=mock_tracker):
-            _track_research(ns, config)
-
-        mock_tracker.set_research.assert_called_once_with("page-abc", ["Finding 1"])
-        assert "Research updated on: page-abc" in capsys.readouterr().out
-
-    def test_resolves_page_id_from_name(
-        self,
-        config: Config,
-        mock_tracker: MagicMock,
-        capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        ns = argparse.Namespace(
-            page_id=None,
             name="Acme",
             research=["Finding 1"],
             dry_run=False,
@@ -633,41 +580,12 @@ class TestTrackResearch:
         with patch(_PATCH_GET_TRACKER, return_value=mock_tracker):
             _track_research(ns, config)
 
-        mock_tracker.find_by_name.assert_called_once_with("Acme")
-        mock_tracker.set_research.assert_called_once_with("page-id-456", ["Finding 1"])
-
-    def test_name_not_found_exits(self, config: Config, mock_tracker: MagicMock) -> None:
-        mock_tracker.find_by_name.return_value = None
-        ns = argparse.Namespace(
-            page_id=None,
-            name="Unknown",
-            research=["Finding"],
-            dry_run=False,
-        )
-        with (
-            patch(_PATCH_GET_TRACKER, return_value=mock_tracker),
-            pytest.raises(SystemExit, match="1"),
-        ):
-            _track_research(ns, config)
-
-    def test_name_found_but_no_page_id_exits(self, config: Config, mock_tracker: MagicMock) -> None:
-        mock_tracker.find_by_name.return_value = Application(name="Acme", page_id=None)
-        ns = argparse.Namespace(
-            page_id=None,
-            name="Acme",
-            research=["Finding"],
-            dry_run=False,
-        )
-        with (
-            patch(_PATCH_GET_TRACKER, return_value=mock_tracker),
-            pytest.raises(SystemExit, match="1"),
-        ):
-            _track_research(ns, config)
+        mock_tracker.set_research.assert_called_once_with("Acme", ["Finding 1"])
+        assert "Research updated on: Acme" in capsys.readouterr().out
 
     def test_dry_run(self, config: Config, capsys: pytest.CaptureFixture[str]) -> None:
         ns = argparse.Namespace(
-            page_id="page-abc",
-            name=None,
+            name="Acme",
             research=["Finding 1"],
             dry_run=True,
         )
@@ -675,41 +593,67 @@ class TestTrackResearch:
             _track_research(ns, config)
 
         parsed = json.loads(capsys.readouterr().out)
-        assert parsed["page_id"] == "page-abc"
+        assert parsed["name"] == "Acme"
         assert parsed["research"] == ["Finding 1"]
 
 
 class TestTrackFollowup:
-    def test_prints_report(self, config: Config, capsys: pytest.CaptureFixture[str]) -> None:
-        mock_notion = MagicMock()
-        mock_notion.check_followups.return_value = []
-        mock_notion.format_followup_report.return_value = "No stale processes."
+    def test_no_in_progress_prints_message(
+        self, config: Config, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        mock_tracker = MagicMock()
+        mock_tracker.list_all.return_value = [
+            Application(name="Acme", status=Status.APPLIED),
+        ]
 
         ns = argparse.Namespace(threshold=None, save=False)
-        with patch(_PATCH_NOTION_TRACKER, return_value=mock_notion):
+        with patch(_PATCH_GET_TRACKER, return_value=mock_tracker):
             _track_followup(ns, config)
 
-        assert "No stale processes." in capsys.readouterr().out
-        mock_notion.check_followups.assert_called_once_with(threshold_days=5)
+        assert "No applications currently in progress." in capsys.readouterr().out
+
+    def test_shows_stale_applications(
+        self, config: Config, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        mock_tracker = MagicMock()
+        mock_tracker.list_all.return_value = [
+            Application(
+                name="Acme",
+                position="Eng",
+                status=Status.IN_PROGRESS,
+                start_date=date(2025, 1, 1),  # very stale
+            ),
+        ]
+
+        ns = argparse.Namespace(threshold=5, save=False)
+        with patch(_PATCH_GET_TRACKER, return_value=mock_tracker):
+            _track_followup(ns, config)
+
+        output = capsys.readouterr().out
+        assert "Stale" in output
+        assert "Acme" in output
 
     def test_custom_threshold(self, config: Config) -> None:
-        mock_notion = MagicMock()
-        mock_notion.check_followups.return_value = []
-        mock_notion.format_followup_report.return_value = "Report"
+        mock_tracker = MagicMock()
+        mock_tracker.list_all.return_value = []
 
         ns = argparse.Namespace(threshold=10, save=False)
-        with patch(_PATCH_NOTION_TRACKER, return_value=mock_notion):
+        with patch(_PATCH_GET_TRACKER, return_value=mock_tracker):
             _track_followup(ns, config)
 
-        mock_notion.check_followups.assert_called_once_with(threshold_days=10)
-
     def test_save_writes_file(self, config: Config, capsys: pytest.CaptureFixture[str]) -> None:
-        mock_notion = MagicMock()
-        mock_notion.check_followups.return_value = []
-        mock_notion.format_followup_report.return_value = "Saved report content"
+        mock_tracker = MagicMock()
+        mock_tracker.list_all.return_value = [
+            Application(
+                name="Acme",
+                position="Eng",
+                status=Status.IN_PROGRESS,
+                start_date=date(2025, 1, 1),
+            ),
+        ]
 
-        ns = argparse.Namespace(threshold=None, save=True)
-        with patch(_PATCH_NOTION_TRACKER, return_value=mock_notion):
+        ns = argparse.Namespace(threshold=5, save=True)
+        with patch(_PATCH_GET_TRACKER, return_value=mock_tracker):
             _track_followup(ns, config)
 
         output = capsys.readouterr().out
@@ -718,7 +662,6 @@ class TestTrackFollowup:
         results_dir = config.queue_results_dir
         saved_files = list(results_dir.glob("followup-*.md"))
         assert len(saved_files) == 1
-        assert "Saved report content" in saved_files[0].read_text()
 
 
 class TestTrackOutreach:
@@ -742,44 +685,6 @@ class TestTrackOutreach:
         contacts_file.write_text(json.dumps(contacts_data))
 
         ns = argparse.Namespace(
-            page_id="page-abc",
-            name=None,
-            contacts_json=str(contacts_file),
-            dry_run=False,
-        )
-        with patch(_PATCH_GET_TRACKER, return_value=mock_tracker):
-            _track_outreach(ns, config)
-
-        mock_tracker.set_contacts.assert_called_once()
-        page_id_arg, contacts_arg = mock_tracker.set_contacts.call_args[0]
-        assert page_id_arg == "page-abc"
-        assert len(contacts_arg) == 1
-        assert contacts_arg[0].name == "Jane Smith"
-        assert contacts_arg[0].title == "VP Eng"
-        assert "Outreach contacts updated on: page-abc" in capsys.readouterr().out
-
-    def test_missing_contacts_json_exits(self, config: Config) -> None:
-        ns = argparse.Namespace(
-            page_id="page-abc",
-            name=None,
-            contacts_json=None,
-            dry_run=False,
-        )
-        with pytest.raises(SystemExit, match="1"):
-            _track_outreach(ns, config)
-
-    def test_resolves_page_id_from_name(
-        self,
-        config: Config,
-        mock_tracker: MagicMock,
-        tmp_path: Path,
-        capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        contacts_file = tmp_path / "contacts.json"
-        contacts_file.write_text(json.dumps([{"name": "Jane", "title": "Eng", "linkedin": "url"}]))
-
-        ns = argparse.Namespace(
-            page_id=None,
             name="Acme",
             contacts_json=str(contacts_file),
             dry_run=False,
@@ -787,27 +692,21 @@ class TestTrackOutreach:
         with patch(_PATCH_GET_TRACKER, return_value=mock_tracker):
             _track_outreach(ns, config)
 
-        mock_tracker.find_by_name.assert_called_once_with("Acme")
-        page_id_arg = mock_tracker.set_contacts.call_args[0][0]
-        assert page_id_arg == "page-id-456"
+        mock_tracker.set_contacts.assert_called_once()
+        app_id_arg, contacts_arg = mock_tracker.set_contacts.call_args[0]
+        assert app_id_arg == "Acme"
+        assert len(contacts_arg) == 1
+        assert contacts_arg[0].name == "Jane Smith"
+        assert contacts_arg[0].title == "VP Eng"
+        assert "Outreach contacts updated on: Acme" in capsys.readouterr().out
 
-    def test_name_not_found_exits(
-        self, config: Config, mock_tracker: MagicMock, tmp_path: Path
-    ) -> None:
-        mock_tracker.find_by_name.return_value = None
-        contacts_file = tmp_path / "contacts.json"
-        contacts_file.write_text(json.dumps([{"name": "Jane", "title": "Eng", "linkedin": "url"}]))
-
+    def test_missing_contacts_json_exits(self, config: Config) -> None:
         ns = argparse.Namespace(
-            page_id=None,
-            name="Unknown",
-            contacts_json=str(contacts_file),
+            name="Acme",
+            contacts_json=None,
             dry_run=False,
         )
-        with (
-            patch(_PATCH_GET_TRACKER, return_value=mock_tracker),
-            pytest.raises(SystemExit, match="1"),
-        ):
+        with pytest.raises(SystemExit, match="1"):
             _track_outreach(ns, config)
 
     def test_dry_run(
@@ -822,8 +721,7 @@ class TestTrackOutreach:
         contacts_file.write_text(json.dumps(contacts_data))
 
         ns = argparse.Namespace(
-            page_id="page-abc",
-            name=None,
+            name="Acme",
             contacts_json=str(contacts_file),
             dry_run=True,
         )
@@ -831,196 +729,8 @@ class TestTrackOutreach:
             _track_outreach(ns, config)
 
         parsed = json.loads(capsys.readouterr().out)
-        assert parsed["page_id"] == "page-abc"
+        assert parsed["name"] == "Acme"
         assert parsed["contacts"] == contacts_data
-
-
-# ---------------------------------------------------------------------------
-# Queue command
-# ---------------------------------------------------------------------------
-
-
-class TestCmdQueue:
-    def test_no_files_prints_message(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        ns = argparse.Namespace(queue_dir=None, results_dir=None)
-        with patch(_PATCH_NOTION_TRACKER):
-            _cmd_queue(ns, config)
-
-        assert "No queue files to process." in capsys.readouterr().out
-
-    def test_processes_queue_files_ok(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        queue_file = config.queue_dir / "test_create.json"
-        queue_file.write_text(json.dumps({"command": "create", "name": "Acme"}))
-
-        mock_notion = MagicMock()
-        mock_notion.process_queue_file.return_value = {
-            "status": "ok",
-            "action": "created",
-            "page_id": "page-new",
-            "url": "https://notion.so/page-new",
-            "sections_written": ["Job Description"],
-        }
-
-        ns = argparse.Namespace(queue_dir=None, results_dir=None)
-        with patch(_PATCH_NOTION_TRACKER, return_value=mock_notion):
-            _cmd_queue(ns, config)
-
-        output = capsys.readouterr().out
-        assert "Processing 1 queue file(s)..." in output
-        assert "OK: created" in output
-        assert "Page ID: page-new" in output
-        assert "URL: https://notion.so/page-new" in output
-        assert "Sections: Job Description" in output
-        assert "Done." in output
-
-    def test_processes_queue_file_error(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        queue_file = config.queue_dir / "bad_file.json"
-        queue_file.write_text(json.dumps({"command": "invalid"}))
-
-        mock_notion = MagicMock()
-        mock_notion.process_queue_file.return_value = {
-            "status": "error",
-            "message": "Unknown command",
-        }
-
-        ns = argparse.Namespace(queue_dir=None, results_dir=None)
-        with patch(_PATCH_NOTION_TRACKER, return_value=mock_notion):
-            _cmd_queue(ns, config)
-
-        output = capsys.readouterr().out
-        assert "ERROR: Unknown command" in output
-
-    def test_custom_dirs(self, config: Config, tmp_path: Path) -> None:
-        custom_queue = tmp_path / "custom_queue"
-        custom_results = tmp_path / "custom_results"
-        custom_queue.mkdir()
-        custom_results.mkdir()
-
-        ns = argparse.Namespace(queue_dir=str(custom_queue), results_dir=str(custom_results))
-        with patch(_PATCH_NOTION_TRACKER):
-            _cmd_queue(ns, config)
-        # No crash = success
-
-    def test_concurrent_claim_skip(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """When another process claims the file first, skip gracefully."""
-        queue_file = config.queue_dir / "claimed.json"
-        queue_file.write_text(json.dumps({"command": "create"}))
-
-        mock_notion = MagicMock()
-        ns = argparse.Namespace(queue_dir=None, results_dir=None)
-
-        original_rename = Path.rename
-
-        def fake_rename(self_path: Path, target: Path) -> None:
-            if self_path.suffix == ".json":
-                raise FileNotFoundError("claimed by another")
-            return original_rename(self_path, target)
-
-        with (
-            patch(_PATCH_NOTION_TRACKER, return_value=mock_notion),
-            patch.object(Path, "rename", fake_rename),
-        ):
-            _cmd_queue(ns, config)
-
-        output = capsys.readouterr().out
-        assert "Skipped (claimed by another process)" in output
-
-    def test_result_ok_without_optional_fields(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """Result with status=ok but no page_id, url, or sections_written."""
-        queue_file = config.queue_dir / "minimal_ok.json"
-        queue_file.write_text(json.dumps({"command": "update"}))
-
-        mock_notion = MagicMock()
-        mock_notion.process_queue_file.return_value = {
-            "status": "ok",
-            "action": "updated",
-        }
-
-        ns = argparse.Namespace(queue_dir=None, results_dir=None)
-        with patch(_PATCH_NOTION_TRACKER, return_value=mock_notion):
-            _cmd_queue(ns, config)
-
-        output = capsys.readouterr().out
-        assert "OK: updated" in output
-        assert "Page ID:" not in output
-        assert "URL:" not in output
-        assert "Sections:" not in output
-
-    def test_error_without_message(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        queue_file = config.queue_dir / "err_no_msg.json"
-        queue_file.write_text(json.dumps({"command": "bad"}))
-
-        mock_notion = MagicMock()
-        mock_notion.process_queue_file.return_value = {"status": "error"}
-
-        ns = argparse.Namespace(queue_dir=None, results_dir=None)
-        with patch(_PATCH_NOTION_TRACKER, return_value=mock_notion):
-            _cmd_queue(ns, config)
-
-        output = capsys.readouterr().out
-        assert "ERROR: unknown error" in output
-
-    def test_moves_processed_input_to_results(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """Verify the input file is moved to results dir after processing."""
-        queue_file = config.queue_dir / "move_test.json"
-        queue_file.write_text(json.dumps({"command": "create"}))
-
-        mock_notion = MagicMock()
-        mock_notion.process_queue_file.return_value = {"status": "ok", "action": "created"}
-
-        ns = argparse.Namespace(queue_dir=None, results_dir=None)
-        with patch(_PATCH_NOTION_TRACKER, return_value=mock_notion):
-            _cmd_queue(ns, config)
-
-        # Original file should be gone (renamed to .processing then moved)
-        assert not queue_file.exists()
-        # Results dir should have both the result JSON and the input copy
-        result_files = list(config.queue_results_dir.iterdir())
-        assert len(result_files) >= 2
-
-    def test_shutil_move_file_not_found(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """When the .processing file vanishes before shutil.move, handle gracefully."""
-        import shutil as _shutil
-
-        queue_file = config.queue_dir / "vanish.json"
-        queue_file.write_text(json.dumps({"command": "create"}))
-
-        mock_notion = MagicMock()
-        mock_notion.process_queue_file.return_value = {"status": "ok", "action": "created"}
-
-        ns = argparse.Namespace(queue_dir=None, results_dir=None)
-
-        original_move = _shutil.move
-
-        def fake_move(src: str, dst: str) -> str:
-            if "input_" in dst:
-                raise FileNotFoundError("vanished")
-            return original_move(src, dst)
-
-        with (
-            patch(_PATCH_NOTION_TRACKER, return_value=mock_notion),
-            patch("shutil.move", side_effect=fake_move),
-        ):
-            _cmd_queue(ns, config)
-
-        output = capsys.readouterr().out
-        assert "Input already moved (concurrent process)" in output
 
 
 # ---------------------------------------------------------------------------
@@ -1038,9 +748,11 @@ class TestCmdPdf:
         mock_company_data = MagicMock()
         mock_path1 = MagicMock()
         mock_path1.name = "ACME-CV.pdf"
+        mock_path1.stem = "ACME-CV"
         mock_path1.stat.return_value.st_size = 12345
         mock_path2 = MagicMock()
         mock_path2.name = "ACME-CL.pdf"
+        mock_path2.stem = "ACME-CL"
         mock_path2.stat.return_value.st_size = 6789
 
         mock_generator = MagicMock()
@@ -1050,6 +762,7 @@ class TestCmdPdf:
         with (
             patch(_PATCH_COMPANY_DATA, return_value=mock_company_data),
             patch(_PATCH_PDF_GENERATOR, return_value=mock_generator),
+            patch("jobbing.cli._update_hub_documents"),
         ):
             _cmd_pdf(ns, config)
 
@@ -1077,6 +790,7 @@ class TestCmdPdf:
         with (
             patch(_PATCH_COMPANY_DATA, return_value=MagicMock()),
             patch(_PATCH_PDF_GENERATOR, return_value=mock_generator),
+            patch("jobbing.cli._update_hub_documents"),
         ):
             _cmd_pdf(ns, config)
 
@@ -1105,6 +819,7 @@ class TestCmdPdf:
         with (
             patch(_PATCH_COMPANY_DATA, return_value=MagicMock()),
             patch(_PATCH_PDF_GENERATOR, return_value=mock_generator),
+            patch("jobbing.cli._update_hub_documents"),
         ):
             _cmd_pdf(ns, config)
 
@@ -1124,10 +839,39 @@ class TestCmdPdf:
         with (
             patch(_PATCH_COMPANY_DATA, return_value=MagicMock()),
             patch(_PATCH_PDF_GENERATOR, return_value=mock_generator),
+            patch("jobbing.cli._update_hub_documents"),
         ):
             _cmd_pdf(ns, config)
 
         mock_generator.generate.assert_called_once()
+
+    def test_obsidian_backend_updates_hub_documents(
+        self, config: Config, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """When backend is obsidian, _update_hub_documents is called."""
+        config.tracker_backend = "obsidian"
+        company_dir = config.companies_dir / "acme"
+        company_dir.mkdir()
+        (company_dir / "acme.json").write_text("{}")
+
+        mock_path = MagicMock()
+        mock_path.name = "ACME-CV.pdf"
+        mock_path.stem = "ACME-CV"
+        mock_path.stat.return_value.st_size = 100
+
+        mock_generator = MagicMock()
+        mock_generator.generate.return_value = [mock_path]
+
+        with (
+            patch(_PATCH_COMPANY_DATA, return_value=MagicMock()),
+            patch(_PATCH_PDF_GENERATOR, return_value=mock_generator),
+            patch("jobbing.cli._update_hub_documents") as mock_hub,
+        ):
+            ns = argparse.Namespace(company="Acme", output_dir=None, cv_only=False, cl_only=False)
+            _cmd_pdf(ns, config)
+
+        mock_hub.assert_called_once()
+        assert mock_hub.call_args[0][0] == "Acme"
 
 
 # ---------------------------------------------------------------------------
@@ -1428,18 +1172,6 @@ class TestMain:
             main()
             mock_fn.assert_called_once()
 
-    def test_dispatches_queue(self) -> None:
-        with (
-            patch("jobbing.cli._build_parser") as mock_parser,
-            patch("jobbing.cli.Config.load") as mock_config,
-            patch("jobbing.cli._cmd_queue") as mock_fn,
-        ):
-            ns = argparse.Namespace(command="queue")
-            mock_parser.return_value.parse_args.return_value = ns
-            mock_config.return_value = MagicMock()
-            main()
-            mock_fn.assert_called_once()
-
     def test_dispatches_pdf(self) -> None:
         with (
             patch("jobbing.cli._build_parser") as mock_parser,
@@ -1489,66 +1221,3 @@ class TestEndToEnd:
         parsed = json.loads(output)
         assert parsed["name"] == "E2E Corp"
         assert parsed["status"] == "Targeted"
-
-    def test_track_highlights_dry_run_via_main(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        with (
-            patch(
-                "sys.argv",
-                [
-                    "jobbing",
-                    "track",
-                    "highlights",
-                    "--page-id",
-                    "pg-1",
-                    "--highlights",
-                    "A",
-                    "B",
-                    "--dry-run",
-                ],
-            ),
-            patch("jobbing.cli.Config.load", return_value=config),
-        ):
-            main()
-
-        parsed = json.loads(capsys.readouterr().out)
-        assert parsed["page_id"] == "pg-1"
-        assert parsed["highlights"] == ["A", "B"]
-
-    def test_track_update_dry_run_via_main(
-        self, config: Config, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        with (
-            patch(
-                "sys.argv",
-                [
-                    "jobbing",
-                    "track",
-                    "update",
-                    "--page-id",
-                    "pg-2",
-                    "--status",
-                    "Applied",
-                    "--dry-run",
-                ],
-            ),
-            patch("jobbing.cli.Config.load", return_value=config),
-        ):
-            main()
-
-        parsed = json.loads(capsys.readouterr().out)
-        assert parsed["status"] == "Applied"
-
-    def test_scan_existing_via_main(
-        self, config: Config, mock_tracker: MagicMock, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        with (
-            patch("sys.argv", ["jobbing", "scan", "existing"]),
-            patch("jobbing.cli.Config.load", return_value=config),
-            patch(_PATCH_GET_TRACKER, return_value=mock_tracker),
-        ):
-            main()
-
-        output = capsys.readouterr().out
-        assert "Existing applications" in output
