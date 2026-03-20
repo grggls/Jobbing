@@ -2,14 +2,14 @@
 
 ## Read These First
 
-1. **WORKFLOW.md** — authoritative workflow. Step-by-step process, JSON schema, Notion queue system, naming conventions. If anything conflicts, WORKFLOW.md wins.
+1. **WORKFLOW.md** — authoritative workflow. Step-by-step process for every skill. If anything conflicts, WORKFLOW.md wins.
 2. **CONTEXT.md** — Greg's profile, complete career timeline, technical skills, salary benchmarks, and writing style rules. This is your source of truth for all claims about Greg's experience.
 
 Read both files at the start of every session before doing any work.
 
 ## What This Project Does
 
-AI-assisted job application workflow. Greg pastes a job posting, Claude analyzes fit, generates tailored CV and cover letter content as JSON, renders PDFs, and updates a Notion tracker.
+AI-assisted job application workflow. Greg pastes a job posting, Claude analyzes fit, generates tailored CV and cover letter content as JSON, renders PDFs, and tracks applications in Obsidian.
 
 ## Behavioral Directives
 
@@ -19,7 +19,7 @@ AI-assisted job application workflow. Greg pastes a job posting, Claude analyzes
 
 **Be circumspect.** Verify before you claim. Check CONTEXT.md before asserting dates, titles, team sizes, or achievements. Cross-reference salary benchmarks. Research companies via web search — don't guess at funding stage, headcount, or culture. If you're unsure, say so. **Never present assumptions, estimates, or unverified data as facts.** If a data point came from a subagent, a search snippet, or inference rather than a verified source, say so explicitly. "I estimate €110K–€140K" is fine. "Levels.fyi shows €77K–€106K" is not fine unless you actually verified that page. When you can't access a source, say "I couldn't verify this" — don't launder the uncertainty.
 
-**Be helpful.** When Greg decides to proceed, execute the full workflow autonomously: analysis → Notion entry → JSON → PDFs → tracker update. Don't stop to ask unless something is genuinely ambiguous.
+**Be helpful.** When Greg decides to proceed, execute the full workflow autonomously: analysis → hub file → JSON → PDFs → tracker update. Don't stop to ask unless something is genuinely ambiguous.
 
 **Default to chat, not files.** When Greg asks you to "write" something — an email, a message, a prompt, a blurb — put it directly in the chat so he can copy-paste it into the destination (email client, LinkedIn, WhatsApp, another Claude window, etc.). Don't create markdown files or disk artifacts unless Greg specifically asks to save to disk, or the task is a project output (PDFs, slides, JSON, code) or project documentation. If genuinely unsure, ask — but the default is always chat.
 
@@ -28,12 +28,12 @@ AI-assisted job application workflow. Greg pastes a job posting, Claude analyzes
 Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analyze`, `/apply`, etc. In Cowork, skills load as background context — use natural language ("analyze this job posting", "help me apply").
 
 - **analyze** — Fit assessment. Paste a job posting, get score, green/red flags, gaps, salary read, company intel, Experience to Highlight bullets. Always start here.
-- **apply** — Full application workflow. Notion entry → tailored JSON → PDFs → ATS check. Run after analyze and Greg's go decision.
+- **apply** — Full application workflow. Obsidian hub entry → tailored JSON → PDFs → ATS check. Run after analyze and Greg's go decision.
 - **outreach** — LinkedIn contact research. Drafts connection request messages. Run after applying.
-- **prep** — Interview prep generation. Researches interviewer, generates likely questions, talking points, and questions to ask. Run when an interview is scheduled.
-- **debrief** — Post-interview debrief capture. Greg dumps raw thoughts, Claude structures them into the Interviews DB row. Run right after an interview.
-- **followup** — Follow-up cadence monitor. Checks all "In Progress (Interviewing)" entries for staleness, surfaces stale conversations with suggested actions. Read-only, no auto-actions.
-- **reassess** — Living Fit Assessment. Re-scores an application after interviews reveal new information. Reads existing score, debrief notes, and Greg's input. Writes via the existing `fit_assessment` queue command.
+- **prep** — Interview prep generation. Researches interviewer, generates likely questions, talking points, and questions to ask. Creates interview file in Obsidian. Run when an interview is scheduled.
+- **debrief** — Post-interview debrief capture. Greg dumps raw thoughts, Claude structures them into the interview file. Run right after an interview.
+- **followup** — Follow-up cadence monitor. Checks all "In Progress (Interviewing)" company hubs for staleness, surfaces stale conversations with suggested actions. Read-only, no auto-actions.
+- **reassess** — Living Fit Assessment. Re-scores an application after interviews reveal new information. Reads existing score, debrief notes, and Greg's input. Writes to hub's Fit Assessment section.
 - **compare** — Decision comparison. Side-by-side weighted analysis of two or more active opportunities. Read-only, outputs Markdown.
 - **track** — Tracker operations. Status updates, research, highlights, conclusions.
 - **scoring** — Tunable scoring guidelines. Component weights, thresholds, domain/tech matching rules. Referenced by analyze, disaggregate, and scan.
@@ -42,23 +42,35 @@ Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analy
 
 ## Project Structure
 
-```
-Jobbing/
+```text
+Jobbing/                            ← Obsidian vault root
 ├── CLAUDE.md              ← you are here
 ├── WORKFLOW.md            ← authoritative workflow (read first)
 ├── CONTEXT.md             ← Greg's profile and career history (read second)
 ├── SCORING.md             ← pointer to .claude/skills/scoring/SKILL.md
 ├── CV-GREGORY-DAMIANI.pdf ← master CV (generic, pre-tailoring)
 │
+├── kanban/                         ← Obsidian kanban (source of truth)
+│   ├── Job Tracker.md              ← kanban board (primary navigation)
+│   ├── companies/                  ← company hub files (one per application)
+│   │   ├── Acme Corp.md
+│   │   └── Bandcamp (Songtradr).md
+│   └── interviews/                 ← interview files (one per interview)
+│       ├── Acme Corp/
+│       │   └── 2026-03-15-Jane-Smith.md
+│       └── Bandcamp (Songtradr)/
+│           └── 2026-02-26-Richard-Frost.md
+│
 ├── src/jobbing/           ← Python package
-│   ├── cli.py             ← Unified CLI: jobbing track|queue|pdf|scan
+│   ├── cli.py             ← Unified CLI: jobbing track|pdf|scan
 │   ├── scanner.py         ← Bookmark parser + board fetcher (no API key)
 │   ├── config.py          ← Config loading (env, .env, API keys)
 │   ├── models.py          ← Domain models (Application, Contact, CVData, etc.)
 │   ├── pdf.py             ← PDF generator (CV + cover letter)
 │   └── tracker/
 │       ├── __init__.py    ← TrackerBackend Protocol + factory
-│       ├── notion.py      ← Notion API tracker
+│       ├── obsidian.py    ← Obsidian markdown tracker (default)
+│       ├── notion.py      ← Notion API tracker (legacy)
 │       └── json_file.py   ← JSON file tracker (portable fallback)
 │
 ├── .claude/skills/        ← Claude Code slash commands
@@ -85,16 +97,12 @@ Jobbing/
 │       ├── {COMPANY}-CV.pdf                  ← generated CV
 │       ├── {COMPANY}-CL.pdf                  ← generated cover letter
 │       ├── {COMPANY}-APPLICATION-ANSWERS.md  ← application questions
-│       ├── {COMPANY}-INTERVIEW-PREP.md       ← interview prep
 │       └── (other company-specific docs)
 │
 ├── docs/                  ← Architecture, decisions, design history
 ├── examples/              ← Anonymized templates
 ├── tests/
-│
-├── scan_results/          ← scan output JSON files
-├── notion_queue/          ← transient queue files (launchd watches this)
-└── notion_queue_results/  ← processed queue audit trail
+└── scan_results/          ← scan output JSON files
 ```
 
 ## Workflow Summary
@@ -102,11 +110,11 @@ Jobbing/
 Full details in WORKFLOW.md. The short version:
 
 1. **`/analyze`** — Greg pastes a job posting. Assess fit (score 0–100), green/red flags, gaps, salary read, company intel, Experience to Highlight bullets. Present the analysis and wait for Greg's go/skip decision.
-2. **`/apply`** — Notion entry → tailored JSON → PDFs → ATS check. All in one flow.
+2. **`/apply`** — Create company hub in Obsidian → tailored JSON → PDFs → ATS check. All in one flow.
 3. **Application answers** — If the application has extra questions, draft `companies/{company}/{COMPANY}-APPLICATION-ANSWERS.md`.
 4. **`/outreach`** — After applying, research LinkedIn contacts and draft messages.
-5. **`/prep`** — Interview scheduled. Research interviewer, generate prep, write to Interviews DB.
-6. **`/debrief`** — After interview. Capture what happened, structure into Interviews DB row.
+5. **`/prep`** — Interview scheduled. Research interviewer, generate prep, create interview file in Obsidian.
+6. **`/debrief`** — After interview. Capture what happened, structure into interview file.
 7. **`/followup`** — Check for stale interview processes. Surfaces companies needing follow-up.
 8. **`/reassess`** — After interviews change the picture. Re-scores with debrief data and Greg's input.
 9. **`/compare`** — Multiple offers or finalists. Weighted side-by-side comparison, read-only.
@@ -124,54 +132,113 @@ Full details in WORKFLOW.md. The short version:
 
 **Experience to Highlight is a checkpoint.** Present the bullets to Greg explicitly and wait for feedback before generating documents. Don't rubber-stamp.
 
-## Commands
+## Obsidian Writes — Direct File Edits
 
-### Notion writes — queue only
+Obsidian is the source of truth. Write directly to markdown files using Read/Edit/Write tools. No queue, no API, no launchd.
 
-The queue is the only reliable write path. Write JSON to `notion_queue/` and the launchd agent on Greg's Mac processes it automatically. Do not attempt Notion MCP writes — known Zod serialization bugs on every write tool.
+### Company hub: `kanban/companies/{Company}.md`
 
-The queue `create` command builds template-like scaffolding automatically: seven toggle heading_3 sections (Job Description, Fit Assessment, Company Research, Experience to Highlight, Outreach Contacts, Questions I Might Get Asked, Questions to Ask) plus an inline Interviews database. If `score` is included, it also sets the Score number property.
+```markdown
+---
+company: "Acme Corp"
+position: "Staff Engineer"
+status: "Targeted"
+date: 2026-03-15
+url: "https://acme.com/jobs/123"
+environment: [Remote, Berlin]
+salary: "€120K"
+focus: [SaaS, DevTools]
+score: 82
+conclusion: ""
+---
 
-```json
-{"command": "create", "name": "Company", "position": "Role", "date": "2026-02-20", "job_description": "Full posting text...", ...}
-{"command": "update", "page_id": "PAGE_ID", "status": "Applied"}
-{"command": "update", "page_id": "PAGE_ID", "status": "Followed-Up"}
-{"command": "update", "page_id": "PAGE_ID", "status": "In Progress (Interviewing)"}
-{"command": "update", "page_id": "PAGE_ID", "status": "Done", "conclusion": "Outcome text"}
-{"command": "highlights", "page_id": "PAGE_ID", "highlights": ["Bullet 1", "Bullet 2"]}
-{"command": "research", "name": "Company", "research": ["Finding 1", "Finding 2"]}
-{"command": "outreach", "name": "Company", "contacts": [{"name": "Jane Smith", "title": "VP Eng", "linkedin": "https://...", "note": "Leads Platform org, ex-Google SRE", "message": "Hi Jane — ..."}]}
-{"command": "interview_questions", "name": "Company", "questions": [{"question": "Q1?", "answer": "A1"}]}
-{"command": "questions_to_ask", "name": "Company", "questions": ["Q1?", "Q2?"]}
-{"command": "fit_assessment", "name": "Company", "score": 75, "reasoning": "...", "green_flags": ["..."], "red_flags": ["..."], "gaps": ["..."], "keywords_missing": ["..."]}
-{"command": "interview_prep", "name": "Company", "date": "2026-03-15", "interviewer": "Jane Smith — VP Eng", "interview_type": "Hiring Manager", "prep_notes": "## Key Topics\n- ...", "questions_to_ask": ["Q1?", "Q2?"]}
-{"command": "debrief", "name": "Company", "date": "2026-03-15", "interviewer": "Jane Smith — VP Eng", "outcome": "Passed", "vibe": 4, "debrief": "Strong conversation...", "questions_they_asked": ["Q1?"], "questions_i_asked": ["Q2?"], "follow_up": "Next steps..."}
+# Acme Corp
+**Position:** Staff Engineer · **Status:** Targeted · **Score:** 82/100
+
+## Documents
+- [[ACME-CORP-CV|CV]] · [[ACME-CORP-CL|Cover Letter]]
+
+## Interviews
+- [[2026-03-15-Jane-Smith|Jane Smith — Phone Screen · Passed · Vibe 4/5]]
+
+## Fit Assessment
+
+## Company Research
+
+## Experience to Highlight
+
+## Job Description
+
+## Outreach Contacts
+
+## Questions I Might Get Asked
+
+## Questions to Ask
+
+## Conclusion
 ```
 
-**Status updates are Greg's decision.** Do not auto-mark "Applied" or any other status. Greg will explicitly ask for status changes.
+**Hub file rules:**
 
-### PDF generation
+- Company identifier = company name = filename (e.g. `Acme Corp.md`)
+- Obsidian resolves `[[ACME-CORP-CV]]` to the PDF in `companies/acme corp/` by shortest unique filename
+- Documents section written by `jobbing pdf {company}` after PDF generation
+- Interviews section grows as prep and debrief files are created (append, don't replace)
+- Status values (in order): `Targeted` → `Applied` → `Followed-Up` → `In Progress (Interviewing)` → `Done`
 
-```bash
-jobbing pdf {company}
-jobbing pdf {company} --cv-only
-jobbing pdf {company} --cl-only
+### Interview file: `kanban/interviews/{Company}/{date}-{slug}.md`
+
+```markdown
+---
+company: "Acme Corp"
+interviewer: "Jane Smith"
+role: "VP Engineering"
+type: "Phone Screen"
+date: 2026-03-15
+vibe: 4
+outcome: "Passed"
+---
+
+# Jane Smith — Phone Screen · 2026-03-15
+**Company:** [[Acme Corp]] · **Outcome:** Passed · **Vibe:** 4/5
+
+## Prep Notes
+
+## Debrief
+
+## Transcript / Raw Notes
 ```
 
-### CLI commands
+**Interview file rules:**
+
+- Filename: `{date}-{FirstName}-{LastName}.md` (e.g. `2026-03-15-Jane-Smith.md`)
+- `[[Acme Corp]]` links back to the hub — Obsidian's backlinks panel shows all interviews for a company
+- `/prep` creates the file and writes Prep Notes; `/debrief` fills Debrief and outcome
+- One file per interviewer per interview slot; duplicate dates append `-2`, `-3`
+
+### Board card format: `kanban/Job Tracker.md`
+
+```text
+- [ ] [[companies/Acme Corp|Acme Corp]] — Staff Engineer · Score: 82 · 2026-03-15
+```
+
+Board card updated when status changes. Card moves between lanes: Targeted → Applied → Followed-Up → In Progress (Interviewing) → Done.
+
+## CLI Commands
 
 After `pip install -e .`, the `jobbing` CLI is available:
 
 ```bash
 jobbing track create --name "Company" --position "Role" --date "2026-02-22"
-jobbing track update --page-id "PAGE_ID" --status "Applied"
-jobbing track highlights --page-id "PAGE_ID" --highlights "Bullet 1" "Bullet 2"
+jobbing track update --name "Company" --status "Applied"
+jobbing track highlights --name "Company" --highlights "Bullet 1" "Bullet 2"
 jobbing track research --name "Company" --research "Finding 1" "Finding 2"
 jobbing track outreach --name "Company" --contacts-json contacts.json
 jobbing track followup                              # check stale interview processes
 jobbing track followup --threshold 7 --save         # custom threshold + save report
-jobbing queue   # process all pending queue files
 jobbing pdf {company}
+jobbing pdf {company} --cv-only
+jobbing pdf {company} --cl-only
 jobbing scan bookmarks                              # list all bookmarks by category
 jobbing scan bookmarks --categories "Climate / Impact"  # list one category
 jobbing scan existing                               # list companies already tracked
@@ -180,20 +247,18 @@ jobbing scan fetch --categories "Startup / Tech"    # fetch one category
 jobbing scan fetch --limit 5                        # fetch first 5 boards
 ```
 
-All track commands support `--dry-run` for previewing without sending.
+All track commands support `--dry-run` for previewing without writing.
 
-## Notion Integration Notes
+## Obsidian Integration Notes
 
-- **Notion is the single source of truth** for all application tracking, company research, and outreach contacts.
-- **Writes**: Queue-based only. Write JSON to `notion_queue/`, launchd picks it up.
-- **Reads**: Notion MCP tools (`notion-fetch`, `notion-search`) work for verification.
-- **DON'T USE NOTION MCP FOR WRITES.** Known Zod serialization bug on every write tool (`update-page`, `create-pages`). Both fail with "Expected object, received string" regardless of payload format. Use the queue system for all writes.
-- **File uploads**: Not supported by Notion API for internal integrations. Greg uploads PDFs manually.
-- **Database ID**: `734d746c43b149298993464f5ccc23e7`
-- **Status values** (in order): `Targeted` → `Applied` → `Followed-Up` → `In Progress (Interviewing)` → `Done`. New entries default to **Targeted**. Do NOT invent new status values — Notion auto-creates select options for any string, so typos and made-up values silently pollute the database. Add a `Conclusion` when moving to `Done`.
-- **Page layout** (canonical order, matches application chronology): Inline "Interviews" database, divider, then seven toggle heading_3 sections: "Job Description", "Fit Assessment", "Company Research", "Experience to Highlight", "Outreach Contacts", "Questions I Might Get Asked", "Questions to Ask". All sections scaffolded from creation with empty placeholders. On update-existing, existing section content is preserved for any section the new JSON doesn't include — safe to re-run without data loss. Section matching is case-insensitive with backward-compat aliases for renamed sections.
-- **Score property**: Number property on the database. Set automatically when `fit_assessment` command runs or when `create` includes a `score` field.
-- **Markdown in queue payloads**: The `_markdown_to_blocks()` parser handles `#`/`##`/`###` headings, `-` bullets (including nested/indented), `**bold**`/`*italic*` inline formatting, and blank-line-separated paragraphs. Other markdown (tables, links, code blocks) is not supported and will render as plain text. Keep queue payload markdown simple.
+- **Source of truth**: `kanban/companies/{Company}.md` (company hub) and `kanban/interviews/{Company}/` (interview files)
+- **Board**: `kanban/Job Tracker.md` — updated when status changes
+- **Reads**: Use Read tool on markdown files directly. No Notion MCP needed.
+- **Writes**: Use Edit/Write tools on markdown files directly. No queue, no API, no launchd.
+- **PDFs**: `jobbing pdf {company}` generates PDFs and updates `## Documents` in the hub
+- **Status values** (in order): `Targeted` → `Applied` → `Followed-Up` → `In Progress (Interviewing)` → `Done`. New entries default to **Targeted**. Do NOT invent new status values.
+- **Company identifier** = company name = hub filename (no page_id concept)
+- **Score**: `score:` field in YAML frontmatter. Set when Fit Assessment runs.
 
 ## Location Logic
 
@@ -204,17 +269,19 @@ All track commands support `--dry-run` for previewing without sending.
 ## Do Not
 
 ### Process
+
 - Skip `/analyze` and go straight to document generation — analysis is always step one
 - Skip the Experience to Highlight checkpoint — present bullets to Greg and wait for feedback
 - Skip the tailoring plan checkpoint in `/apply` — present the strategy and wait for approval
 - Generate the JSON before Greg approves the tailoring plan
-- Auto-mark "Applied" or any other Notion status — status updates are Greg's decision
+- Auto-mark "Applied" or any other status — status updates are Greg's decision
 - Proceed without reading WORKFLOW.md and CONTEXT.md at the start of each session
 - Proceed without reading `examples/example_company.json` as the structural template before generating JSON
 - Inflate fit scores to be encouraging — be honest, a skip is better than a wasted application
 - Guess at company info (headcount, funding, culture) — web search or say "not found"
 
 ### Writing — CV and Cover Letter
+
 - Use AI tells or summative self-congratulatory language. Banned phrases include:
   - "aligns perfectly", "uniquely positioned", "proven track record"
   - "passionate about", "thrilled to", "excited to bring"
@@ -235,6 +302,7 @@ All track commands support `--dry-run` for previewing without sending.
 - Claim direct reports or management responsibility at roles where Greg was IC (e.g., BuzzFeed, Yara, TradingScreen)
 
 ### Outreach Messages
+
 - Write messages over 300 characters (LinkedIn connection request limit)
 - Leave the company name implied — always name the company explicitly
 - End with "Happy to connect" or "Would welcome a conversation" — end with curiosity about their work
@@ -242,17 +310,19 @@ All track commands support `--dry-run` for previewing without sending.
 - Use stiff, transactional language — write like a peer, not a candidate pitching
 
 ### Job Postings and Research
+
 - Try to fetch job postings via web search/fetch tools — LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, and most job boards are blocked. **Always use Greg's Chrome browser** (Claude in Chrome MCP tools) to read job postings. This is the only reliable path.
 - Score roles based on title and company name alone — always fetch and read the actual JD before scoring
 - Present unverified data as sourced facts — if a data point came from a search snippet or subagent and you didn't read the source page yourself, say so
 
-### Notion and Technical
-- Use Notion MCP `update-page` — Zod serialization bug, use the queue for all updates
-- Create files outside `companies/{company}/` for company-specific content
+### Technical
+
+- Create files outside `companies/{company}/` for company-specific content (CVs, CLs, JSON)
+- Create files outside `kanban/companies/` or `kanban/interviews/` for tracker content
 - Leave TODO comments or placeholder content in JSON files
 - Claim you included something in the JSON that you didn't actually include — verify your own work before reporting
-- Write to Notion directly from Cowork — use the queue system for all writes except template-based page creation
 
 ### Ethical
+
 - Apply to defense contractors, military technology, weapons systems, or companies whose primary customer is military/intelligence — this is a firm exclusion, non-negotiable
 - Misrepresent Greg's work authorization — US citizen (no sponsorship needed for US), German permanent residency (no sponsorship needed for EU/DE)
