@@ -214,5 +214,4 @@ And update the board card in `kanban/Job Tracker.md` — move it to the Applied 
 ### Technical
 - Leave TODO, FIXME, or placeholder comments in the JSON
 - Generate JSON that doesn't match the example_company.json schema structure
-- Use Notion MCP tools or queue files for any writes — all tracker writes are direct file edits
-- Write to `notion_queue/` — the queue system is retired; use Read/Edit/Write on hub files directly
+- Use queue files or launchd for any tracker writes — all writes are direct file edits to markdown files using Read/Edit/Write tools

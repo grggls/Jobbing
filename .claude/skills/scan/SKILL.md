@@ -7,6 +7,11 @@ description: Scan bookmarked job boards for relevant postings. Python fetches th
 
 Scan bookmarked job boards for relevant postings. Python handles HTTP fetching, you handle extraction and scoring.
 
+## Critical Rules
+
+- **Always use Greg's Chrome browser to read career pages and job postings.** LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, Ashby, and most job boards block web fetch/search tools. The Python fetcher also fails on JS-rendered career pages, Cloudflare challenges, and bot detection. Don't attempt web fetch first and then report "couldn't access" — go straight to Chrome MCP tools. This is the only reliable path.
+- **Never try web fetch/search on a job board URL.** If you need to read a posting, open it in Chrome. No exceptions.
+
 ## Instructions
 
 ### Step 1: Load context

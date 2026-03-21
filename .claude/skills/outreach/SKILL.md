@@ -83,4 +83,4 @@ jobbing track outreach --name "Company Name" --contacts-json contacts.json
 - Fabricate LinkedIn profile URLs — if you can't find the real URL, say so and leave the field for Greg to fill
 - Invent mutual connections or shared interests that don't exist
 - Write to the hub file before Greg approves the contacts and messages
-- Use Notion MCP tools or queue files — write directly to the hub file using Read/Edit/Write tools
+- Use queue files or launchd for tracker writes — edit the hub file directly using Read/Edit/Write tools
