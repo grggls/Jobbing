@@ -52,19 +52,20 @@ Jobbing/                            ← Obsidian vault root
 ├── SCORING.md             ← pointer to .claude/skills/scoring/SKILL.md
 ├── CV-GREGORY-DAMIANI.pdf ← master CV (generic, pre-tailoring)
 │
-├── kanban/                         ← Obsidian kanban (source of truth)
+├── kanban/                         ← Obsidian vault (source of truth)
 │   ├── Job Tracker.md              ← kanban board (primary navigation)
-│   ├── companies/                  ← company hub files (one per application)
-│   │   ├── Acme Corp.md
-│   │   └── Bandcamp (Songtradr).md
-│   └── interviews/                 ← interview files (one per interview)
+│   └── companies/                  ← one subdirectory per company (all artifacts)
 │       ├── Acme Corp/
-│       │   └── 2026-03-15-Jane-Smith.md
+│       │   ├── Acme Corp.md              ← hub file (committed)
+│       │   ├── 2026-03-15-Jane-Smith.md  ← interview file (committed)
+│       │   ├── ACME-CORP-CV.pdf          ← generated PDF (gitignored)
+│       │   ├── ACME-CORP-CL.pdf          ← generated PDF (gitignored)
+│       │   └── acme corp.json            ← CV/CL data (gitignored)
 │       └── Bandcamp (Songtradr)/
-│           └── 2026-02-26-Richard-Frost.md
+│           └── Bandcamp (Songtradr).md
 │
 ├── src/jobbing/           ← Python package
-│   ├── cli.py             ← Unified CLI: jobbing track|pdf|scan
+│   ├── cli.py             ← Unified CLI: jobbing track|pdf|scan|get|set
 │   ├── scanner.py         ← Bookmark parser + board fetcher (no API key)
 │   ├── config.py          ← Config loading (env, .env, API keys)
 │   ├── models.py          ← Domain models (Application, Contact, CVData, etc.)
@@ -72,7 +73,7 @@ Jobbing/                            ← Obsidian vault root
 │   └── tracker/
 │       ├── __init__.py    ← TrackerBackend Protocol + factory
 │       ├── obsidian.py    ← Obsidian markdown tracker (default)
-│       ├── notion.py      ← Notion API tracker (legacy)
+│       ├── notion.py      ← Notion API tracker (legacy, deprecated)
 │       └── json_file.py   ← JSON file tracker (portable fallback)
 │
 ├── .claude/skills/        ← Claude Code slash commands
@@ -92,15 +93,10 @@ Jobbing/                            ← Obsidian vault root
 ├── pyproject.toml         ← Package metadata, deps, CLI entry point
 ├── .env                   ← API keys (gitignored)
 ├── .venv/                 ← Python virtual environment
-│
-├── companies/             ← all company-specific content (gitignored)
-│   └── {company}/
-│       ├── {company}.json                    ← tailored CV + CL data
-│       ├── {COMPANY}-CV.pdf                  ← generated CV
-│       ├── {COMPANY}-CL.pdf                  ← generated cover letter
-│       ├── {COMPANY}-APPLICATION-ANSWERS.md  ← application questions
-│       └── (other company-specific docs)
-│
+├── templates/             ← Obsidian templates
+│   └── Company Hub Template.md
+├── scripts/               ← Maintenance scripts
+│   └── migrate_to_unified_dirs.py
 ├── docs/                  ← Architecture, decisions, design history
 ├── examples/              ← Anonymized templates
 ├── tests/
@@ -113,7 +109,7 @@ Full details in WORKFLOW.md. The short version:
 
 1. **`/analyze`** — Greg pastes a job posting. Assess fit (score 0–100), green/red flags, gaps, salary read, company intel, Experience to Highlight bullets. Present the analysis and wait for Greg's go/skip decision.
 2. **`/apply`** — Create company hub in Obsidian → tailored JSON → PDFs → ATS check. All in one flow.
-3. **Application answers** — If the application has extra questions, draft `companies/{company}/{COMPANY}-APPLICATION-ANSWERS.md`.
+3. **Application answers** — If the application has extra questions, draft `kanban/companies/{Company}/{COMPANY}-APPLICATION-ANSWERS.md`.
 4. **`/outreach`** — After applying, research LinkedIn contacts and draft messages.
 5. **`/prep`** — Interview scheduled. Research interviewer, generate prep, create interview file in Obsidian.
 6. **`/debrief`** — After interview. Capture what happened, structure into interview file.
@@ -138,7 +134,9 @@ Full details in WORKFLOW.md. The short version:
 
 Obsidian is the source of truth. Write directly to markdown files using Read/Edit/Write tools. No queue, no API, no launchd.
 
-### Company hub: `kanban/companies/{Company}.md`
+Use `jobbing get "{Company}"` to read all company data as structured JSON. Use `jobbing set "{Company}" --field status --value "Applied"` to update fields atomically. Prefer the API layer over direct markdown parsing to avoid context loss.
+
+### Company hub: `kanban/companies/{Company}/{Company}.md`
 
 ```markdown
 ---
@@ -182,13 +180,13 @@ conclusion: ""
 
 **Hub file rules:**
 
-- Company identifier = company name = filename (e.g. `Acme Corp.md`)
-- Obsidian resolves `[[ACME-CORP-CV]]` to the PDF in `companies/acme corp/` by shortest unique filename
+- Company identifier = company name = directory name = hub filename (e.g. `kanban/companies/Acme Corp/Acme Corp.md`)
+- Obsidian resolves `[[ACME-CORP-CV]]` to the PDF in the same directory by shortest unique filename
 - Documents section written by `jobbing pdf {company}` after PDF generation
 - Interviews section grows as prep and debrief files are created (append, don't replace)
 - Status values (in order): `Targeted` → `Applied` → `Followed-Up` → `In Progress (Interviewing)` → `Done`
 
-### Interview file: `kanban/interviews/{Company}/{date}-{slug}.md`
+### Interview file: `kanban/companies/{Company}/{date}-{slug}.md`
 
 ```markdown
 ---
@@ -221,7 +219,7 @@ outcome: "Passed"
 ### Board card format: `kanban/Job Tracker.md`
 
 ```text
-- [ ] [[companies/Acme Corp|Acme Corp]] — Staff Engineer
+- [ ] [[Acme Corp|Acme Corp]] — Staff Engineer
   Score: 82 · 2026-03-15
 ```
 
@@ -244,6 +242,11 @@ jobbing track sync                                  # reconcile board with hub f
 jobbing pdf {company}
 jobbing pdf {company} --cv-only
 jobbing pdf {company} --cl-only
+jobbing get "{company}"                             # all company data as JSON
+jobbing get "{company}" --field status              # single frontmatter field
+jobbing get "{company}" --section "Fit Assessment"  # single section content
+jobbing set "{company}" --field status --value "Applied"
+jobbing set "{company}" --section "Fit Assessment" --content "..."
 jobbing scan bookmarks                              # list all bookmarks by category
 jobbing scan bookmarks --categories "Climate / Impact"  # list one category
 jobbing scan existing                               # list companies already tracked
@@ -256,13 +259,15 @@ All track commands support `--dry-run` for previewing without writing.
 
 ## Obsidian Integration Notes
 
-- **Source of truth**: `kanban/companies/{Company}.md` (company hub) and `kanban/interviews/{Company}/` (interview files)
+- **Source of truth**: `kanban/companies/{Company}/{Company}.md` (hub file) and `kanban/companies/{Company}/{date}-{Name}.md` (interview files)
+- **All company artifacts** live in one directory: `kanban/companies/{Company}/` — hub, interviews, PDFs, JSON
+- **API layer**: `jobbing get "{Company}"` returns all hub data as JSON. `jobbing set "{Company}" --field|--section` updates atomically. Prefer these over direct markdown parsing.
 - **Board**: `kanban/Job Tracker.md` — updated when status changes
-- **Reads**: Use Read tool on markdown files directly. No Notion MCP needed.
-- **Writes**: Use Edit/Write tools on markdown files directly. No queue, no API, no launchd.
-- **PDFs**: `jobbing pdf {company}` generates PDFs and updates `## Documents` in the hub
+- **Reads**: Use `jobbing get` first. Fall back to Read tool on markdown files if you need raw content.
+- **Writes**: Use `jobbing set` for fields and sections. Use Edit/Write for structural changes. No queue, no API, no launchd.
+- **PDFs**: `jobbing pdf {company}` generates PDFs into the company dir and updates `## Documents` in the hub
 - **Status values** (in order): `Targeted` → `Applied` → `Followed-Up` → `In Progress (Interviewing)` → `Done`. New entries default to **Targeted**. Do NOT invent new status values.
-- **Company identifier** = company name = hub filename (no page_id concept)
+- **Company identifier** = company name = directory name = hub filename (no page_id concept)
 - **Score**: `score:` field in YAML frontmatter. Set when Fit Assessment runs.
 
 ## Location Logic
@@ -322,8 +327,7 @@ All track commands support `--dry-run` for previewing without writing.
 
 ### Technical
 
-- Create files outside `companies/{company}/` for company-specific content (CVs, CLs, JSON)
-- Create files outside `kanban/companies/` or `kanban/interviews/` for tracker content
+- Create files outside `kanban/companies/{Company}/` for company-specific content (CVs, CLs, JSON, interviews, application answers)
 - Leave TODO comments or placeholder content in JSON files
 - Claim you included something in the JSON that you didn't actually include — verify your own work before reporting
 

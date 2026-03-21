@@ -58,7 +58,7 @@ Jobgether, Lensa, and similar aggregators repost the same role across multiple s
 
 ## What This Skill Does NOT Do
 
-- Full `/analyze` treatment (company intel, Experience to Highlight bullets, Notion entry). Use `/analyze` for that after identifying promising roles here.
+- Full `/analyze` treatment (company intel, Experience to Highlight bullets, hub file creation). Use `/analyze` for that after identifying promising roles here.
 - Application workflow. Use `/apply` after `/analyze`.
 - Outreach research. Use `/outreach` after applying.
 

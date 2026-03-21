@@ -16,17 +16,16 @@ __pycache__/
 .obsidian/workspace-mobile.json
 .obsidian/cache
 
-# Kanban — exclude large derived-data snapshot
+# Kanban — board is committed, company data is private
 kanban/snapshot.json
+kanban/companies/
+kanban/interviews/
 
 # Personal data — never commit
 CONTEXT.md
 BOOKMARKS.md
 CV-*.pdf
-companies/**
-!companies/
-!companies/*/
-!companies/**/.gitkeep
+companies/
 
 # Notion queue (transient)
 notion_queue/

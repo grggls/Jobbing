@@ -7,7 +7,7 @@ description: Manage the Obsidian job application tracker. Status updates, resear
 
 Manage the Obsidian job application tracker. Use this for status updates, adding research, updating highlights, or any tracker operations outside the main `/analyze` → `/apply` flow.
 
-All writes are direct edits to markdown files using Read/Edit/Write tools. There is no queue, no launchd, no Notion MCP.
+All writes are direct edits to markdown files using Read/Edit/Write tools. There is no queue, no launchd.
 
 - **Company hub files:** `kanban/companies/{Company Name}.md`
 - **Board:** `kanban/Job Tracker.md`
@@ -189,7 +189,7 @@ Or invoke conversationally via `/followup` for a richer interactive summary with
 ## Rules
 
 - **Status updates are Greg's decision.** Never auto-mark "Applied" or any other status.
-- **All writes are direct file edits.** Read the hub file, make the change, write it back. No queue, no launchd, no Notion MCP.
+- **All writes are direct file edits.** Read the hub file, make the change, write it back. No queue, no launchd.
 - **Check before creating.** Confirm no hub file already exists for the company before creating one.
 - **Overwrite warnings.** When replacing Research or Highlights sections, confirm with Greg if existing content would be lost.
 - **Conclusions are Greg's words.** Don't write a conclusion without Greg's input — it captures his assessment, not Claude's.
@@ -208,7 +208,7 @@ jobbing track followup [--threshold N] [--save]
 
 ## Do Not
 - Change any status without Greg's explicit instruction — never auto-mark "Applied", "Done", or any other status
-- Use Notion MCP tools, queue files, or launchd — the queue system is retired; edit hub files directly
+- Use queue files or launchd for tracker writes — edit hub files directly using Read/Edit/Write tools
 - Write a conclusion without Greg's input — conclusions capture Greg's assessment, not Claude's
 - Overwrite existing highlights or research without confirming — these operations replace the entire section
 - Create duplicate hub files — check if one already exists before creating

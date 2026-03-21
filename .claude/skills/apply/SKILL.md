@@ -180,7 +180,7 @@ And update the board card in `kanban/Job Tracker.md` — move it to the Applied 
 - **No AI tells.** No "aligns perfectly" or summative self-congratulation. Show, don't tell.
 - **No fake metrics.** Only use numbers from CONTEXT.md.
 - **No TODO comments or placeholder content** in the JSON.
-- **All tracker writes are direct file edits.** Edit the hub file at `kanban/companies/{Company}.md` using Read/Edit/Write tools. No queue files, no launchd, no Notion MCP.
+- **All tracker writes are direct file edits.** Edit the hub file at `kanban/companies/{Company}.md` using Read/Edit/Write tools. No queue files, no launchd.
 
 ## Do Not
 ### Process

@@ -10,8 +10,8 @@ Edit this file to tune how the `/analyze`, `/disaggregate`, and `/scan` skills e
 
 ## Threshold
 
-- **Minimum score for Notion entry:** 60 (configurable via `SCORE_THRESHOLD` in `.env`)
-- **Scores 40-59:** Logged to `scan_results/` but not tracked in Notion. Review with `jobbing scan --review`.
+- **Minimum score for tracker entry:** 60 (configurable via `SCORE_THRESHOLD` in `.env`)
+- **Scores 40-59:** Logged to `scan_results/` but not auto-created in Obsidian. Review with `jobbing scan` and run `/analyze` if interested.
 - **Scores 0-39:** Logged only.
 
 ## Scoring guidelines

@@ -97,11 +97,11 @@ For any posting Greg wants to pursue:
 - **Be honest.** A board full of junior roles or frontend jobs is a "no matches" — say so.
 - **Skip JS-rendered boards.** If page content is mostly boilerplate with no job listings, note it and move on.
 - **Check for duplicates.** Same company+role across multiple boards = one result.
-- **Use Chrome MCP.** Use my browser when you run into robots.txt that prevents your scraping.
-
 ## Do Not
 
 - Call the Anthropic API directly — you ARE the LLM, just read the content and score it
 - Present roles for companies already in the tracker
 - Filter out roles solely because the title says "Senior" — read the scope first
 - Create hub files automatically — matches go through `/analyze` first
+- Attempt web fetch/search on job board URLs before using Chrome — Chrome is the default, not the fallback
+- Report "couldn't access" a career page without first trying Chrome MCP
