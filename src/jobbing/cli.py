@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -160,6 +161,47 @@ def _track_followup(args: argparse.Namespace, config: Config) -> None:
         print(f"\nSaved to: {filepath}")
 
 
+def _track_validate(args: argparse.Namespace, config: Config) -> None:
+    """Validate all hub files for data integrity issues."""
+    from jobbing.tracker.obsidian import ObsidianTracker
+
+    tracker = ObsidianTracker(config)
+    issues = tracker.validate_hubs()
+
+    if not issues:
+        print("All hub files OK — no issues found.")
+        return
+
+    print(f"Found {len(issues)} issue(s):\n")
+    for issue in issues:
+        print(f"  - {issue}")
+    sys.exit(1)
+
+
+def _track_sync(args: argparse.Namespace, config: Config) -> None:
+    """Reconcile the kanban board with hub frontmatter for all companies."""
+    from jobbing.tracker.obsidian import ObsidianTracker
+
+    tracker = ObsidianTracker(config)
+
+    if args.dry_run:
+        apps = tracker.list_all()
+        print(f"Would sync {len(apps)} companies to board.")
+        for app in apps:
+            status = app.status.value if app.status else "?"
+            score = app.scoring.score if app.scoring else 0
+            print(f"  {app.name} — status={status!r}, score={score}")
+        return
+
+    changes = tracker.sync_board()
+    if changes:
+        for c in changes:
+            print(c)
+        print(f"\nSynced {len(changes)} cards.")
+    else:
+        print("Board already up to date.")
+
+
 def _track_outreach(args: argparse.Namespace, config: Config) -> None:
     """Replace outreach contacts on a tracker entry."""
     from jobbing.tracker import get_tracker
@@ -235,18 +277,29 @@ def _cmd_pdf(args: argparse.Namespace, config: Config) -> None:
     print("\nDone.")
 
 
+def _normalize_company_name(s: str) -> str:
+    """Strip parenthetical suffixes for fuzzy hub file matching.
+
+    e.g. "Talentedge (Anonymous IoT Client)" → "talentedge"
+    """
+    return re.sub(r"\s*\([^)]*\)\s*$", "", s).strip().lower()
+
+
 def _update_hub_documents(company_input: str, paths: list[Path], config: Config) -> None:
     """Find the hub file and update its Documents section with CV/CL wikilinks."""
     from jobbing.tracker.obsidian import ObsidianTracker
 
-    # Case-insensitive hub file lookup
     companies_dir = config.kanban_companies_dir
     if not companies_dir.is_dir():
         return
 
+    # Fuzzy lookup: exact match first, then strip-parenthetical match
+    input_lower = company_input.lower()
+    input_normalized = _normalize_company_name(company_input)
     company_name = None
     for f in companies_dir.glob("*.md"):
-        if f.stem.lower() == company_input.lower():
+        stem_lower = f.stem.lower()
+        if stem_lower == input_lower or _normalize_company_name(f.stem) == input_normalized:
             company_name = f.stem
             break
 
@@ -265,6 +318,15 @@ def _update_hub_documents(company_input: str, paths: list[Path], config: Config)
     obs_tracker = ObsidianTracker(config)
     obs_tracker.add_documents_section(company_name, cv_stem, cl_stem)
     print(f"Updated Documents section: {company_name}")
+
+    # Remove any Obsidian stub .md files created for unresolved PDF wikilinks
+    vault_root = config.project_dir
+    for stem in [cv_stem, cl_stem]:
+        if stem:
+            stub = vault_root / f"{stem}.md"
+            if stub.exists() and stub.stat().st_size == 0:
+                stub.unlink()
+                print(f"Removed Obsidian stub: {stub.name}", file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
@@ -533,6 +595,13 @@ def _build_parser() -> argparse.ArgumentParser:
     p_outreach.add_argument("--contacts-json", required=True, help="Path to contacts JSON")
     p_outreach.add_argument("--dry-run", action="store_true", dest="dry_run")
 
+    # track validate
+    track_subs.add_parser("validate", help="Validate all hub files for integrity issues")
+
+    # track sync
+    p_sync = track_subs.add_parser("sync", help="Reconcile board cards with hub frontmatter")
+    p_sync.add_argument("--dry-run", action="store_true", dest="dry_run")
+
     # --- pdf ---
     p_pdf = subparsers.add_parser("pdf", help="Generate PDF documents")
     p_pdf.add_argument("company", help="Company name")
@@ -578,6 +647,8 @@ def main() -> None:
             "research": _track_research,
             "outreach": _track_outreach,
             "followup": _track_followup,
+            "validate": _track_validate,
+            "sync": _track_sync,
         }
         handler = dispatch[args.track_command]
         handler(args, config)

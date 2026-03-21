@@ -413,3 +413,355 @@ def test_add_documents_section_writes_links(tmp_path):
     text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
     assert "[[ACME-CORP-CV|CV]]" in text
     assert "[[ACME-CORP-CL|Cover Letter]]" in text
+
+
+# ---------------------------------------------------------------------------
+# Hub frontmatter completeness (_scaffold_hub always emits all required fields)
+# ---------------------------------------------------------------------------
+
+
+REQUIRED_FIELDS = [
+    "company", "position", "status", "date", "url",
+    "environment", "salary", "focus", "vision", "mission",
+    "score", "conclusion",
+]
+
+
+def test_scaffold_hub_emits_all_required_fields(tmp_path):
+    """New hub files must contain all required frontmatter fields."""
+    board = _make_board(tmp_path)
+    tracker = _make_tracker(tmp_path)
+    tracker.create(_make_app())
+
+    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    fm = _parse_frontmatter(text)
+    for field in REQUIRED_FIELDS:
+        assert field in fm, f"Missing required frontmatter field: {field!r}"
+
+
+def test_scaffold_hub_emits_vision_and_mission(tmp_path):
+    """Specifically check that vision and mission are always present."""
+    board = _make_board(tmp_path)
+    tracker = _make_tracker(tmp_path)
+    app = Application(
+        name="Acme Corp",
+        position="Staff Engineer",
+        vision="Build the future",
+        mission="Help developers",
+    )
+    tracker.create(app)
+
+    fm = _parse_frontmatter(
+        (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    )
+    assert fm["vision"] == "Build the future"
+    assert fm["mission"] == "Help developers"
+
+
+def test_scaffold_hub_emits_vision_and_mission_when_empty(tmp_path):
+    """vision and mission appear even when not set."""
+    board = _make_board(tmp_path)
+    tracker = _make_tracker(tmp_path)
+    tracker.create(_make_app())
+
+    fm = _parse_frontmatter(
+        (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    )
+    assert "vision" in fm
+    assert "mission" in fm
+
+
+# ---------------------------------------------------------------------------
+# find_by_name restores score from frontmatter
+# ---------------------------------------------------------------------------
+
+
+def test_find_by_name_restores_score(tmp_path):
+    """find_by_name should hydrate scoring from the score: frontmatter field."""
+    board = _make_board(tmp_path)
+    tracker = _make_tracker(tmp_path)
+    tracker.create(_make_app(score=83))
+
+    app = tracker.find_by_name("Acme Corp")
+    assert app is not None
+    assert app.scoring is not None
+    assert app.scoring.score == 83
+
+
+def test_find_by_name_no_score_returns_none_scoring(tmp_path):
+    """find_by_name with score=0 should not set scoring (score=0 means unscored)."""
+    board = _make_board(tmp_path)
+    tracker = _make_tracker(tmp_path)
+    tracker.create(_make_app(score=None))  # no score set
+
+    app = tracker.find_by_name("Acme Corp")
+    assert app is not None
+    assert app.scoring is None
+
+
+# ---------------------------------------------------------------------------
+# validate_hubs
+# ---------------------------------------------------------------------------
+
+
+def _make_tracker_with_companies(tmp_path: Path) -> ObsidianTracker:
+    """Tracker with project_companies_dir wired to a real temp subdir."""
+    config = MagicMock()
+    config.kanban_dir = tmp_path
+    config.kanban_companies_dir = tmp_path / "companies"
+    config.kanban_board_path = tmp_path / "Job Tracker.md"
+    config.companies_dir = tmp_path / "project_companies"
+    return ObsidianTracker(config)
+
+
+def test_validate_hubs_clean(tmp_path):
+    """A freshly created hub with all fields set should produce no issues."""
+    _make_board(tmp_path)
+    tracker = _make_tracker_with_companies(tmp_path)
+    app = Application(
+        name="Acme Corp",
+        position="Staff Engineer",
+        vision="v",
+        mission="m",
+        url="https://example.com",
+        salary="€100K",
+        environment=["Remote"],
+        focus=["SaaS"],
+    )
+    app.scoring = ScoringResult(score=80, reasoning="")
+    tracker.create(app)
+
+    issues = tracker.validate_hubs()
+    # The only issues allowed are CL date staleness (no JSON file exists here)
+    non_date_issues = [i for i in issues if "missing frontmatter" in i or "mismatch" in i or "not found on board" in i]
+    assert non_date_issues == [], non_date_issues
+
+
+def test_validate_hubs_flags_missing_fields(tmp_path):
+    """Hub file missing vision/mission should be flagged."""
+    _make_board(tmp_path)
+    tracker = _make_tracker_with_companies(tmp_path)
+
+    # Write a hub manually with missing fields
+    hub_dir = tmp_path / "companies"
+    hub_dir.mkdir(parents=True, exist_ok=True)
+    hub = hub_dir / "Bad Corp.md"
+    hub.write_text(
+        '---\ncompany: "Bad Corp"\nstatus: "Targeted"\n---\n\n# Bad Corp\n',
+        encoding="utf-8",
+    )
+    # Add to board
+    board = tmp_path / "Job Tracker.md"
+    board_text = board.read_text(encoding="utf-8")
+    board.write_text(
+        board_text.replace(
+            "## Targeted\n",
+            "## Targeted\n\n- [ ] [[companies/Bad Corp|Bad Corp]]\n",
+        ),
+        encoding="utf-8",
+    )
+
+    issues = tracker.validate_hubs()
+    missing = [i for i in issues if "Bad Corp" in i and "missing" in i]
+    assert any("vision" in i for i in missing)
+    assert any("mission" in i for i in missing)
+
+
+def test_validate_hubs_flags_status_mismatch(tmp_path):
+    """Hub with status=Applied but card in Targeted lane should be flagged."""
+    _make_board(tmp_path)
+    tracker = _make_tracker_with_companies(tmp_path)
+    app = Application(name="Mismatch Co", position="SRE", vision="v", mission="m",
+                      url="https://x.com", salary="€90K")
+    app.scoring = ScoringResult(score=70, reasoning="")
+    tracker.create(app)
+
+    # Change hub status to Applied but leave card in Targeted
+    hub = tmp_path / "companies" / "Mismatch Co.md"
+    from jobbing.tracker.obsidian import _write_frontmatter
+    _write_frontmatter(hub, {"status": "Applied"})
+
+    issues = tracker.validate_hubs()
+    mismatch = [i for i in issues if "Mismatch Co" in i and "mismatch" in i]
+    assert len(mismatch) == 1
+    assert "Applied" in mismatch[0]
+    assert "Targeted" in mismatch[0]
+
+
+def test_validate_hubs_flags_score_mismatch(tmp_path):
+    """Hub score differing from board card score should be flagged."""
+    _make_board(tmp_path)
+    tracker = _make_tracker_with_companies(tmp_path)
+    app = Application(name="Score Co", position="SRE", vision="v", mission="m",
+                      url="https://x.com", salary="€90K")
+    app.scoring = ScoringResult(score=75, reasoning="")
+    tracker.create(app)
+
+    # Change hub score to something different
+    hub = tmp_path / "companies" / "Score Co.md"
+    from jobbing.tracker.obsidian import _write_frontmatter
+    _write_frontmatter(hub, {"score": 99})
+
+    issues = tracker.validate_hubs()
+    score_issues = [i for i in issues if "Score Co" in i and "score mismatch" in i]
+    assert len(score_issues) == 1
+
+
+def test_validate_hubs_flags_stale_cl_date(tmp_path):
+    """CL date older than 7 days should be flagged."""
+    import json
+
+    _make_board(tmp_path)
+    tracker = _make_tracker_with_companies(tmp_path)
+    app = Application(name="Old Date Co", position="SRE", vision="v", mission="m",
+                      url="https://x.com", salary="€90K")
+    app.scoring = ScoringResult(score=70, reasoning="")
+    tracker.create(app)
+
+    # Create a JSON file with an old CL date
+    co_dir = tmp_path / "project_companies" / "old date co"
+    co_dir.mkdir(parents=True, exist_ok=True)
+    (co_dir / "old date co.json").write_text(
+        json.dumps({"cl": {"date": "January 1, 2026"}}), encoding="utf-8"
+    )
+
+    issues = tracker.validate_hubs()
+    stale = [i for i in issues if "Old Date Co" in i and "CL date" in i]
+    assert len(stale) == 1
+    assert "days old" in stale[0]
+
+
+# ---------------------------------------------------------------------------
+# sync_board
+# ---------------------------------------------------------------------------
+
+
+def test_sync_board_moves_misplaced_cards(tmp_path):
+    """sync_board should move a card to the correct lane based on hub status."""
+    board = _make_board(tmp_path)
+    tracker = _make_tracker_with_companies(tmp_path)
+    app = _make_app(score=80)
+    tracker.create(app)
+
+    # Manually update hub status without touching the board
+    hub = tmp_path / "companies" / "Acme Corp.md"
+    from jobbing.tracker.obsidian import _write_frontmatter
+    _write_frontmatter(hub, {"status": "Applied"})
+
+    # Board still shows Targeted
+    board_text = board.read_text(encoding="utf-8")
+    targeted_pos = board_text.index("## Targeted")
+    card_pos = board_text.index("[[companies/Acme Corp|Acme Corp]]")
+    applied_pos = board_text.index("## Applied")
+    assert targeted_pos < card_pos < applied_pos  # still in Targeted
+
+    # After sync, card should be in Applied
+    tracker.sync_board()
+    board_text = board.read_text(encoding="utf-8")
+    applied_pos = board_text.index("## Applied")
+    card_pos = board_text.index("[[companies/Acme Corp|Acme Corp]]")
+    followup_pos = board_text.index("## Followed-Up")
+    assert applied_pos < card_pos < followup_pos
+
+
+def test_sync_board_updates_score_on_card(tmp_path):
+    """sync_board should update the score shown on the board card."""
+    board = _make_board(tmp_path)
+    tracker = _make_tracker_with_companies(tmp_path)
+    tracker.create(_make_app(score=70))
+
+    # Update hub score directly
+    hub = tmp_path / "companies" / "Acme Corp.md"
+    from jobbing.tracker.obsidian import _write_frontmatter
+    _write_frontmatter(hub, {"score": 90})
+
+    tracker.sync_board()
+
+    board_text = board.read_text(encoding="utf-8")
+    assert "Score: 90" in board_text
+    assert "Score: 70" not in board_text
+
+
+# ---------------------------------------------------------------------------
+# _normalize_company_name (fuzzy hub lookup)
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_company_name():
+    from jobbing.cli import _normalize_company_name
+
+    assert _normalize_company_name("Talentedge (Anonymous IoT Client)") == "talentedge"
+    assert _normalize_company_name("Bandcamp (Songtradr)") == "bandcamp"
+    assert _normalize_company_name("Acme Corp") == "acme corp"
+    assert _normalize_company_name("UPPER CASE") == "upper case"
+    assert _normalize_company_name("Multi (Paren) Corp") == "multi (paren) corp"  # only strips trailing
+
+
+def test_update_hub_documents_fuzzy_lookup(tmp_path, monkeypatch):
+    """jobbing pdf talentedge should find hub 'Talentedge (Anonymous IoT Client).md'."""
+    from jobbing.cli import _update_hub_documents
+
+    # Set up kanban companies dir with a compound-name hub
+    companies_dir = tmp_path / "kanban" / "companies"
+    companies_dir.mkdir(parents=True)
+    hub = companies_dir / "Talentedge (Anonymous IoT Client).md"
+    hub.write_text(
+        '---\ncompany: "Talentedge (Anonymous IoT Client)"\nstatus: "Targeted"\n---\n\n## Documents\n',
+        encoding="utf-8",
+    )
+
+    config = MagicMock()
+    config.kanban_companies_dir = companies_dir
+    config.project_dir = tmp_path
+    config.tracker_backend = "obsidian"
+    config.kanban_dir = tmp_path / "kanban"
+    config.kanban_board_path = tmp_path / "kanban" / "Job Tracker.md"
+    config.companies_dir = tmp_path / "companies"
+
+    cv = tmp_path / "TALENTEDGE-CV.pdf"
+    cl = tmp_path / "TALENTEDGE-CL.pdf"
+    cv.write_bytes(b"%PDF-1.4 fake")
+    cl.write_bytes(b"%PDF-1.4 fake")
+
+    _update_hub_documents("talentedge", [cv, cl], config)
+
+    text = hub.read_text(encoding="utf-8")
+    assert "[[TALENTEDGE-CV|CV]]" in text
+    assert "[[TALENTEDGE-CL|Cover Letter]]" in text
+
+
+def test_update_hub_documents_removes_obsidian_stubs(tmp_path):
+    """jobbing pdf should delete 0-byte stub .md files left by Obsidian."""
+    from jobbing.cli import _update_hub_documents
+
+    companies_dir = tmp_path / "kanban" / "companies"
+    companies_dir.mkdir(parents=True)
+    hub = companies_dir / "Acme Corp.md"
+    hub.write_text(
+        '---\ncompany: "Acme Corp"\nstatus: "Targeted"\n---\n\n## Documents\n',
+        encoding="utf-8",
+    )
+
+    config = MagicMock()
+    config.kanban_companies_dir = companies_dir
+    config.project_dir = tmp_path
+    config.tracker_backend = "obsidian"
+    config.kanban_dir = tmp_path / "kanban"
+    config.kanban_board_path = tmp_path / "kanban" / "Job Tracker.md"
+    config.companies_dir = tmp_path / "companies"
+
+    cv = tmp_path / "ACME-CORP-CV.pdf"
+    cl = tmp_path / "ACME-CORP-CL.pdf"
+    cv.write_bytes(b"%PDF-1.4 fake")
+    cl.write_bytes(b"%PDF-1.4 fake")
+
+    # Simulate Obsidian stubs (0-byte .md files at vault root)
+    cv_stub = tmp_path / "ACME-CORP-CV.md"
+    cl_stub = tmp_path / "ACME-CORP-CL.md"
+    cv_stub.write_text("")
+    cl_stub.write_text("")
+
+    _update_hub_documents("Acme Corp", [cv, cl], config)
+
+    assert not cv_stub.exists(), "CV stub should have been removed"
+    assert not cl_stub.exists(), "CL stub should have been removed"

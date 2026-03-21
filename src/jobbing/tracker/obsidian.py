@@ -298,7 +298,7 @@ def _scaffold_hub(app: "Application") -> str:
     """Generate a new company hub markdown file."""
     lines: list[str] = []
 
-    # Frontmatter
+    # Frontmatter — all required fields always emitted so hubs are self-complete
     lines.append("---")
     lines.append(f"company: {_frontmatter_value(app.name)}")
     lines.append(f"position: {_frontmatter_value(app.position)}")
@@ -306,16 +306,15 @@ def _scaffold_hub(app: "Application") -> str:
     lines.append(f"status: {_frontmatter_value(status_val)}")
     if app.start_date:
         lines.append(f"date: {app.start_date}")
-    if app.url:
-        lines.append(f"url: {_frontmatter_value(app.url)}")
-    if app.environment:
-        lines.append(f"environment: [{', '.join(app.environment)}]")
-    if app.salary:
-        lines.append(f"salary: {_frontmatter_value(app.salary)}")
-    if app.focus:
-        lines.append(f"focus: [{', '.join(app.focus)}]")
-    if app.scoring:
-        lines.append(f"score: {app.scoring.score}")
+    else:
+        lines.append('date: ""')
+    lines.append(f"url: {_frontmatter_value(app.url)}")
+    lines.append(f"environment: [{', '.join(app.environment)}]")
+    lines.append(f"salary: {_frontmatter_value(app.salary)}")
+    lines.append(f"focus: [{', '.join(app.focus)}]")
+    lines.append(f"vision: {_frontmatter_value(app.vision)}")
+    lines.append(f"mission: {_frontmatter_value(app.mission)}")
+    lines.append(f"score: {app.scoring.score if app.scoring else 0}")
     lines.append('conclusion: ""')
     lines.append("---")
     lines.append("")
@@ -373,6 +372,7 @@ class ObsidianTracker:
         self._kanban_dir = config.kanban_dir
         self._companies_dir = config.kanban_companies_dir
         self._board_path = config.kanban_board_path
+        self._project_companies_dir = config.companies_dir
 
     # -- Internal helpers --
 
@@ -486,6 +486,17 @@ class ObsidianTracker:
         if isinstance(focus, str):
             focus = [focus] if focus else []
 
+        score_raw = fm.get("score")
+        scoring = None
+        if score_raw is not None:
+            try:
+                score_val = int(float(str(score_raw)))
+                if score_val > 0:
+                    from jobbing.models import ScoringResult
+                    scoring = ScoringResult(score=score_val, reasoning="")
+            except (ValueError, TypeError):
+                pass
+
         return Application(
             name=str(fm.get("company", name)),
             position=str(fm.get("position", "")),
@@ -497,6 +508,7 @@ class ObsidianTracker:
             focus=list(focus),
             conclusion=str(fm.get("conclusion", "")),
             page_id=str(fm.get("notion_id", name)),
+            scoring=scoring,
         )
 
     def set_highlights(self, app_id: str, highlights: list[str]) -> None:
@@ -561,6 +573,141 @@ class ObsidianTracker:
             f"- [[{cv_stem}|CV]] · [[{cl_stem}|Cover Letter]]",
         ]
         _replace_section(path, "Documents", lines)
+
+    def validate_hubs(self) -> list[str]:
+        """Check all hub files for data integrity issues.
+
+        Returns a list of issue strings. Empty list = all clear.
+        Checks: missing frontmatter fields, status/score mismatch vs board,
+        missing Documents wikilinks when PDFs exist, stale CL dates.
+        """
+        from datetime import date as date_type, datetime
+
+        issues: list[str] = []
+        required_fields = [
+            "company", "position", "status", "date", "url",
+            "environment", "salary", "focus", "vision", "mission",
+            "score", "conclusion",
+        ]
+
+        if not self._companies_dir.is_dir():
+            return ["kanban/companies/ directory not found"]
+
+        # Parse board once: build company→lane and company→board_score maps
+        board_status: dict[str, str] = {}
+        board_score: dict[str, int | None] = {}
+        if self._board_path.is_file():
+            board_lines = self._board_path.read_text(encoding="utf-8").splitlines()
+            current_lane = ""
+            i = 0
+            while i < len(board_lines):
+                line = board_lines[i]
+                if line.startswith("## ") and line.strip()[3:] in STATUS_LANES:
+                    current_lane = line.strip()[3:]
+                elif "[[companies/" in line and line.strip().startswith("- ["):
+                    m = re.search(r'\[\[companies/[^\|]+\|([^\]]+)\]\]', line)
+                    if m:
+                        bname = m.group(1)
+                        board_status[bname] = current_lane
+                        # Score may appear on next indented body line
+                        if i + 1 < len(board_lines) and _is_card_body(board_lines[i + 1]):
+                            sm = re.search(r"Score:\s*(\d+)", board_lines[i + 1])
+                            board_score[bname] = int(sm.group(1)) if sm else None
+                            i += 1
+                        else:
+                            board_score[bname] = None
+                i += 1
+
+        for path in sorted(self._companies_dir.glob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            fm = _parse_frontmatter(text)
+            company = str(fm.get("company", path.stem))
+
+            # 1. Missing required frontmatter fields
+            for field_name in required_fields:
+                val = fm.get(field_name)
+                if val is None:
+                    issues.append(f"{company}: missing frontmatter field '{field_name}'")
+
+            # 2. Status mismatch hub vs board
+            hub_status = str(fm.get("status", ""))
+            b_lane = board_status.get(company)
+            if b_lane is None:
+                issues.append(f"{company}: card not found on board")
+            elif hub_status and hub_status != b_lane:
+                issues.append(
+                    f"{company}: status mismatch — hub={hub_status!r}, board={b_lane!r}"
+                )
+
+            # 3. Score mismatch hub vs board
+            score_raw = fm.get("score")
+            hub_score: int | None = None
+            try:
+                hub_score = int(float(str(score_raw))) if score_raw is not None else None
+            except (ValueError, TypeError):
+                pass
+            b_score = board_score.get(company)
+            if hub_score and b_score is not None and hub_score != b_score:
+                issues.append(
+                    f"{company}: score mismatch — hub={hub_score}, board={b_score}"
+                )
+
+            # 4. Missing Documents wikilinks when PDFs exist
+            company_lower = company.lower()
+            pdf_dir = self._project_companies_dir / company_lower
+            if pdf_dir.is_dir():
+                cv_pdfs = list(pdf_dir.glob("*-CV.pdf"))
+                cl_pdfs = list(pdf_dir.glob("*-CL.pdf"))
+                # Get Documents section content
+                doc_content = ""
+                doc_lines = text.splitlines()
+                in_doc = False
+                for dline in doc_lines:
+                    if dline.strip() == "## Documents":
+                        in_doc = True
+                        continue
+                    if in_doc:
+                        if dline.startswith("## "):
+                            break
+                        doc_content += dline + "\n"
+                if cv_pdfs and "[[" not in doc_content:
+                    issues.append(f"{company}: CV PDF exists but Documents section has no wikilink")
+                if cl_pdfs and "Cover Letter" not in doc_content:
+                    issues.append(f"{company}: CL PDF exists but Documents section missing Cover Letter link")
+
+            # 5. Stale CL date (>7 days old)
+            json_file = self._project_companies_dir / company_lower / f"{company_lower}.json"
+            if json_file.is_file():
+                try:
+                    import json as _json
+                    with open(json_file) as jf:
+                        jdata = _json.load(jf)
+                    cl_date_str = jdata.get("cl", {}).get("date", "")
+                    if cl_date_str:
+                        cl_date = datetime.strptime(cl_date_str, "%B %d, %Y").date()
+                        days_old = (date_type.today() - cl_date).days
+                        if days_old > 7:
+                            issues.append(
+                                f"{company}: CL date is {days_old} days old ({cl_date_str})"
+                            )
+                except Exception:
+                    pass
+
+        return issues
+
+    def sync_board(self) -> list[str]:
+        """Reconcile board cards with hub frontmatter for all tracked companies.
+
+        Reads each hub file, rebuilds the board card with current status/score,
+        and moves the card to the correct lane. Returns list of changes made.
+        """
+        if not self._board_path.is_file():
+            return ["Board file not found"]
+        changes: list[str] = []
+        for app in self.list_all():
+            _board_add_or_move_card(self._board_path, app)
+            changes.append(f"synced: {app.name} ({app.status.value})")
+        return changes
 
     def add_interview_link(self, company_name: str, filename: str, display_text: str) -> None:
         """Append a wikilink to ## Interviews section (no duplicates)."""

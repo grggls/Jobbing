@@ -335,6 +335,8 @@ Periodically check all active interview processes for staleness. Use `/followup`
 jobbing track followup                    # default threshold (5 days)
 jobbing track followup --threshold 7      # custom threshold
 jobbing track followup --save             # save report to disk
+jobbing track validate                    # check all hubs for integrity issues
+jobbing track sync                        # reconcile board cards with hub frontmatter
 ```
 
 ## Step 8: Living Fit Assessment
