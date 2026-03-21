@@ -6,18 +6,14 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from jobbing.models import Application, Contact, ScoringResult, Status
 from jobbing.tracker.obsidian import (
     ObsidianTracker,
     _card_lines,
-    _find_card_in_board,
     _parse_frontmatter,
     _replace_section,
     _write_frontmatter,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -29,9 +25,10 @@ def _make_board(tmp_path: Path) -> Path:
     board = tmp_path / "Job Tracker.md"
     board.write_text(
         "---\nkanban-plugin: basic\n---\n\n"
-        + "\n\n".join(f"## {lane}\n" for lane in [
-            "Targeted", "Applied", "Followed-Up", "In Progress (Interviewing)", "Done"
-        ])
+        + "\n\n".join(
+            f"## {lane}\n"
+            for lane in ["Targeted", "Applied", "Followed-Up", "In Progress (Interviewing)", "Done"]
+        )
         + "\n\n%% kanban:settings\n```\n{}\n```\n%%\n",
         encoding="utf-8",
     )
@@ -90,7 +87,7 @@ def test_parse_frontmatter_empty():
 
 
 def test_parse_frontmatter_no_body():
-    text = "---\ncompany: \"Acme\"\n---\n"
+    text = '---\ncompany: "Acme"\n---\n'
     fm = _parse_frontmatter(text)
     assert fm["company"] == "Acme"
 
@@ -141,7 +138,7 @@ def test_board_card_format_with_score():
     app = _make_app(score=88, start_date=date(2026, 2, 26))
     lines = _card_lines(app)
     assert len(lines) == 2
-    assert "[[companies/Acme Corp|Acme Corp]]" in lines[0]
+    assert "[[Acme Corp|Acme Corp]]" in lines[0]
     assert "Staff Engineer" in lines[0]
     assert "Score: 88" in lines[1]
     assert "2026-02-26" in lines[1]
@@ -153,7 +150,7 @@ def test_board_card_format_without_score():
     lines = _card_lines(app)
     assert len(lines) == 1
     assert "Score:" not in lines[0]
-    assert "[[companies/Acme Corp|Acme Corp]]" in lines[0]
+    assert "[[Acme Corp|Acme Corp]]" in lines[0]
 
 
 # ---------------------------------------------------------------------------
@@ -162,12 +159,11 @@ def test_board_card_format_without_score():
 
 
 def test_create_writes_frontmatter(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     app = _make_app(score=75, start_date=date(2026, 1, 10))
     tracker.create(app)
 
-    path = tmp_path / "companies" / "Acme Corp.md"
+    path = tmp_path / "companies" / "Acme Corp" / "Acme Corp.md"
     assert path.is_file()
     fm = _parse_frontmatter(path.read_text(encoding="utf-8"))
     assert fm["company"] == "Acme Corp"
@@ -177,14 +173,22 @@ def test_create_writes_frontmatter(tmp_path):
 
 
 def test_create_scaffolds_sections(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
 
-    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
-    for section in ["Documents", "Interviews", "Fit Assessment", "Company Research",
-                    "Experience to Highlight", "Job Description", "Outreach Contacts",
-                    "Questions I Might Get Asked", "Questions to Ask", "Conclusion"]:
+    text = (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
+    for section in [
+        "Documents",
+        "Interviews",
+        "Fit Assessment",
+        "Company Research",
+        "Experience to Highlight",
+        "Job Description",
+        "Outreach Contacts",
+        "Questions I Might Get Asked",
+        "Questions to Ask",
+        "Conclusion",
+    ]:
         assert f"## {section}" in text
 
 
@@ -194,10 +198,10 @@ def test_create_adds_board_card(tmp_path):
     tracker.create(_make_app())
 
     board_text = board.read_text(encoding="utf-8")
-    assert "[[companies/Acme Corp|Acme Corp]]" in board_text
+    assert "[[Acme Corp|Acme Corp]]" in board_text
     # Card should be in Targeted lane
     targeted_pos = board_text.index("## Targeted")
-    card_pos = board_text.index("[[companies/Acme Corp|Acme Corp]]")
+    card_pos = board_text.index("[[Acme Corp|Acme Corp]]")
     applied_pos = board_text.index("## Applied")
     assert targeted_pos < card_pos < applied_pos
 
@@ -208,7 +212,7 @@ def test_create_idempotent(tmp_path):
     app = _make_app()
     tracker.create(app)
     # Add some content to a section
-    path = tmp_path / "companies" / "Acme Corp.md"
+    path = tmp_path / "companies" / "Acme Corp" / "Acme Corp.md"
     _replace_section(path, "Fit Assessment", ["Great fit"])
     # Re-create should not wipe the section
     tracker.create(app)
@@ -216,14 +220,14 @@ def test_create_idempotent(tmp_path):
     assert "Great fit" in text
     # Board should not have duplicates
     board_text = board.read_text(encoding="utf-8")
-    assert board_text.count("[[companies/Acme Corp|Acme Corp]]") == 1
+    assert board_text.count("[[Acme Corp|Acme Corp]]") == 1
 
 
 def test_create_no_board_file(tmp_path):
     """create() should not crash if board file doesn't exist."""
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
-    path = tmp_path / "companies" / "Acme Corp.md"
+    path = tmp_path / "companies" / "Acme Corp" / "Acme Corp.md"
     assert path.is_file()
 
 
@@ -233,7 +237,6 @@ def test_create_no_board_file(tmp_path):
 
 
 def test_update_frontmatter_fields(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     app = _make_app()
     tracker.create(app)
@@ -243,7 +246,7 @@ def test_update_frontmatter_fields(tmp_path):
     app.scoring = ScoringResult(score=90, reasoning="")
     tracker.update(app)
 
-    path = tmp_path / "companies" / "Acme Corp.md"
+    path = tmp_path / "companies" / "Acme Corp" / "Acme Corp.md"
     fm = _parse_frontmatter(path.read_text(encoding="utf-8"))
     assert fm["status"] == "Applied"
     assert fm["salary"] == "€120K"
@@ -261,14 +264,13 @@ def test_update_status_moves_board_card(tmp_path):
 
     board_text = board.read_text(encoding="utf-8")
     applied_pos = board_text.index("## Applied")
-    card_pos = board_text.index("[[companies/Acme Corp|Acme Corp]]")
+    card_pos = board_text.index("[[Acme Corp|Acme Corp]]")
     followup_pos = board_text.index("## Followed-Up")
     assert applied_pos < card_pos < followup_pos
 
 
 def test_update_missing_file(tmp_path):
     """update() on a non-existent file should not crash."""
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.update(_make_app())  # file doesn't exist — no crash
 
@@ -279,7 +281,6 @@ def test_update_missing_file(tmp_path):
 
 
 def test_find_by_name_returns_application(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app(score=77, start_date=date(2026, 3, 1)))
 
@@ -301,7 +302,6 @@ def test_find_by_name_missing(tmp_path):
 
 
 def test_list_all_counts(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     for name in ["Alpha Corp", "Beta Inc", "Gamma Ltd"]:
         tracker.create(_make_app(name=name))
@@ -325,38 +325,35 @@ def test_list_all_empty(tmp_path):
 
 
 def test_set_highlights_replaces_section(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
     tracker.set_highlights("Acme Corp", ["Old bullet"])
     tracker.set_highlights("Acme Corp", ["New bullet 1", "New bullet 2"])
 
-    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    text = (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     assert "- New bullet 1" in text
     assert "- New bullet 2" in text
     assert "Old bullet" not in text
 
 
 def test_set_research_replaces_section(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
     tracker.set_research("Acme Corp", ["Finding A"])
     tracker.set_research("Acme Corp", ["Finding B"])
 
-    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    text = (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     assert "Finding B" in text
     assert "Finding A" not in text
 
 
 def test_set_contacts_replaces_section(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
     contacts = [Contact(name="Jane Smith", title="VP Eng", linkedin="https://li.com/jane")]
     tracker.set_contacts("Acme Corp", contacts)
 
-    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    text = (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     assert "Jane Smith" in text
     assert "VP Eng" in text
 
@@ -367,34 +364,31 @@ def test_set_contacts_replaces_section(tmp_path):
 
 
 def test_add_interview_link_appends(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
     tracker.add_interview_link("Acme Corp", "2026-03-15-Jane-Smith.md", "Jane Smith · Technical")
 
-    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    text = (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     assert "[[2026-03-15-Jane-Smith|Jane Smith · Technical]]" in text
 
 
 def test_add_interview_link_no_duplicate(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
     tracker.add_interview_link("Acme Corp", "2026-03-15-Jane-Smith.md", "Jane Smith")
     tracker.add_interview_link("Acme Corp", "2026-03-15-Jane-Smith.md", "Jane Smith")
 
-    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    text = (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     assert text.count("[[2026-03-15-Jane-Smith|Jane Smith]]") == 1
 
 
 def test_add_interview_link_multiple(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
     tracker.add_interview_link("Acme Corp", "2026-03-01-Alice.md", "Alice · Phone Screen")
     tracker.add_interview_link("Acme Corp", "2026-03-15-Bob.md", "Bob · Technical")
 
-    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    text = (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     assert "[[2026-03-01-Alice|Alice · Phone Screen]]" in text
     assert "[[2026-03-15-Bob|Bob · Technical]]" in text
 
@@ -405,12 +399,11 @@ def test_add_interview_link_multiple(tmp_path):
 
 
 def test_add_documents_section_writes_links(tmp_path):
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
     tracker.add_documents_section("Acme Corp", "ACME-CORP-CV", "ACME-CORP-CL")
 
-    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    text = (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     assert "[[ACME-CORP-CV|CV]]" in text
     assert "[[ACME-CORP-CL|Cover Letter]]" in text
 
@@ -421,19 +414,27 @@ def test_add_documents_section_writes_links(tmp_path):
 
 
 REQUIRED_FIELDS = [
-    "company", "position", "status", "date", "url",
-    "environment", "salary", "focus", "vision", "mission",
-    "score", "conclusion",
+    "company",
+    "position",
+    "status",
+    "date",
+    "url",
+    "environment",
+    "salary",
+    "focus",
+    "vision",
+    "mission",
+    "score",
+    "conclusion",
 ]
 
 
 def test_scaffold_hub_emits_all_required_fields(tmp_path):
     """New hub files must contain all required frontmatter fields."""
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
 
-    text = (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+    text = (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     fm = _parse_frontmatter(text)
     for field in REQUIRED_FIELDS:
         assert field in fm, f"Missing required frontmatter field: {field!r}"
@@ -441,7 +442,6 @@ def test_scaffold_hub_emits_all_required_fields(tmp_path):
 
 def test_scaffold_hub_emits_vision_and_mission(tmp_path):
     """Specifically check that vision and mission are always present."""
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     app = Application(
         name="Acme Corp",
@@ -452,7 +452,7 @@ def test_scaffold_hub_emits_vision_and_mission(tmp_path):
     tracker.create(app)
 
     fm = _parse_frontmatter(
-        (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+        (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     )
     assert fm["vision"] == "Build the future"
     assert fm["mission"] == "Help developers"
@@ -460,12 +460,11 @@ def test_scaffold_hub_emits_vision_and_mission(tmp_path):
 
 def test_scaffold_hub_emits_vision_and_mission_when_empty(tmp_path):
     """vision and mission appear even when not set."""
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app())
 
     fm = _parse_frontmatter(
-        (tmp_path / "companies" / "Acme Corp.md").read_text(encoding="utf-8")
+        (tmp_path / "companies" / "Acme Corp" / "Acme Corp.md").read_text(encoding="utf-8")
     )
     assert "vision" in fm
     assert "mission" in fm
@@ -478,7 +477,6 @@ def test_scaffold_hub_emits_vision_and_mission_when_empty(tmp_path):
 
 def test_find_by_name_restores_score(tmp_path):
     """find_by_name should hydrate scoring from the score: frontmatter field."""
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app(score=83))
 
@@ -490,7 +488,6 @@ def test_find_by_name_restores_score(tmp_path):
 
 def test_find_by_name_no_score_returns_none_scoring(tmp_path):
     """find_by_name with score=0 should not set scoring (score=0 means unscored)."""
-    board = _make_board(tmp_path)
     tracker = _make_tracker(tmp_path)
     tracker.create(_make_app(score=None))  # no score set
 
@@ -505,13 +502,8 @@ def test_find_by_name_no_score_returns_none_scoring(tmp_path):
 
 
 def _make_tracker_with_companies(tmp_path: Path) -> ObsidianTracker:
-    """Tracker with project_companies_dir wired to a real temp subdir."""
-    config = MagicMock()
-    config.kanban_dir = tmp_path
-    config.kanban_companies_dir = tmp_path / "companies"
-    config.kanban_board_path = tmp_path / "Job Tracker.md"
-    config.companies_dir = tmp_path / "project_companies"
-    return ObsidianTracker(config)
+    """Tracker — same as _make_tracker, kept for backward compat in validate/sync tests."""
+    return _make_tracker(tmp_path)
 
 
 def test_validate_hubs_clean(tmp_path):
@@ -533,7 +525,11 @@ def test_validate_hubs_clean(tmp_path):
 
     issues = tracker.validate_hubs()
     # The only issues allowed are CL date staleness (no JSON file exists here)
-    non_date_issues = [i for i in issues if "missing frontmatter" in i or "mismatch" in i or "not found on board" in i]
+    non_date_issues = [
+        i
+        for i in issues
+        if "missing frontmatter" in i or "mismatch" in i or "not found on board" in i
+    ]
     assert non_date_issues == [], non_date_issues
 
 
@@ -542,8 +538,8 @@ def test_validate_hubs_flags_missing_fields(tmp_path):
     _make_board(tmp_path)
     tracker = _make_tracker_with_companies(tmp_path)
 
-    # Write a hub manually with missing fields
-    hub_dir = tmp_path / "companies"
+    # Write a hub manually with missing fields in per-company subdir
+    hub_dir = tmp_path / "companies" / "Bad Corp"
     hub_dir.mkdir(parents=True, exist_ok=True)
     hub = hub_dir / "Bad Corp.md"
     hub.write_text(
@@ -556,7 +552,7 @@ def test_validate_hubs_flags_missing_fields(tmp_path):
     board.write_text(
         board_text.replace(
             "## Targeted\n",
-            "## Targeted\n\n- [ ] [[companies/Bad Corp|Bad Corp]]\n",
+            "## Targeted\n\n- [ ] [[Bad Corp|Bad Corp]]\n",
         ),
         encoding="utf-8",
     )
@@ -571,14 +567,19 @@ def test_validate_hubs_flags_status_mismatch(tmp_path):
     """Hub with status=Applied but card in Targeted lane should be flagged."""
     _make_board(tmp_path)
     tracker = _make_tracker_with_companies(tmp_path)
-    app = Application(name="Mismatch Co", position="SRE", vision="v", mission="m",
-                      url="https://x.com", salary="€90K")
+    app = Application(
+        name="Mismatch Co",
+        position="SRE",
+        vision="v",
+        mission="m",
+        url="https://x.com",
+        salary="€90K",
+    )
     app.scoring = ScoringResult(score=70, reasoning="")
     tracker.create(app)
 
     # Change hub status to Applied but leave card in Targeted
-    hub = tmp_path / "companies" / "Mismatch Co.md"
-    from jobbing.tracker.obsidian import _write_frontmatter
+    hub = tmp_path / "companies" / "Mismatch Co" / "Mismatch Co.md"
     _write_frontmatter(hub, {"status": "Applied"})
 
     issues = tracker.validate_hubs()
@@ -592,14 +593,14 @@ def test_validate_hubs_flags_score_mismatch(tmp_path):
     """Hub score differing from board card score should be flagged."""
     _make_board(tmp_path)
     tracker = _make_tracker_with_companies(tmp_path)
-    app = Application(name="Score Co", position="SRE", vision="v", mission="m",
-                      url="https://x.com", salary="€90K")
+    app = Application(
+        name="Score Co", position="SRE", vision="v", mission="m", url="https://x.com", salary="€90K"
+    )
     app.scoring = ScoringResult(score=75, reasoning="")
     tracker.create(app)
 
     # Change hub score to something different
-    hub = tmp_path / "companies" / "Score Co.md"
-    from jobbing.tracker.obsidian import _write_frontmatter
+    hub = tmp_path / "companies" / "Score Co" / "Score Co.md"
     _write_frontmatter(hub, {"score": 99})
 
     issues = tracker.validate_hubs()
@@ -613,14 +614,19 @@ def test_validate_hubs_flags_stale_cl_date(tmp_path):
 
     _make_board(tmp_path)
     tracker = _make_tracker_with_companies(tmp_path)
-    app = Application(name="Old Date Co", position="SRE", vision="v", mission="m",
-                      url="https://x.com", salary="€90K")
+    app = Application(
+        name="Old Date Co",
+        position="SRE",
+        vision="v",
+        mission="m",
+        url="https://x.com",
+        salary="€90K",
+    )
     app.scoring = ScoringResult(score=70, reasoning="")
     tracker.create(app)
 
-    # Create a JSON file with an old CL date
-    co_dir = tmp_path / "project_companies" / "old date co"
-    co_dir.mkdir(parents=True, exist_ok=True)
+    # Create a JSON file with an old CL date in the per-company dir (new structure)
+    co_dir = tmp_path / "companies" / "Old Date Co"
     (co_dir / "old date co.json").write_text(
         json.dumps({"cl": {"date": "January 1, 2026"}}), encoding="utf-8"
     )
@@ -644,14 +650,13 @@ def test_sync_board_moves_misplaced_cards(tmp_path):
     tracker.create(app)
 
     # Manually update hub status without touching the board
-    hub = tmp_path / "companies" / "Acme Corp.md"
-    from jobbing.tracker.obsidian import _write_frontmatter
+    hub = tmp_path / "companies" / "Acme Corp" / "Acme Corp.md"
     _write_frontmatter(hub, {"status": "Applied"})
 
     # Board still shows Targeted
     board_text = board.read_text(encoding="utf-8")
     targeted_pos = board_text.index("## Targeted")
-    card_pos = board_text.index("[[companies/Acme Corp|Acme Corp]]")
+    card_pos = board_text.index("[[Acme Corp|Acme Corp]]")
     applied_pos = board_text.index("## Applied")
     assert targeted_pos < card_pos < applied_pos  # still in Targeted
 
@@ -659,7 +664,7 @@ def test_sync_board_moves_misplaced_cards(tmp_path):
     tracker.sync_board()
     board_text = board.read_text(encoding="utf-8")
     applied_pos = board_text.index("## Applied")
-    card_pos = board_text.index("[[companies/Acme Corp|Acme Corp]]")
+    card_pos = board_text.index("[[Acme Corp|Acme Corp]]")
     followup_pos = board_text.index("## Followed-Up")
     assert applied_pos < card_pos < followup_pos
 
@@ -671,8 +676,7 @@ def test_sync_board_updates_score_on_card(tmp_path):
     tracker.create(_make_app(score=70))
 
     # Update hub score directly
-    hub = tmp_path / "companies" / "Acme Corp.md"
-    from jobbing.tracker.obsidian import _write_frontmatter
+    hub = tmp_path / "companies" / "Acme Corp" / "Acme Corp.md"
     _write_frontmatter(hub, {"score": 90})
 
     tracker.sync_board()
@@ -694,19 +698,23 @@ def test_normalize_company_name():
     assert _normalize_company_name("Bandcamp (Songtradr)") == "bandcamp"
     assert _normalize_company_name("Acme Corp") == "acme corp"
     assert _normalize_company_name("UPPER CASE") == "upper case"
-    assert _normalize_company_name("Multi (Paren) Corp") == "multi (paren) corp"  # only strips trailing
+    assert (
+        _normalize_company_name("Multi (Paren) Corp") == "multi (paren) corp"
+    )  # only strips trailing
 
 
 def test_update_hub_documents_fuzzy_lookup(tmp_path, monkeypatch):
-    """jobbing pdf talentedge should find hub 'Talentedge (Anonymous IoT Client).md'."""
+    """jobbing pdf talentedge should find hub 'Talentedge (Anonymous IoT Client)'."""
     from jobbing.cli import _update_hub_documents
 
-    # Set up kanban companies dir with a compound-name hub
+    # Set up kanban companies dir with a compound-name per-company subdir
     companies_dir = tmp_path / "kanban" / "companies"
-    companies_dir.mkdir(parents=True)
-    hub = companies_dir / "Talentedge (Anonymous IoT Client).md"
+    company_name = "Talentedge (Anonymous IoT Client)"
+    company_dir = companies_dir / company_name
+    company_dir.mkdir(parents=True)
+    hub = company_dir / f"{company_name}.md"
     hub.write_text(
-        '---\ncompany: "Talentedge (Anonymous IoT Client)"\nstatus: "Targeted"\n---\n\n## Documents\n',
+        f'---\ncompany: "{company_name}"\nstatus: "Targeted"\n---\n\n## Documents\n',
         encoding="utf-8",
     )
 
@@ -716,7 +724,6 @@ def test_update_hub_documents_fuzzy_lookup(tmp_path, monkeypatch):
     config.tracker_backend = "obsidian"
     config.kanban_dir = tmp_path / "kanban"
     config.kanban_board_path = tmp_path / "kanban" / "Job Tracker.md"
-    config.companies_dir = tmp_path / "companies"
 
     cv = tmp_path / "TALENTEDGE-CV.pdf"
     cl = tmp_path / "TALENTEDGE-CL.pdf"
@@ -735,8 +742,9 @@ def test_update_hub_documents_removes_obsidian_stubs(tmp_path):
     from jobbing.cli import _update_hub_documents
 
     companies_dir = tmp_path / "kanban" / "companies"
-    companies_dir.mkdir(parents=True)
-    hub = companies_dir / "Acme Corp.md"
+    company_dir = companies_dir / "Acme Corp"
+    company_dir.mkdir(parents=True)
+    hub = company_dir / "Acme Corp.md"
     hub.write_text(
         '---\ncompany: "Acme Corp"\nstatus: "Targeted"\n---\n\n## Documents\n',
         encoding="utf-8",
@@ -748,7 +756,6 @@ def test_update_hub_documents_removes_obsidian_stubs(tmp_path):
     config.tracker_backend = "obsidian"
     config.kanban_dir = tmp_path / "kanban"
     config.kanban_board_path = tmp_path / "kanban" / "Job Tracker.md"
-    config.companies_dir = tmp_path / "companies"
 
     cv = tmp_path / "ACME-CORP-CV.pdf"
     cl = tmp_path / "ACME-CORP-CL.pdf"

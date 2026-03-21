@@ -110,10 +110,7 @@ def _track_followup(args: argparse.Namespace, config: Config) -> None:
     threshold = args.threshold or config.followup_threshold_days
 
     apps = tracker.list_all()
-    in_progress = [
-        a for a in apps
-        if a.status and a.status.value == "In Progress (Interviewing)"
-    ]
+    in_progress = [a for a in apps if a.status and a.status.value == "In Progress (Interviewing)"]
 
     if not in_progress:
         print("No applications currently in progress.")
@@ -153,7 +150,7 @@ def _track_followup(args: argparse.Namespace, config: Config) -> None:
     print(report)
 
     if args.save:
-        results_dir = config.queue_results_dir
+        results_dir = config.scan_results_dir
         results_dir.mkdir(parents=True, exist_ok=True)
         filename = f"followup-{today.isoformat()}.md"
         filepath = results_dir / filename
@@ -247,13 +244,26 @@ def _cmd_pdf(args: argparse.Namespace, config: Config) -> None:
     from jobbing.models import CompanyData
     from jobbing.pdf import PDFGenerator
 
-    company_lower = args.company.lower()
-    company_dir = config.companies_dir / company_lower
-
-    json_file = company_dir / f"{company_lower}.json"
-    if not json_file.exists():
-        print(f"Error: {json_file} not found.", file=sys.stderr)
+    # Find the company directory under kanban/companies/{Company}/
+    company_dir = _find_company_dir(args.company, config.kanban_companies_dir)
+    if company_dir is None:
+        print(
+            f"Error: No company directory found for '{args.company}'"
+            f" in {config.kanban_companies_dir}",
+            file=sys.stderr,
+        )
         sys.exit(1)
+
+    # Find the JSON file — try {safe_name}.json then any *.json
+    safe_name = _safe_name(args.company)
+    json_file = company_dir / f"{safe_name}.json"
+    if not json_file.exists():
+        # Fall back: any .json in directory
+        json_candidates = list(company_dir.glob("*.json"))
+        if not json_candidates:
+            print(f"Error: No JSON file found in {company_dir}", file=sys.stderr)
+            sys.exit(1)
+        json_file = json_candidates[0]
 
     company_data = CompanyData.from_json_file(json_file)
     output_dir = Path(args.output_dir) if args.output_dir else company_dir
@@ -277,35 +287,55 @@ def _cmd_pdf(args: argparse.Namespace, config: Config) -> None:
     print("\nDone.")
 
 
+def _safe_name(s: str) -> str:
+    """Convert a company name to a safe filesystem stem."""
+    return s.replace("/", "-").replace("\\", "-").replace(":", " -").strip()
+
+
 def _normalize_company_name(s: str) -> str:
-    """Strip parenthetical suffixes for fuzzy hub file matching.
+    """Strip parenthetical suffixes for fuzzy directory matching.
 
     e.g. "Talentedge (Anonymous IoT Client)" → "talentedge"
     """
     return re.sub(r"\s*\([^)]*\)\s*$", "", s).strip().lower()
 
 
+def _find_company_dir(company_input: str, kanban_companies_dir: Path) -> Path | None:
+    """Find the per-company subdirectory under kanban/companies/.
+
+    Tries exact safe_name match, then case-insensitive match, then
+    normalized (strip parentheticals) match.
+    """
+    if not kanban_companies_dir.is_dir():
+        return None
+
+    input_safe = _safe_name(company_input)
+    input_lower = input_safe.lower()
+    input_normalized = _normalize_company_name(company_input)
+
+    for d in kanban_companies_dir.iterdir():
+        if not d.is_dir():
+            continue
+        stem_lower = d.name.lower()
+        if (
+            d.name == input_safe
+            or stem_lower == input_lower
+            or _normalize_company_name(d.name) == input_normalized
+        ):
+            return d
+    return None
+
+
 def _update_hub_documents(company_input: str, paths: list[Path], config: Config) -> None:
     """Find the hub file and update its Documents section with CV/CL wikilinks."""
     from jobbing.tracker.obsidian import ObsidianTracker
 
-    companies_dir = config.kanban_companies_dir
-    if not companies_dir.is_dir():
+    company_dir = _find_company_dir(company_input, config.kanban_companies_dir)
+    if not company_dir:
+        print(f"Warning: No company directory found for '{company_input}'", file=sys.stderr)
         return
 
-    # Fuzzy lookup: exact match first, then strip-parenthetical match
-    input_lower = company_input.lower()
-    input_normalized = _normalize_company_name(company_input)
-    company_name = None
-    for f in companies_dir.glob("*.md"):
-        stem_lower = f.stem.lower()
-        if stem_lower == input_lower or _normalize_company_name(f.stem) == input_normalized:
-            company_name = f.stem
-            break
-
-    if not company_name:
-        print(f"Warning: No hub file found for '{company_input}' in {companies_dir}", file=sys.stderr)
-        return
+    company_name = company_dir.name
 
     cv_stem = cl_stem = ""
     for path in paths:
@@ -327,6 +357,161 @@ def _update_hub_documents(company_input: str, paths: list[Path], config: Config)
             if stub.exists() and stub.stat().st_size == 0:
                 stub.unlink()
                 print(f"Removed Obsidian stub: {stub.name}", file=sys.stderr)
+
+
+# ---------------------------------------------------------------------------
+# Get / Set subcommands — structured API layer for Claude
+# ---------------------------------------------------------------------------
+
+
+def _cmd_get(args: argparse.Namespace, config: Config) -> None:
+    """Return all company data as structured JSON.
+
+    Reads hub frontmatter + sections, lists interview files and PDFs.
+    Designed so Claude can call `jobbing get "Company"` instead of parsing
+    markdown directly, eliminating context loss and stochastic file access.
+    """
+    from jobbing.tracker.obsidian import _parse_frontmatter
+
+    company_dir = _find_company_dir(args.company, config.kanban_companies_dir)
+    if not company_dir:
+        print(json.dumps({"error": f"Company '{args.company}' not found"}), file=sys.stderr)
+        sys.exit(1)
+
+    hub_path = company_dir / f"{company_dir.name}.md"
+    if not hub_path.is_file():
+        print(json.dumps({"error": f"Hub file not found: {hub_path}"}), file=sys.stderr)
+        sys.exit(1)
+
+    text = hub_path.read_text(encoding="utf-8")
+    fm = _parse_frontmatter(text)
+
+    # Extract all sections
+    sections: dict[str, str] = {}
+    lines = text.splitlines()
+    current_section: str | None = None
+    section_lines: list[str] = []
+
+    for line in lines:
+        if line.startswith("## "):
+            if current_section is not None:
+                sections[current_section] = "\n".join(section_lines).strip()
+            current_section = line[3:].strip()
+            section_lines = []
+        elif current_section is not None:
+            section_lines.append(line)
+
+    if current_section is not None:
+        sections[current_section] = "\n".join(section_lines).strip()
+
+    # If --field, return single value
+    if getattr(args, "field", None):
+        field = args.field
+        if field in fm:
+            print(json.dumps(fm[field]))
+        elif field in sections:
+            print(sections[field])
+        else:
+            print(json.dumps(None))
+        return
+
+    # If --section, return section content
+    if getattr(args, "section", None):
+        section = args.section
+        print(sections.get(section, ""))
+        return
+
+    # Full output
+    interviews = sorted(
+        [
+            f.name
+            for f in company_dir.iterdir()
+            if f.is_file() and f.suffix == ".md" and f.name != hub_path.name
+        ]
+    )
+    pdfs = {
+        "cv": next((f.name for f in company_dir.glob("*-CV.pdf")), None),
+        "cl": next((f.name for f in company_dir.glob("*-CL.pdf")), None),
+    }
+    json_files = [f.name for f in company_dir.glob("*.json")]
+
+    output = {
+        "company": fm.get("company", company_dir.name),
+        "position": fm.get("position", ""),
+        "status": fm.get("status", "Targeted"),
+        "score": fm.get("score", 0),
+        "date": str(fm.get("date", "")),
+        "url": fm.get("url", ""),
+        "salary": fm.get("salary", ""),
+        "environment": fm.get("environment", []),
+        "focus": fm.get("focus", []),
+        "vision": fm.get("vision", ""),
+        "mission": fm.get("mission", ""),
+        "conclusion": fm.get("conclusion", ""),
+        "sections": sections,
+        "interviews": interviews,
+        "pdfs": pdfs,
+        "json_files": json_files,
+    }
+    print(json.dumps(output, indent=2, ensure_ascii=False))
+
+
+def _cmd_set(args: argparse.Namespace, config: Config) -> None:
+    """Atomically update a frontmatter field or section in a company hub.
+
+    Usage:
+        jobbing set "Acme Corp" --field status --value "Applied"
+        jobbing set "Acme Corp" --section "Fit Assessment" --content "Score: 78..."
+    """
+    from jobbing.tracker.obsidian import ObsidianTracker, _replace_section, _write_frontmatter
+
+    company_dir = _find_company_dir(args.company, config.kanban_companies_dir)
+    if not company_dir:
+        print(f"Error: Company '{args.company}' not found", file=sys.stderr)
+        sys.exit(1)
+
+    hub_path = company_dir / f"{company_dir.name}.md"
+    if not hub_path.is_file():
+        print(f"Error: Hub file not found: {hub_path}", file=sys.stderr)
+        sys.exit(1)
+
+    if args.dry_run:
+        if getattr(args, "field", None):
+            print(f"Would set frontmatter field '{args.field}' = {args.value!r}")
+        elif getattr(args, "section", None):
+            preview = (args.content[:80] + "...") if len(args.content) > 80 else args.content
+            print(f"Would replace section '{args.section}' with: {preview!r}")
+        return
+
+    if getattr(args, "field", None) and args.field:
+        # Update frontmatter field
+        value: Any = args.value
+        # Try to coerce numeric strings
+        try:
+            value = int(args.value)
+        except (ValueError, TypeError):
+            pass
+        _write_frontmatter(hub_path, {args.field: value})
+        print(f"Set {company_dir.name}: {args.field} = {value!r}")
+
+        # If status changed, also move board card
+        if args.field == "status":
+            obs_tracker = ObsidianTracker(config)
+            app = obs_tracker.find_by_name(company_dir.name)
+            if app and obs_tracker._board_path.is_file():
+                from jobbing.tracker.obsidian import _board_add_or_move_card
+
+                _board_add_or_move_card(obs_tracker._board_path, app)
+                print(f"Board card moved to: {value}")
+
+    elif getattr(args, "section", None) and args.section:
+        # Replace section content
+        content_lines = args.content.splitlines()
+        _replace_section(hub_path, args.section, content_lines)
+        print(f"Updated section '{args.section}' in {company_dir.name}")
+    else:
+        print("Error: must specify --field or --section", file=sys.stderr)
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -425,10 +610,10 @@ def _scan_existing(args: argparse.Namespace, config: Config) -> None:
         apps = tracker.list_all()
     except Exception as e:
         logging.getLogger(__name__).warning(
-            "Tracker query failed (%s), falling back to companies/ directory", e
+            "Tracker query failed (%s), falling back to kanban/companies/ directory", e
         )
-        source = "companies/"
-        companies_dir = config.companies_dir
+        source = "kanban/companies/"
+        companies_dir = config.kanban_companies_dir
         if companies_dir.is_dir():
             for d in sorted(companies_dir.iterdir()):
                 if d.is_dir() and not d.name.startswith("."):
@@ -625,6 +810,21 @@ def _build_parser() -> argparse.ArgumentParser:
     # scan existing
     scan_subs.add_parser("existing", help="List companies already in tracker")
 
+    # --- get ---
+    p_get = subparsers.add_parser("get", help="Read company data as structured JSON")
+    p_get.add_argument("company", help="Company name (fuzzy match)")
+    p_get.add_argument("--field", help="Return a single frontmatter field value")
+    p_get.add_argument("--section", help="Return a single section's content")
+
+    # --- set ---
+    p_set = subparsers.add_parser("set", help="Atomically update a company hub field or section")
+    p_set.add_argument("company", help="Company name (fuzzy match)")
+    p_set.add_argument("--field", help="Frontmatter field name to update")
+    p_set.add_argument("--value", help="New value for the field")
+    p_set.add_argument("--section", help="Section heading to replace")
+    p_set.add_argument("--content", help="New content for the section")
+    p_set.add_argument("--dry-run", action="store_true", dest="dry_run")
+
     return parser
 
 
@@ -658,6 +858,12 @@ def main() -> None:
 
     elif args.command == "scan":
         _cmd_scan(args, config)
+
+    elif args.command == "get":
+        _cmd_get(args, config)
+
+    elif args.command == "set":
+        _cmd_set(args, config)
 
 
 if __name__ == "__main__":

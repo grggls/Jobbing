@@ -7,7 +7,6 @@ kanban/Job Tracker.md. No API, no queue, no network required.
 from __future__ import annotations
 
 import re
-from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -111,7 +110,7 @@ def _write_frontmatter(path: Path, updates: dict[str, object]) -> None:
     if text.startswith("---"):
         end = text.find("\n---", 3)
         if end != -1:
-            body = text[end + 4:]  # skip '\n---'
+            body = text[end + 4 :]  # skip '\n---'
             path.write_text(new_fm + body, encoding="utf-8")
             return
 
@@ -160,14 +159,14 @@ def _replace_section(path: Path, heading: str, content_lines: list[str]) -> None
 # ---------------------------------------------------------------------------
 
 
-def _card_lines(app: "Application") -> list[str]:
+def _card_lines(app: Application) -> list[str]:
     """Format a kanban board card as one or two lines.
 
     Title line: [[link|Name]] — Position
     Body line (if any metadata):  Score: N · YYYY-MM-DD
     """
     safe_name = app.name.replace("/", "-").replace("\\", "-").replace(":", " -").strip()
-    title = f"[[companies/{safe_name}|{app.name}]]"
+    title = f"[[{safe_name}|{app.name}]]"
     if app.position:
         title += f" — {app.position}"
     meta: list[str] = []
@@ -184,7 +183,7 @@ def _card_lines(app: "Application") -> list[str]:
 def _find_card_in_board(lines: list[str], company_name: str) -> int | None:
     """Find the line index of a card title line for company_name in the board."""
     safe_name = company_name.replace("/", "-").replace("\\", "-").replace(":", " -").strip()
-    needle = f"[[companies/{safe_name}|"
+    needle = f"[[{safe_name}|"
     for i, line in enumerate(lines):
         if needle in line:
             return i
@@ -196,7 +195,7 @@ def _is_card_body(line: str) -> bool:
     return line.startswith("  ") and not line.strip().startswith("- [")
 
 
-def _board_add_or_move_card(board_path: Path, app: "Application") -> None:
+def _board_add_or_move_card(board_path: Path, app: Application) -> None:
     """Add a new card to the board, or move it if the status changed.
 
     Cards are inserted into the correct lane. Within a lane, cards are
@@ -230,8 +229,8 @@ def _board_add_or_move_card(board_path: Path, app: "Application") -> None:
         # Find lane end (next ## heading or settings block)
         lane_end = lane_start + 1
         while lane_end < len(lines):
-            l = lines[lane_end]
-            if l.startswith("## ") or l.strip().startswith("%% kanban"):
+            ln = lines[lane_end]
+            if ln.startswith("## ") or ln.strip().startswith("%% kanban"):
                 break
             lane_end += 1
 
@@ -294,7 +293,7 @@ _SECTION_ORDER = [
 ]
 
 
-def _scaffold_hub(app: "Application") -> str:
+def _scaffold_hub(app: Application) -> str:
     """Generate a new company hub markdown file."""
     lines: list[str] = []
 
@@ -364,32 +363,37 @@ def _scaffold_hub(app: "Application") -> str:
 class ObsidianTracker:
     """TrackerBackend implementation that writes to Obsidian kanban files.
 
-    Reads/writes kanban/companies/{Company}.md and kanban/Job Tracker.md.
+    Reads/writes kanban/companies/{Company}/{Company}.md and kanban/Job Tracker.md.
+    Each company has its own subdirectory containing the hub file, interview
+    files, PDFs, and JSON — all in one place.
     No external dependencies, no network required.
     """
 
-    def __init__(self, config: "Config") -> None:
+    def __init__(self, config: Config) -> None:
         self._kanban_dir = config.kanban_dir
         self._companies_dir = config.kanban_companies_dir
         self._board_path = config.kanban_board_path
-        self._project_companies_dir = config.companies_dir
 
     # -- Internal helpers --
 
+    def _company_dir(self, name: str) -> Path:
+        safe = name.replace("/", "-").replace("\\", "-").replace(":", " -").strip()
+        return self._companies_dir / safe
+
     def _company_file(self, name: str) -> Path:
         safe = name.replace("/", "-").replace("\\", "-").replace(":", " -").strip()
-        return self._companies_dir / f"{safe}.md"
+        return self._companies_dir / safe / f"{safe}.md"
 
     # -- TrackerBackend protocol --
 
-    def create(self, app: "Application") -> tuple[str, list[str]]:
+    def create(self, app: Application) -> tuple[str, list[str]]:
         """Create or update a company hub file and board card.
 
         Returns (company_name, sections_written).
         If file already exists, updates frontmatter but preserves all
         section content (idempotent).
         """
-        self._companies_dir.mkdir(parents=True, exist_ok=True)
+        self._company_dir(app.name).mkdir(parents=True, exist_ok=True)
         path = self._company_file(app.name)
         sections: list[str] = []
 
@@ -429,7 +433,7 @@ class ObsidianTracker:
 
         return app.name, sections
 
-    def update(self, app: "Application") -> None:
+    def update(self, app: Application) -> None:
         """Update frontmatter and move board card if status changed."""
         path = self._company_file(app.name)
         if not path.is_file():
@@ -450,7 +454,7 @@ class ObsidianTracker:
         if self._board_path.is_file():
             _board_add_or_move_card(self._board_path, app)
 
-    def find_by_name(self, name: str) -> "Application | None":
+    def find_by_name(self, name: str) -> Application | None:
         """Read and parse a company hub file into an Application."""
         from jobbing.models import Application, Status
 
@@ -478,13 +482,17 @@ class ObsidianTracker:
             except (ValueError, IndexError):
                 pass
 
-        env = fm.get("environment", [])
-        if isinstance(env, str):
-            env = [env] if env else []
+        env_raw = fm.get("environment", [])
+        if isinstance(env_raw, str):
+            env: list[str] = [env_raw] if env_raw else []
+        else:
+            env = list(env_raw) if isinstance(env_raw, list) else []
 
-        focus = fm.get("focus", [])
-        if isinstance(focus, str):
-            focus = [focus] if focus else []
+        focus_raw = fm.get("focus", [])
+        if isinstance(focus_raw, str):
+            focus: list[str] = [focus_raw] if focus_raw else []
+        else:
+            focus = list(focus_raw) if isinstance(focus_raw, list) else []
 
         score_raw = fm.get("score")
         scoring = None
@@ -493,6 +501,7 @@ class ObsidianTracker:
                 score_val = int(float(str(score_raw)))
                 if score_val > 0:
                     from jobbing.models import ScoringResult
+
                     scoring = ScoringResult(score=score_val, reasoning="")
             except (ValueError, TypeError):
                 pass
@@ -503,9 +512,9 @@ class ObsidianTracker:
             status=status,
             start_date=start_date,
             url=str(fm.get("url", "")),
-            environment=list(env),
+            environment=env,
             salary=str(fm.get("salary", "")),
-            focus=list(focus),
+            focus=focus,
             conclusion=str(fm.get("conclusion", "")),
             page_id=str(fm.get("notion_id", name)),
             scoring=scoring,
@@ -523,7 +532,7 @@ class ObsidianTracker:
         if path.is_file():
             _replace_section(path, "Company Research", [f"- {r}" for r in research])
 
-    def set_contacts(self, app_id: str, contacts: list["Contact"]) -> None:
+    def set_contacts(self, app_id: str, contacts: list[Contact]) -> None:
         """Replace ## Outreach Contacts section."""
         path = self._company_file(app_id)
         if not path.is_file():
@@ -542,13 +551,18 @@ class ObsidianTracker:
             lines.append(line)
         _replace_section(path, "Outreach Contacts", lines)
 
-    def list_all(self) -> list["Application"]:
-        """List all tracked applications from kanban/companies/*.md."""
+    def list_all(self) -> list[Application]:
+        """List all tracked applications from kanban/companies/*/."""
         if not self._companies_dir.is_dir():
             return []
         apps: list[Application] = []
-        for path in sorted(self._companies_dir.glob("*.md")):
-            text = path.read_text(encoding="utf-8")
+        for company_dir in sorted(self._companies_dir.iterdir()):
+            if not company_dir.is_dir():
+                continue
+            hub = company_dir / f"{company_dir.name}.md"
+            if not hub.is_file():
+                continue
+            text = hub.read_text(encoding="utf-8")
             fm = _parse_frontmatter(text)
             if not fm.get("company"):
                 continue
@@ -581,13 +595,23 @@ class ObsidianTracker:
         Checks: missing frontmatter fields, status/score mismatch vs board,
         missing Documents wikilinks when PDFs exist, stale CL dates.
         """
-        from datetime import date as date_type, datetime
+        from datetime import date as date_type
+        from datetime import datetime
 
         issues: list[str] = []
         required_fields = [
-            "company", "position", "status", "date", "url",
-            "environment", "salary", "focus", "vision", "mission",
-            "score", "conclusion",
+            "company",
+            "position",
+            "status",
+            "date",
+            "url",
+            "environment",
+            "salary",
+            "focus",
+            "vision",
+            "mission",
+            "score",
+            "conclusion",
         ]
 
         if not self._companies_dir.is_dir():
@@ -604,8 +628,8 @@ class ObsidianTracker:
                 line = board_lines[i]
                 if line.startswith("## ") and line.strip()[3:] in STATUS_LANES:
                     current_lane = line.strip()[3:]
-                elif "[[companies/" in line and line.strip().startswith("- ["):
-                    m = re.search(r'\[\[companies/[^\|]+\|([^\]]+)\]\]', line)
+                elif line.strip().startswith("- [") and "[[" in line:
+                    m = re.search(r"\[\[[^\|]+\|([^\]]+)\]\]", line)
                     if m:
                         bname = m.group(1)
                         board_status[bname] = current_lane
@@ -618,7 +642,12 @@ class ObsidianTracker:
                             board_score[bname] = None
                 i += 1
 
-        for path in sorted(self._companies_dir.glob("*.md")):
+        for company_dir in sorted(self._companies_dir.iterdir()):
+            if not company_dir.is_dir():
+                continue
+            path = company_dir / f"{company_dir.name}.md"
+            if not path.is_file():
+                continue
             text = path.read_text(encoding="utf-8")
             fm = _parse_frontmatter(text)
             company = str(fm.get("company", path.stem))
@@ -635,9 +664,7 @@ class ObsidianTracker:
             if b_lane is None:
                 issues.append(f"{company}: card not found on board")
             elif hub_status and hub_status != b_lane:
-                issues.append(
-                    f"{company}: status mismatch — hub={hub_status!r}, board={b_lane!r}"
-                )
+                issues.append(f"{company}: status mismatch — hub={hub_status!r}, board={b_lane!r}")
 
             # 3. Score mismatch hub vs board
             score_raw = fm.get("score")
@@ -648,16 +675,13 @@ class ObsidianTracker:
                 pass
             b_score = board_score.get(company)
             if hub_score and b_score is not None and hub_score != b_score:
-                issues.append(
-                    f"{company}: score mismatch — hub={hub_score}, board={b_score}"
-                )
+                issues.append(f"{company}: score mismatch — hub={hub_score}, board={b_score}")
 
             # 4. Missing Documents wikilinks when PDFs exist
-            company_lower = company.lower()
-            pdf_dir = self._project_companies_dir / company_lower
-            if pdf_dir.is_dir():
-                cv_pdfs = list(pdf_dir.glob("*-CV.pdf"))
-                cl_pdfs = list(pdf_dir.glob("*-CL.pdf"))
+            company_assets_dir = self._company_dir(company)
+            if company_assets_dir.is_dir():
+                cv_pdfs = list(company_assets_dir.glob("*-CV.pdf"))
+                cl_pdfs = list(company_assets_dir.glob("*-CL.pdf"))
                 # Get Documents section content
                 doc_content = ""
                 doc_lines = text.splitlines()
@@ -673,13 +697,19 @@ class ObsidianTracker:
                 if cv_pdfs and "[[" not in doc_content:
                     issues.append(f"{company}: CV PDF exists but Documents section has no wikilink")
                 if cl_pdfs and "Cover Letter" not in doc_content:
-                    issues.append(f"{company}: CL PDF exists but Documents section missing Cover Letter link")
+                    issues.append(
+                        f"{company}: CL PDF exists but Documents section missing Cover Letter link"
+                    )
 
-            # 5. Stale CL date (>7 days old)
-            json_file = self._project_companies_dir / company_lower / f"{company_lower}.json"
-            if json_file.is_file():
+            # 5. Stale CL date (>7 days old) — look for any *.json in company dir
+            json_files = (
+                list(company_assets_dir.glob("*.json")) if company_assets_dir.is_dir() else []
+            )
+            json_file = json_files[0] if json_files else None
+            if json_file is not None and json_file.is_file():
                 try:
                     import json as _json
+
                     with open(json_file) as jf:
                         jdata = _json.load(jf)
                     cl_date_str = jdata.get("cl", {}).get("date", "")

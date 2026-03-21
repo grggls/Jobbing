@@ -53,13 +53,12 @@ class TestConfig:
     def test_load_from_dotenv(self, tmp_project: Path) -> None:
         with patch.dict(os.environ, {}, clear=True):
             config = Config.load(project_dir=tmp_project)
-        assert config.notion_api_key == "test-key-123"
         assert config.project_dir == tmp_project
 
     def test_derived_paths(self, config: Config) -> None:
-        assert config.companies_dir == config.project_dir / "companies"
-        assert config.queue_dir == config.project_dir / "notion_queue"
-        assert config.queue_results_dir == config.project_dir / "notion_queue_results"
+        assert config.kanban_dir == config.project_dir / "kanban"
+        assert config.kanban_companies_dir == config.project_dir / "kanban" / "companies"
+        assert config.kanban_board_path == config.project_dir / "kanban" / "Job Tracker.md"
         assert config.env_path == config.project_dir / ".env"
 
     def test_defaults(self, config: Config) -> None:
@@ -79,12 +78,12 @@ class TestConfig:
         assert config.tracker_backend == "json"
         assert config.score_threshold == 80
 
-    def test_missing_notion_key_is_empty(self, tmp_path: Path) -> None:
-        """Config doesn't crash when Notion key is unavailable."""
+    def test_load_without_dotenv(self, tmp_path: Path) -> None:
+        """Config doesn't crash when .env is empty."""
         (tmp_path / ".env").write_text("# empty\n")
         with (
             patch.dict(os.environ, {}, clear=True),
             patch("jobbing.config._load_key_from_secrets", return_value=None),
         ):
             config = Config.load(project_dir=tmp_path)
-        assert config.notion_api_key == ""
+        assert config.tracker_backend == "obsidian"

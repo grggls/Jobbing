@@ -5,8 +5,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pytest
-
 # Make the kanban script importable without installing it
 sys.path.insert(0, str(Path(__file__).parent.parent / "kanban"))
 from sync_notion_to_obsidian import (
@@ -17,7 +15,6 @@ from sync_notion_to_obsidian import (
     _update_hub_interviews_section,
     generate_interview_file,
 )
-
 
 # ---------------------------------------------------------------------------
 # _interview_name_slug
@@ -166,7 +163,8 @@ def test_hub_interviews_section_replaced(tmp_path):
     """Existing ## Interviews section is replaced, not duplicated."""
     hub = tmp_path / "Acme.md"
     hub.write_text(
-        "---\ncompany: Acme\n---\n\n# Acme\n\n## Interviews\n\n- [[old-link|Old Interview]]\n\n## Fit Assessment\n\nContent\n",
+        "---\ncompany: Acme\n---\n\n# Acme\n\n## Interviews\n\n"
+        "- [[old-link|Old Interview]]\n\n## Fit Assessment\n\nContent\n",
         encoding="utf-8",
     )
     wikilinks = ["- [[new-link|New Interview]]"]
@@ -182,7 +180,8 @@ def test_hub_interviews_section_after_documents(tmp_path):
     """## Interviews is inserted after ## Documents when present."""
     hub = tmp_path / "Acme.md"
     hub.write_text(
-        "---\ncompany: Acme\n---\n\n# Acme\n\n## Documents\n\n- [[CV|CV]]\n\n## Fit Assessment\n\nContent\n",
+        "---\ncompany: Acme\n---\n\n# Acme\n\n## Documents\n\n"
+        "- [[CV|CV]]\n\n## Fit Assessment\n\nContent\n",
         encoding="utf-8",
     )
     wikilinks = ["- [[2026-01-10-Alice|Alice]]"]
@@ -190,9 +189,9 @@ def test_hub_interviews_section_after_documents(tmp_path):
 
     updated = hub.read_text(encoding="utf-8")
     lines = updated.splitlines()
-    doc_idx = next(i for i, l in enumerate(lines) if l.strip() == "## Documents")
-    int_idx = next(i for i, l in enumerate(lines) if l.strip() == "## Interviews")
-    fit_idx = next(i for i, l in enumerate(lines) if l.strip() == "## Fit Assessment")
+    doc_idx = next(i for i, ln in enumerate(lines) if ln.strip() == "## Documents")
+    int_idx = next(i for i, ln in enumerate(lines) if ln.strip() == "## Interviews")
+    fit_idx = next(i for i, ln in enumerate(lines) if ln.strip() == "## Fit Assessment")
     assert doc_idx < int_idx < fit_idx
 
 

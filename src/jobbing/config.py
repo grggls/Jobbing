@@ -1,8 +1,7 @@
 """Configuration loading for the Jobbing package.
 
-Consolidates API key loading and adds configuration for scoring and tracker.
-
-Key loading cascade: environment variable → .env file → ~/.zshrc-secrets
+Configures scoring thresholds, tracker backend, and follow-up cadence.
+Supports loading from environment variables and .env file.
 """
 
 from __future__ import annotations
@@ -75,12 +74,13 @@ class Config:
 
     project_dir: Path
 
-    # Notion
-    notion_api_key: str = ""
-    notion_database_id: str = "734d746c-43b1-4929-8993-464f5ccc23e7"
-
     # Tracker
-    tracker_backend: str = "obsidian"  # "obsidian" | "notion" | "json"
+    tracker_backend: str = "obsidian"  # "obsidian" | "json"
+
+    # Legacy Notion fields — only needed when tracker_backend='notion'
+    # Can be set directly (e.g. in tests) or left empty for env-cascade lookup
+    notion_api_key: str = ""
+    notion_database_id: str = ""
 
     # Scoring
     score_threshold: int = 60
@@ -90,23 +90,11 @@ class Config:
 
     @classmethod
     def load(cls, project_dir: Path | None = None) -> Config:
-        """Load configuration from environment, .env, and defaults.
-
-        API keys that are missing are left empty — callers should check
-        before use (e.g., NotionTracker checks notion_api_key).
-        """
+        """Load configuration from environment, .env, and defaults."""
         if project_dir is None:
             project_dir = Path(__file__).resolve().parent.parent.parent
 
         env_path = project_dir / ".env"
-
-        # Load keys — allow missing (some features are optional)
-        notion_key = ""
-
-        try:
-            notion_key = _load_key("NOTION_API_KEY", env_path)
-        except ValueError:
-            pass
 
         # Score threshold from env
         threshold = int(os.environ.get("SCORE_THRESHOLD", "60"))
@@ -121,22 +109,29 @@ class Config:
             or "5"
         )
 
+        notion_api_key = (
+            _load_key_from_env("NOTION_API_KEY")
+            or _load_key_from_dotenv("NOTION_API_KEY", env_path)
+            or _load_key_from_secrets("NOTION_API_KEY")
+            or ""
+        )
+        notion_database_id = (
+            _load_key_from_env("NOTION_DATABASE_ID")
+            or _load_key_from_dotenv("NOTION_DATABASE_ID", env_path)
+            or _load_key_from_secrets("NOTION_DATABASE_ID")
+            or ""
+        )
+
         return cls(
             project_dir=project_dir,
-            notion_api_key=notion_key,
-            notion_database_id=os.environ.get(
-                "NOTION_DATABASE_ID", "734d746c-43b1-4929-8993-464f5ccc23e7"
-            ),
             tracker_backend=backend,
             score_threshold=threshold,
             followup_threshold_days=followup_days,
+            notion_api_key=notion_api_key,
+            notion_database_id=notion_database_id,
         )
 
     # --- Derived paths ---
-
-    @property
-    def companies_dir(self) -> Path:
-        return self.project_dir / "companies"
 
     @property
     def kanban_dir(self) -> Path:
@@ -153,14 +148,6 @@ class Config:
     @property
     def kanban_board_path(self) -> Path:
         return self.kanban_dir / "Job Tracker.md"
-
-    @property
-    def queue_dir(self) -> Path:
-        return self.project_dir / "notion_queue"
-
-    @property
-    def queue_results_dir(self) -> Path:
-        return self.project_dir / "notion_queue_results"
 
     @property
     def scan_results_dir(self) -> Path:

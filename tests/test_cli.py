@@ -53,7 +53,7 @@ _PATCH_SAVE_FETCH = "jobbing.scanner.save_fetch_results"
 def config(tmp_path: Path) -> Config:
     """Minimal config pointing at a temp directory."""
     (tmp_path / ".env").write_text('NOTION_API_KEY="test-key"\n')
-    (tmp_path / "companies").mkdir()
+    (tmp_path / "kanban" / "companies").mkdir(parents=True)
     (tmp_path / "notion_queue").mkdir()
     (tmp_path / "notion_queue_results").mkdir()
     (tmp_path / "scan_results").mkdir()
@@ -659,7 +659,7 @@ class TestTrackFollowup:
         output = capsys.readouterr().out
         assert "Saved to:" in output
 
-        results_dir = config.queue_results_dir
+        results_dir = config.scan_results_dir
         saved_files = list(results_dir.glob("followup-*.md"))
         assert len(saved_files) == 1
 
@@ -740,9 +740,9 @@ class TestTrackOutreach:
 
 class TestCmdPdf:
     def test_generates_pdfs(self, config: Config, capsys: pytest.CaptureFixture[str]) -> None:
-        company_dir = config.companies_dir / "acme"
+        company_dir = config.kanban_companies_dir / "Acme"
         company_dir.mkdir()
-        json_file = company_dir / "acme.json"
+        json_file = company_dir / "Acme.json"
         json_file.write_text("{}")
 
         mock_company_data = MagicMock()
@@ -779,9 +779,9 @@ class TestCmdPdf:
             _cmd_pdf(ns, config)
 
     def test_cv_only_flag_passed(self, config: Config) -> None:
-        company_dir = config.companies_dir / "acme"
+        company_dir = config.kanban_companies_dir / "Acme"
         company_dir.mkdir()
-        (company_dir / "acme.json").write_text("{}")
+        (company_dir / "Acme.json").write_text("{}")
 
         mock_generator = MagicMock()
         mock_generator.generate.return_value = []
@@ -800,9 +800,9 @@ class TestCmdPdf:
         assert kwargs[1]["cl_only"] is False
 
     def test_custom_output_dir(self, config: Config, tmp_path: Path) -> None:
-        company_dir = config.companies_dir / "acme"
+        company_dir = config.kanban_companies_dir / "Acme"
         company_dir.mkdir()
-        (company_dir / "acme.json").write_text("{}")
+        (company_dir / "Acme.json").write_text("{}")
 
         custom_output = tmp_path / "custom_out"
         custom_output.mkdir()
@@ -828,9 +828,9 @@ class TestCmdPdf:
 
     def test_company_name_lowercased(self, config: Config) -> None:
         """Company name is lowercased for directory lookup."""
-        company_dir = config.companies_dir / "mixedcase"
+        company_dir = config.kanban_companies_dir / "MixedCase"
         company_dir.mkdir()
-        (company_dir / "mixedcase.json").write_text("{}")
+        (company_dir / "MixedCase.json").write_text("{}")
 
         mock_generator = MagicMock()
         mock_generator.generate.return_value = []
@@ -850,9 +850,9 @@ class TestCmdPdf:
     ) -> None:
         """When backend is obsidian, _update_hub_documents is called."""
         config.tracker_backend = "obsidian"
-        company_dir = config.companies_dir / "acme"
+        company_dir = config.kanban_companies_dir / "Acme"
         company_dir.mkdir()
-        (company_dir / "acme.json").write_text("{}")
+        (company_dir / "Acme.json").write_text("{}")
 
         mock_path = MagicMock()
         mock_path.name = "ACME-CV.pdf"
@@ -1053,17 +1053,17 @@ class TestScanExisting:
     def test_falls_back_to_companies_dir(
         self, config: Config, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        (config.companies_dir / "acme").mkdir()
-        (config.companies_dir / "globex").mkdir()
-        (config.companies_dir / ".hidden").mkdir()
+        (config.kanban_companies_dir / "Acme").mkdir()
+        (config.kanban_companies_dir / "globex").mkdir()
+        (config.kanban_companies_dir / ".hidden").mkdir()
 
         ns = argparse.Namespace()
         with patch(_PATCH_GET_TRACKER, side_effect=Exception("No tracker")):
             _scan_existing(ns, config)
 
         output = capsys.readouterr().out
-        assert "source: companies/" in output
-        assert "acme" in output
+        assert "source: kanban/companies/" in output
+        assert "Acme" in output
         assert "globex" in output
         assert ".hidden" not in output
 
