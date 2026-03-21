@@ -10,6 +10,7 @@ __pycache__/
 
 # OS / editor
 .DS_Store
+=*
 
 # Obsidian — commit config, exclude machine-specific state
 .obsidian/workspace.json

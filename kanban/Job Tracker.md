@@ -6,7 +6,6 @@ kanban-plugin: board
 
 ## Targeted
 
-- [ ] [[Finom|Finom]] — Head of Infrastructure & Reliability · Score: 83 · 2026-03-21
 - [ ] [[1Password|1Password]] — Senior Director Engineering, Identity Security Platform Infrastructure
   Score: 76 · 2026-03-09
 - [ ] [[Talentedge (Anonymous IoT Client)|Talentedge (Anonymous IoT Client)]] — Principal Platform Engineer (AWS)
@@ -16,6 +15,8 @@ kanban-plugin: board
 
 ## Applied
 
+- [ ] [[Finom|Finom]] — Head of Infrastructure & Reliability
+  Score: 83 · 2026-03-21
 - [ ] [[Qdrant|Qdrant]] — VP of Cloud Engineering
   Score: 82 · 2026-03-21
 
