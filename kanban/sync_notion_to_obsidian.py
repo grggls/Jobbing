@@ -467,20 +467,19 @@ def generate_kanban_board(companies: list[TrackedCompany]) -> str:
 
         for c in entries:
             safe_name = _sanitize_filename(c.name)
-            # Card text: link to company note + metadata
-            card_parts = [f"[[companies/{safe_name}|{c.name}]]"]
-            meta = []
+            # Card title line: [[link|Name]] — Position
+            title = f"[[companies/{safe_name}|{c.name}]]"
             if c.position:
-                meta.append(c.position)
+                title += f" — {c.position}"
+            lines.append(f"- [ ] {title}")
+            # Card body line: Score · Date (if any)
+            meta = []
             if c.score is not None:
                 meta.append(f"Score: {c.score}")
             if c.start_date:
                 meta.append(c.start_date)
             if meta:
-                card_parts.append(f" — {' · '.join(meta)}")
-
-            card_text = "".join(card_parts)
-            lines.append(f"- [ ] {card_text}")
+                lines.append(f"  {' · '.join(meta)}")
 
         lines.append("")
 

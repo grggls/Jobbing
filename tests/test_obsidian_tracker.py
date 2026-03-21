@@ -11,7 +11,7 @@ import pytest
 from jobbing.models import Application, Contact, ScoringResult, Status
 from jobbing.tracker.obsidian import (
     ObsidianTracker,
-    _card_line,
+    _card_lines,
     _find_card_in_board,
     _parse_frontmatter,
     _replace_section,
@@ -133,23 +133,27 @@ def test_replace_section_idempotent(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# _card_line
+# _card_lines
 # ---------------------------------------------------------------------------
 
 
 def test_board_card_format_with_score():
     app = _make_app(score=88, start_date=date(2026, 2, 26))
-    card = _card_line(app)
-    assert "[[companies/Acme Corp|Acme Corp]]" in card
-    assert "Score: 88" in card
-    assert "2026-02-26" in card
+    lines = _card_lines(app)
+    assert len(lines) == 2
+    assert "[[companies/Acme Corp|Acme Corp]]" in lines[0]
+    assert "Staff Engineer" in lines[0]
+    assert "Score: 88" in lines[1]
+    assert "2026-02-26" in lines[1]
+    assert lines[1].startswith("  ")
 
 
 def test_board_card_format_without_score():
     app = _make_app()
-    card = _card_line(app)
-    assert "Score:" not in card
-    assert "[[companies/Acme Corp|Acme Corp]]" in card
+    lines = _card_lines(app)
+    assert len(lines) == 1
+    assert "Score:" not in lines[0]
+    assert "[[companies/Acme Corp|Acme Corp]]" in lines[0]
 
 
 # ---------------------------------------------------------------------------

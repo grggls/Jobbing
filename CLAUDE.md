@@ -219,7 +219,8 @@ outcome: "Passed"
 ### Board card format: `kanban/Job Tracker.md`
 
 ```text
-- [ ] [[companies/Acme Corp|Acme Corp]] — Staff Engineer · Score: 82 · 2026-03-15
+- [ ] [[companies/Acme Corp|Acme Corp]] — Staff Engineer
+  Score: 82 · 2026-03-15
 ```
 
 Board card updated when status changes. Card moves between lanes: Targeted → Applied → Followed-Up → In Progress (Interviewing) → Done.

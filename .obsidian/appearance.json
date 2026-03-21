@@ -1,7 +1,11 @@
 {
-  "theme": "Things",
-  "mode": "dark",
+  "theme": "obsidian",
   "interfaceFontFamily": "Inter",
   "textFontFamily": "Inter",
-  "monospaceFontFamily": "JetBrains Mono"
+  "monospaceFontFamily": "Inter",
+  "cssTheme": "Things",
+  "baseFontSize": 16,
+  "showViewHeader": true,
+  "accentColor": "#a0bade",
+  "baseFontSizeAction": true
 }

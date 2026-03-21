@@ -160,30 +160,40 @@ def _replace_section(path: Path, heading: str, content_lines: list[str]) -> None
 # ---------------------------------------------------------------------------
 
 
-def _card_line(app: "Application") -> str:
-    """Format a kanban board card line."""
+def _card_lines(app: "Application") -> list[str]:
+    """Format a kanban board card as one or two lines.
+
+    Title line: [[link|Name]] — Position
+    Body line (if any metadata):  Score: N · YYYY-MM-DD
+    """
     safe_name = app.name.replace("/", "-").replace("\\", "-").replace(":", " -").strip()
-    parts = [f"[[companies/{safe_name}|{app.name}]]"]
-    meta: list[str] = []
+    title = f"[[companies/{safe_name}|{app.name}]]"
     if app.position:
-        meta.append(app.position)
+        title += f" — {app.position}"
+    meta: list[str] = []
     if app.scoring and app.scoring.score is not None:
         meta.append(f"Score: {app.scoring.score}")
     if app.start_date:
         meta.append(str(app.start_date))
+    result = [f"- [ ] {title}"]
     if meta:
-        parts.append(f" — {' · '.join(meta)}")
-    return f"- [ ] {''.join(parts)}"
+        result.append(f"  {' · '.join(meta)}")
+    return result
 
 
 def _find_card_in_board(lines: list[str], company_name: str) -> int | None:
-    """Find the line index of a card for company_name in the board."""
+    """Find the line index of a card title line for company_name in the board."""
     safe_name = company_name.replace("/", "-").replace("\\", "-").replace(":", " -").strip()
     needle = f"[[companies/{safe_name}|"
     for i, line in enumerate(lines):
         if needle in line:
             return i
     return None
+
+
+def _is_card_body(line: str) -> bool:
+    """Return True if line is a card body line (indented, not a list item)."""
+    return line.startswith("  ") and not line.strip().startswith("- [")
 
 
 def _board_add_or_move_card(board_path: Path, app: "Application") -> None:
@@ -195,10 +205,12 @@ def _board_add_or_move_card(board_path: Path, app: "Application") -> None:
     text = board_path.read_text(encoding="utf-8")
     lines = text.splitlines()
 
-    # Remove existing card (any lane)
+    # Remove existing card (title + optional body line)
     existing_idx = _find_card_in_board(lines, app.name)
     if existing_idx is not None:
         lines.pop(existing_idx)
+        if existing_idx < len(lines) and _is_card_body(lines[existing_idx]):
+            lines.pop(existing_idx)
 
     # Find target lane heading
     status_label = app.status.value if hasattr(app.status, "value") else str(app.status)
@@ -209,9 +221,11 @@ def _board_add_or_move_card(board_path: Path, app: "Application") -> None:
             lane_start = i
             break
 
+    new_card = _card_lines(app)
+
     if lane_start is None:
         # Lane not found — append at end before settings block
-        lines.append(_card_line(app))
+        lines.extend(new_card)
     else:
         # Find lane end (next ## heading or settings block)
         lane_end = lane_start + 1
@@ -221,22 +235,41 @@ def _board_add_or_move_card(board_path: Path, app: "Application") -> None:
                 break
             lane_end += 1
 
-        # Collect existing cards in lane, add new one, sort
-        card_lines = [l for l in lines[lane_start + 1 : lane_end] if l.strip().startswith("- [")]
-        non_card_lines = [
-            l for l in lines[lane_start + 1 : lane_end] if not l.strip().startswith("- [")
-        ]
-        card_lines.append(_card_line(app))
+        # Collect existing cards as (title, body) pairs
+        section = lines[lane_start + 1 : lane_end]
+        cards: list[tuple[str, str]] = []
+        i = 0
+        while i < len(section):
+            line = section[i]
+            if line.strip().startswith("- ["):
+                body = ""
+                if i + 1 < len(section) and _is_card_body(section[i + 1]):
+                    body = section[i + 1]
+                    i += 1
+                cards.append((line, body))
+            i += 1
 
-        def _card_sort_key(c: str) -> tuple[int, str]:
-            m = re.search(r"Score:\s*(\d+)", c)
+        # Add new card
+        new_title = new_card[0]
+        new_body = new_card[1] if len(new_card) > 1 else ""
+        cards.append((new_title, new_body))
+
+        def _card_sort_key(card: tuple[str, str]) -> tuple[int, str]:
+            combined = card[0] + card[1]
+            m = re.search(r"Score:\s*(\d+)", combined)
             score = int(m.group(1)) if m else 0
-            name_m = re.search(r"\[\[companies/[^\|]+\|([^\]]+)\]\]", c)
-            name = name_m.group(1) if name_m else c
+            name_m = re.search(r"\[\[companies/[^\|]+\|([^\]]+)\]\]", card[0])
+            name = name_m.group(1) if name_m else card[0]
             return (-score, name)
 
-        card_lines.sort(key=_card_sort_key)
-        lane_content = non_card_lines + card_lines
+        cards.sort(key=_card_sort_key)
+
+        lane_content: list[str] = []
+        for title, body in cards:
+            lane_content.append(title)
+            if body:
+                lane_content.append(body)
+
         lines = lines[: lane_start + 1] + [""] + lane_content + [""] + lines[lane_end:]
 
     board_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

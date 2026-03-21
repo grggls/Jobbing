@@ -5,14 +5,16 @@ status: "In Progress (Interviewing)"
 date: 2026-02-09
 url: "https://www.linkedin.com/jobs/view/lead-platform-engineer-at-reflexai-4355413345/"
 environment: [Remote]
+salary: "€168,765 (converted from $195K USD)"
 focus: [AI]
+score: 88
 
 ---
 
 # ReflexAI
 **Position:** Lead Platform Engineer
 
-**Status:** In Progress (Interviewing) · **Date:** 2026-02-09 · **Environment:** Remote · **Focus:** AI
+**Status:** In Progress (Interviewing) · **Date:** 2026-02-09 · **Environment:** Remote · **Focus:** AI · **Score:** 88/100
 
 [Job Posting](https://www.linkedin.com/jobs/view/lead-platform-engineer-at-reflexai-4355413345/)
 
@@ -45,6 +47,12 @@ focus: [AI]
 - CTO interview: Security roadmap beyond current compliance: FIPS 140-2/3, hardware security modules for encryption, client-side decryption of high-sensitivity fields. Using Google Cloud KMS for encryption at rest currently.
 - CTO interview: Privileged access management is top of mind. Some engineers still have standing prod accounts. John wants time-limited, least-privilege access. Greg pitched Google PAM — John hadn't seen it, responded positively.
 - CTO interview: Positive signals throughout. John committed to feedback 'later this week or early next week.' No comp discussion (appropriate for 30-min vibe check). No red flags triggered.
+- **Offer received (2026-03-14):** $195K base, 8,000 stock options, full US benefits (health/dental/vision, 401K w/ 3% match, $25K life insurance). Ashley Williams (Talent Acquisition) delivered verbally — initially thought Greg was US-based. Offer letter signed by Sam Dorison (CEO), expires 2026-03-24, proposed start date 2026-04-01.
+- **Equity details (2026-03-19):** Total shares ~7.69M fully diluted (8,000 options = ~0.104%). 409A valuation finalized, strike price $1.25/share. 1-year cliff, 4-year vest, monthly after cliff. Early exercise / pre-vesting purchase available. Single-trigger acceleration for first 12 months only. Stock plan is 2022 SOP with 705,820-share pool.
+- **Negotiation — resolved:** Post-termination exercise window extended from 90 days (stock plan default) → 120 days → 12 months (confirmed by Sam via Ashley, 2026-03-21). Side project exceptions: PIIA has a section for listing exceptions — Solo Recon and job search tool to be listed at signing.
+- **Negotiation — resolved (2026-03-21):** Deel EOR confirmed. Salary will be paid in EUR (€168,765 at today's conversion from $195K). Ashley starting Deel contract process, expects contract out next week.
+- **Negotiation — open:** EUR figure needs to be locked in the Deel contract as a fixed EUR amount, not a floating USD→EUR conversion. US benefits don't apply under Deel — statutory German benefits instead. Benefits gap estimated at $18-24K/year (health, 401K match, life insurance) — potential argument for rounding up to €175-180K.
+- Bay Phillips sent personal congratulations email (2026-03-19) with cell number, expressing enthusiasm about working together.
 
 ## Job Description
 **About ReflexAI**
