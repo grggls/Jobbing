@@ -825,6 +825,45 @@ class ObsidianTracker:
             changes.append(f"synced: {app.name} ({app.status.value})")
         return changes
 
+    def sync_from_board(self) -> list[str]:
+        """Reverse sync: read board lane positions and update hub frontmatter.
+
+        For each card on the board, compares the card's lane with the hub
+        file's ``status`` field.  If they differ, updates the hub frontmatter
+        to match the board.  Returns a list of changes made.
+        """
+        if not self._board_path.is_file():
+            return ["Board file not found"]
+
+        board_text = self._board_path.read_text(encoding="utf-8")
+        board_lines = board_text.splitlines()
+
+        # Build {company_name: lane} map from the board
+        board_status: dict[str, str] = {}
+        current_lane = ""
+        for line in board_lines:
+            if line.startswith("## ") and line.strip()[3:] in STATUS_LANES:
+                current_lane = line.strip()[3:]
+            elif line.strip().startswith("- [") and "[[" in line:
+                m = re.search(r"\[\[[^\|]+\|([^\]]+)\]\]", line)
+                if m:
+                    board_status[m.group(1)] = current_lane
+
+        changes: list[str] = []
+        for company_name, board_lane in board_status.items():
+            path = self._company_file(company_name)
+            if not path.is_file():
+                continue
+            fm = _parse_frontmatter(path.read_text(encoding="utf-8"))
+            hub_status = str(fm.get("status", ""))
+            if hub_status != board_lane:
+                _write_frontmatter(path, {"status": board_lane})
+                changes.append(
+                    f"{company_name}: {hub_status!r} → {board_lane!r}"
+                )
+
+        return changes
+
     def add_interview_link(self, company_name: str, filename: str, display_text: str) -> None:
         """Append a wikilink to ## Interviews section (no duplicates)."""
         path = self._company_file(company_name)

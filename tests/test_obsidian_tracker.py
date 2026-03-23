@@ -892,3 +892,71 @@ def test_create_backfills_existing_hub(tmp_path):
 
     # Sections report includes backfill info
     assert any("backfilled" in s for s in sections)
+
+
+# ---------------------------------------------------------------------------
+# sync_from_board (Board → Hub reverse sync)
+# ---------------------------------------------------------------------------
+
+
+def test_sync_from_board_updates_hub_status(tmp_path):
+    """Dragging a card to a new lane on the board should update hub frontmatter."""
+    board = _make_board(tmp_path)
+    tracker = _make_tracker(tmp_path)
+    app = _make_app(score=84, start_date=date(2026, 3, 5))
+    tracker.create(app)
+
+    # Verify card is in Targeted
+    hub = tmp_path / "companies" / "Acme Corp" / "Acme Corp.md"
+    fm = _parse_frontmatter(hub.read_text(encoding="utf-8"))
+    assert fm["status"] == "Targeted"
+
+    # Simulate dragging card to Done: manually move the card in the board file
+    board_text = board.read_text(encoding="utf-8")
+    # Remove from Targeted
+    card_lines = _card_lines(app)
+    for cl in card_lines:
+        board_text = board_text.replace(cl + "\n", "")
+    # Add to Done
+    board_text = board_text.replace(
+        "## Done\n",
+        "## Done\n\n" + "\n".join(card_lines) + "\n",
+    )
+    board.write_text(board_text, encoding="utf-8")
+
+    # Run reverse sync
+    changes = tracker.sync_from_board()
+    assert len(changes) == 1
+    assert "Acme Corp" in changes[0]
+    assert "Done" in changes[0]
+
+    # Hub frontmatter should now say Done
+    fm = _parse_frontmatter(hub.read_text(encoding="utf-8"))
+    assert fm["status"] == "Done"
+
+
+def test_sync_from_board_noop_when_matched(tmp_path):
+    """No changes when board and hub already agree."""
+    _make_board(tmp_path)
+    tracker = _make_tracker(tmp_path)
+    tracker.create(_make_app(score=80))
+
+    changes = tracker.sync_from_board()
+    assert changes == []
+
+
+def test_sync_from_board_skips_missing_hubs(tmp_path):
+    """Cards on the board without a hub file are silently skipped."""
+    board = _make_board(tmp_path)
+    tracker = _make_tracker(tmp_path)
+
+    # Add a card to the board manually with no hub file
+    board_text = board.read_text(encoding="utf-8")
+    board_text = board_text.replace(
+        "## Targeted\n",
+        "## Targeted\n\n- [ ] [[Ghost Co|Ghost Co]] — Engineer\n\t  Score: — · no date\n",
+    )
+    board.write_text(board_text, encoding="utf-8")
+
+    changes = tracker.sync_from_board()
+    assert changes == []

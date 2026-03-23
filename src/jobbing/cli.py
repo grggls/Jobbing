@@ -181,6 +181,21 @@ def _track_sync(args: argparse.Namespace, config: Config) -> None:
 
     tracker = ObsidianTracker(config)
 
+    if args.from_board:
+        # Reverse sync: board lanes → hub frontmatter
+        if args.dry_run:
+            print("Would sync hub frontmatter from board lane positions.")
+            return
+
+        changes = tracker.sync_from_board()
+        if changes:
+            for c in changes:
+                print(c)
+            print(f"\nUpdated {len(changes)} hub(s) from board.")
+        else:
+            print("All hubs already match board.")
+        return
+
     if args.dry_run:
         apps = tracker.list_all()
         print(f"Would sync {len(apps)} companies to board.")
@@ -786,6 +801,12 @@ def _build_parser() -> argparse.ArgumentParser:
     # track sync
     p_sync = track_subs.add_parser("sync", help="Reconcile board cards with hub frontmatter")
     p_sync.add_argument("--dry-run", action="store_true", dest="dry_run")
+    p_sync.add_argument(
+        "--from-board",
+        action="store_true",
+        dest="from_board",
+        help="Reverse sync: update hub frontmatter from board lane positions",
+    )
 
     # --- pdf ---
     p_pdf = subparsers.add_parser("pdf", help="Generate PDF documents")
