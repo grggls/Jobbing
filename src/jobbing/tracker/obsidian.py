@@ -160,24 +160,31 @@ def _replace_section(path: Path, heading: str, content_lines: list[str]) -> None
 
 
 def _card_lines(app: Application) -> list[str]:
-    """Format a kanban board card as one or two lines.
+    """Format a kanban board card as two lines.
 
-    Title line: [[link|Name]] — Position
-    Body line (if any metadata):  Score: N · YYYY-MM-DD
+    Title line: ``- [ ] [[link|Name]] — Position``
+    Body line:  ``  Score: N · Conclusion · YYYY-MM-DD``
+
+    Every card always has a body line with Score and date for visual
+    consistency on the kanban board.  Conclusion is included when non-empty.
     """
     safe_name = app.name.replace("/", "-").replace("\\", "-").replace(":", " -").strip()
     title = f"[[{safe_name}|{app.name}]]"
     if app.position:
         title += f" — {app.position}"
-    meta: list[str] = []
-    if app.scoring and app.scoring.score is not None:
-        meta.append(f"Score: {app.scoring.score}")
-    if app.start_date:
-        meta.append(str(app.start_date))
-    result = [f"- [ ] {title}"]
-    if meta:
-        result.append(f"  {' · '.join(meta)}")
-    return result
+
+    # Score — always present
+    score_str = str(app.scoring.score) if app.scoring and app.scoring.score else "—"
+    meta: list[str] = [f"Score: {score_str}"]
+
+    # Conclusion — only when non-empty
+    if app.conclusion and app.conclusion.strip():
+        meta.append(app.conclusion.strip())
+
+    # Date — always present
+    meta.append(str(app.start_date) if app.start_date else "no date")
+
+    return [f"- [ ] {title}", f"\t  {' · '.join(meta)}"]
 
 
 def _find_card_in_board(lines: list[str], company_name: str) -> int | None:
@@ -192,7 +199,10 @@ def _find_card_in_board(lines: list[str], company_name: str) -> int | None:
 
 def _is_card_body(line: str) -> bool:
     """Return True if line is a card body line (indented, not a list item)."""
-    return line.startswith("  ") and not line.strip().startswith("- [")
+    stripped = line.strip()
+    if stripped.startswith("- ["):
+        return False
+    return line.startswith("\t") or line.startswith("  ")
 
 
 def _board_add_or_move_card(board_path: Path, app: Application) -> None:

@@ -142,15 +142,40 @@ def test_board_card_format_with_score():
     assert "Staff Engineer" in lines[0]
     assert "Score: 88" in lines[1]
     assert "2026-02-26" in lines[1]
-    assert lines[1].startswith("  ")
+    assert lines[1].startswith("\t")
 
 
 def test_board_card_format_without_score():
+    """Cards without a score still get a body line with Score: —."""
     app = _make_app()
     lines = _card_lines(app)
-    assert len(lines) == 1
-    assert "Score:" not in lines[0]
+    assert len(lines) == 2
     assert "[[Acme Corp|Acme Corp]]" in lines[0]
+    assert "Score: —" in lines[1]
+    assert "no date" in lines[1]
+
+
+def test_board_card_format_with_conclusion():
+    """Conclusion text appears between Score and date on the body line."""
+    app = _make_app(score=84, start_date=date(2026, 3, 5))
+    app.conclusion = "Withdrew"
+    lines = _card_lines(app)
+    assert len(lines) == 2
+    assert "Score: 84" in lines[1]
+    assert "Withdrew" in lines[1]
+    assert "2026-03-05" in lines[1]
+    # Order: Score · Conclusion · Date
+    body = lines[1]
+    assert body.index("Score: 84") < body.index("Withdrew") < body.index("2026-03-05")
+
+
+def test_board_card_format_empty_conclusion_excluded():
+    """Empty or whitespace-only conclusion is not rendered on the card."""
+    app = _make_app(score=80, start_date=date(2026, 3, 1))
+    app.conclusion = "  "
+    lines = _card_lines(app)
+    # Body should be "Score: 80 · 2026-03-01" with no extra separator
+    assert lines[1].strip() == "Score: 80 · 2026-03-01"
 
 
 # ---------------------------------------------------------------------------
