@@ -13,14 +13,12 @@ kanban-plugin: board
 - [ ] [[PortPro|PortPro]] — Director of DevOps
 	  Score: 74 · 2026-03-09
 
-
 ## Applied
 
 - [ ] [[Finom|Finom]] — Head of Infrastructure & Reliability
 	  Score: 83 · 2026-03-21
 - [ ] [[Qdrant|Qdrant]] — VP of Cloud Engineering
 	  Score: 82 · 2026-03-21
-
 
 ## Followed-Up
 
@@ -30,129 +28,125 @@ kanban-plugin: board
 
 - [ ] [[ReflexAI|ReflexAI]] — Lead Platform Engineer
 	  Score: 88 · 2026-02-09
+- [ ] [[tem|tem]] — Senior Staff Engineer
+	  Score: 84 · 2026-03-20
 - [ ] [[Filevine|Filevine]] — VP of Engineering, Reliability
 	  Score: 78 · 2026-03-06
 - [ ] [[Bandcamp (Songtradr)|Bandcamp (Songtradr)]] — Lead Systems Engineer
-	  2026-02-26
+	  Score: — · 2026-02-26
 - [ ] [[Parloa|Parloa]] — Principal Software Engineer
-	  2026-02-19
-- [ ] [[tem|tem]] — Senior Staff Engineer
-	  Score: 84 · 2026-03-20
-
+	  Score: — · 2026-02-19
 
 ## Done
 
-- [ ] [[Chainloop|Chainloop]] — Founding Engineering Manager
-	  Score: 84 · Withdrew · 2026-03-05
 - [ ] [[Kevala|Kevala]] — Staff Site Reliability Engineer
-	  Score: 88 · 2026-02-10
+	  Score: 88 · Recruiter was difficult to work with.... · 2026-02-10
+- [ ] [[Chainloop|Chainloop]] — Founding Engineering Manager
+	  Score: 84 · Withdrew — salary below floor, EM tit... · 2026-03-05
 - [ ] [[FICO|FICO]] — Principal Engineer - Platform Engineering/Site Reliability
-	  Score: 82 · 2026-02-23
+	  Score: 82 · Not hiring for any infra/platform rol... · 2026-02-23
 - [ ] [[Reveleer|Reveleer]] — Director, Infrastructure
-	  Score: 78 · 2026-03-09
+	  Score: 78 · Position closed before application. · 2026-03-09
 - [ ] [[Updater|Updater]] — Lead Platform Engineer
-	  Score: 78 · 2026-03-06
+	  Score: 78 · Scored 72/100. Strong tech match (AWS... · 2026-03-06
 - [ ] [[Caddie (Unknown DevTool Co)|Caddie (Unknown DevTool Co)]] — Director of SRE
 	  Score: 76 · 2026-02-26
-- [ ] [[Goldie Tech|Goldie Tech]] — CTO
-	  2026-02-20
 - [ ] [[Golem - Arkiv|Golem - Arkiv]] — Head of Platform - Arkiv
 	  Score: 74 · 2026-01-26
 - [ ] [[1inch|1inch]] — Head of DevOps
-	  2026-02-22
+	  Score: — · 2026-02-22
 - [ ] [[Acto|Acto]] — Staff Platform Engineer
-	  2026-02-06
+	  Score: — · Declined offer. Staff Engineer @ €120... · 2026-02-06
 - [ ] [[Affirm|Affirm]] — Director, Software Engineering (Site Reliability Engineering)
-	  2026-02-20
+	  Score: — · 2026-02-20
 - [ ] [[Alchemy|Alchemy]] — Director of Engineering - Infrastructure and Platform
-	  2026-02-10
+	  Score: — · 2026-02-10
 - [ ] [[Alma|Alma]] — Senior Director, Engineering Operations & Platform
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[Alpaca|Alpaca]] — Senior DevOps Engineer
-	  2026-02-15
+	  Score: — · 2026-02-15
 - [ ] [[Andercore|Andercore]] — VP of Engineering
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[Arc|Arc]] — Founding Engineer
-	  2026-01-30
+	  Score: — · I told them I didn’t want to work 7 d... · 2026-01-30
 - [ ] [[Ashby|Ashby]] — Staff Platform Engineer, Europe
 	  2026-02-16
 - [ ] [[AuthZed|AuthZed]] — Senior Engineering Leader — Cloud Platform & SRE
-	  2026-02-20
+	  Score: — · 2026-02-20
 - [ ] [[Blue River Technology|Blue River Technology]] — Principal Platform Engineer
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[Cyberhaven|Cyberhaven]] — Senior Director, SRE & Cloud Infrastructure
-	  2026-02-16
+	  Score: — · 2026-02-16
 - [ ] [[Dealfront|Dealfront]] — Infrastructure/SRE Engineering Manager
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[Envelio|Envelio]] — Engineering Manager — SRE & Infrastructure
-	  2026-02-15
+	  Score: — · 2026-02-15
 - [ ] [[FUTO|FUTO]] — Senior Infrastructure & Platform Engineer (Immich)
-	  2026-02-23
+	  Score: — · Below scoring threshold (61/100): Sen... · 2026-02-23
 - [ ] [[FetLife|FetLife]] — Head of Engineering & Infrastructure
-	  2026-02-23
+	  Score: — · No active engineering postings found ... · 2026-02-23
 - [ ] [[Files.com|Files.com]] — Infrastructure Engineer
-	  2026-02-20
+	  Score: — · Skip — level mismatch. 'Infrastructur... · 2026-02-20
 - [ ] [[Fingerprint|Fingerprint]] — Manager of Cloud Platform Engineering
-	  2026-02-20
+	  Score: — · Cancelled by recruiter — unable to hi... · 2026-02-20
 - [ ] [[GitLab|GitLab]] — VP of Engineering, Architecture and Transformation
-	  2026-03-06
+	  Score: — · 2026-03-06
+- [ ] [[Goldie Tech|Goldie Tech]] — CTO
+	  Score: — · Ghosted by Patrick. Last contact was ... · 2026-02-20
 - [ ] [[Honor|Honor]] — Staff Platform Engineer - Infra + DevOps
-	  2026-02-20
+	  Score: — · Skip — product engineering director r... · 2026-02-20
 - [ ] [[Kentik|Kentik]] — Staff Site Reliability Engineer, Cloud
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[Lago|Lago]] — Senior Infrastructure Engineer
-	  2026-02-23
+	  Score: — · Salary $70K–$100K, well below €135K m... · 2026-02-23
 - [ ] [[Loadsmart|Loadsmart]] — Senior Site Reliability Engineer
-	  2026-02-22
+	  Score: — · Below scoring threshold (58/100): Sen... · 2026-02-22
 - [ ] [[Machinify|Machinify]] — Senior Engineering Manager, Core Platform
-	  2026-02-15
+	  Score: — · Form rejection email · 2026-02-15
 - [ ] [[Mistral AI|Mistral AI]] — Software Engineer, Compute Infrastructure
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[NinjaOne|NinjaOne]] — Staff DevOps Engineer
-	  2026-02-20
+	  Score: — · Skip — core requirement is deep OS ke... · 2026-02-20
 - [ ] [[Nomos|Nomos]] — Senior Engineer (undefined role)
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[Notabene|Notabene]] — Director of Platform Engineering
-	  2026-01-02
+	  Score: — · 2026-01-02
 - [ ] [[ONIQ|ONIQ]] — Lead DevOps Engineer
-	  2026-02-19
+	  Score: — · Didn’t apply. They wanted transcripts... · 2026-02-19
 - [ ] [[Otera|Otera]] — Head of Engineering
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[Pentasia (Prediction Markets)|Pentasia (Prediction Markets)]] — Head of Infrastructure
-	  2026-03-06
+	  Score: — · Skip. Anonymous client (can't verify ... · 2026-03-06
 - [ ] [[Perplexity|Perplexity]] — Senior/Staff Platform, DevX, or Cloud Infra
-	  2026-02-19
+	  Score: — · Turned down with a noreply email · 2026-02-19
 - [ ] [[Planet Labs|Planet Labs]] — Software Engineer, Platform Operations
-	  2026-02-23
+	  Score: — · Skipped — defense contract exposure (... · 2026-02-23
 - [ ] [[Pliant|Pliant]] — Head of Platform Infrastructure
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[Prompt Health|Prompt Health]] — Senior DevOps Engineer (MLOps)
-	  2026-02-23
+	  Score: — · Below scoring threshold (60/100): Sen... · 2026-02-23
 - [ ] [[Pulumi|Pulumi]] — Principal Software Engineer (Ecosystem)
-	  2026-02-20
+	  Score: — · Skip — all roles are building the IaC... · 2026-02-20
 - [ ] [[Rootly|Rootly]] — Head of Platform Engineering
-	  2026-02-15
+	  Score: — · 2026-02-15
 - [ ] [[Rula|Rula]] — Director of Cloud & Platform Engineering
-	  2026-02-20
+	  Score: — · Posting deleted Sep 2025 — role likel... · 2026-02-20
 - [ ] [[STABL Energy|STABL Energy]] — Head of Cloud
-	  2026-02-26
+	  Score: — · form rejection · 2026-02-26
 - [ ] [[Snyk|Snyk]] — Senior Director, Engineering
-	  2026-02-15
+	  Score: — · 2026-02-15
 - [ ] [[Think-it|Think-it]] — Lead Cloud Platform Engineer
-	  2026-02-19
+	  Score: — · 2026-02-19
 - [ ] [[Trade Republic|Trade Republic]] — Staff Engineer – Cloud Platform
-	  2026-02-19
+	  Score: — · Rejected after screening call with Ed... · 2026-02-19
 - [ ] [[UKG|UKG]] — Director, Site Reliability Engineering
-	  2026-02-23
+	  Score: — · Job was closed before I could apply · 2026-02-23
 - [ ] [[Wikimedia Foundation|Wikimedia Foundation]] — Senior Site Reliability Engineer, Data Platform Engineering
-	  2026-02-23
+	  Score: — · Below scoring threshold (60/100): Sen... · 2026-02-23
 - [ ] [[terralayr|terralayr]] — Engineering Manager
-	  2026-02-25
+	  Score: — · 2026-02-25
 - [ ] [[trawa|trawa]] — Engineering Manager — Platform
-	  2026-02-15
-
-
-
+	  Score: — · turned down within 24 hours of applying · 2026-02-15
 
 %% kanban:settings
 ```

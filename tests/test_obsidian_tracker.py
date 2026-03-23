@@ -180,6 +180,19 @@ def test_board_card_format_empty_conclusion_excluded():
     assert lines[1].strip() == "Score: 80 · 2026-03-01"
 
 
+def test_board_card_format_long_conclusion_truncated():
+    """Conclusion text longer than 40 chars is truncated on the card."""
+    app = _make_app(score=88, start_date=date(2026, 2, 10))
+    app.conclusion = "Recruiter was difficult to work with and did not schedule properly"
+    lines = _card_lines(app)
+    body = lines[1]
+    assert "..." in body
+    # Full text should not appear
+    assert "schedule properly" not in body
+    # But truncated version should
+    assert "Recruiter was difficult to work with" in body
+
+
 # ---------------------------------------------------------------------------
 # ObsidianTracker.create
 # ---------------------------------------------------------------------------

@@ -177,9 +177,12 @@ def _card_lines(app: Application) -> list[str]:
     score_str = str(app.scoring.score) if app.scoring and app.scoring.score else "—"
     meta: list[str] = [f"Score: {score_str}"]
 
-    # Conclusion — only when non-empty
+    # Conclusion — only when non-empty, truncated for card readability
     if app.conclusion and app.conclusion.strip():
-        meta.append(app.conclusion.strip())
+        conclusion = app.conclusion.strip()
+        if len(conclusion) > 40:
+            conclusion = conclusion[:37] + "..."
+        meta.append(conclusion)
 
     # Date — always present
     meta.append(str(app.start_date) if app.start_date else "no date")
@@ -812,17 +815,29 @@ class ObsidianTracker:
         return issues
 
     def sync_board(self) -> list[str]:
-        """Reconcile board cards with hub frontmatter for all tracked companies.
+        """Reconcile board cards with hub frontmatter for companies on the board.
 
-        Reads each hub file, rebuilds the board card with current status/score,
-        and moves the card to the correct lane. Returns list of changes made.
+        Only re-renders cards that already exist on the board — does not add
+        cards for companies that have been removed from the board.
+        Returns list of changes made.
         """
         if not self._board_path.is_file():
             return ["Board file not found"]
+
+        # Build set of company names currently on the board
+        board_text = self._board_path.read_text(encoding="utf-8")
+        on_board: set[str] = set()
+        for line in board_text.splitlines():
+            if line.strip().startswith("- [") and "[[" in line:
+                m = re.search(r"\[\[[^\|]+\|([^\]]+)\]\]", line)
+                if m:
+                    on_board.add(m.group(1))
+
         changes: list[str] = []
         for app in self.list_all():
-            _board_add_or_move_card(self._board_path, app)
-            changes.append(f"synced: {app.name} ({app.status.value})")
+            if app.name in on_board:
+                _board_add_or_move_card(self._board_path, app)
+                changes.append(f"synced: {app.name} ({app.status.value})")
         return changes
 
     def sync_from_board(self) -> list[str]:

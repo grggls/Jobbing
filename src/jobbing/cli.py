@@ -197,7 +197,17 @@ def _track_sync(args: argparse.Namespace, config: Config) -> None:
         return
 
     if args.dry_run:
-        apps = tracker.list_all()
+        # Only show companies currently on the board
+        board_text = tracker._board_path.read_text(encoding="utf-8")
+        on_board = set()
+        for line in board_text.splitlines():
+            if line.strip().startswith("- [") and "[[" in line:
+                import re as _re
+
+                m = _re.search(r"\[\[[^\|]+\|([^\]]+)\]\]", line)
+                if m:
+                    on_board.add(m.group(1))
+        apps = [a for a in tracker.list_all() if a.name in on_board]
         print(f"Would sync {len(apps)} companies to board.")
         for app in apps:
             status = app.status.value if app.status else "?"
