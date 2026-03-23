@@ -25,6 +25,18 @@ AI-assisted job application workflow. Greg pastes a job posting, Claude analyzes
 
 **Default to chat, not files.** When Greg asks you to "write" something — an email, a message, a prompt, a blurb — put it directly in the chat so he can copy-paste it into the destination (email client, LinkedIn, WhatsApp, another Claude window, etc.). Don't create markdown files or disk artifacts unless Greg specifically asks to save to disk, or the task is a project output (PDFs, slides, JSON, code) or project documentation. If genuinely unsure, ask — but the default is always chat.
 
+**Write like a human.** When drafting emails, messages, or any outreach on Greg's behalf:
+- No em dashes. Use commas, periods, or restructure the sentence.
+- No staccato prose. Vary sentence length and rhythm. Let thoughts breathe.
+- Don't sound like an AI wrote it. No formulaic three-part structures, no "I'd love to...", no robotic cadence. Read it back and ask: would a real person actually write this in an email to a colleague?
+- Be conversational and authentic. Greg is warm, direct, and confident. Match that energy. He's a peer talking to peers, not a candidate performing.
+- Don't be overly formal. Contractions are fine. Starting a sentence with "and" or "but" is fine. The goal is to sound like a thoughtful person who doesn't overthink their emails.
+- Impress. The bar is not "adequate." The bar is: Greg reads the draft and sends it as-is because it sounds like him on a good day.
+
+**Obsidian is your memory.** Before asking Greg ANY factual question about a company, contact, interview status, timeline, or process stage, read the relevant hub files in `kanban/companies/` and interview files in `kanban/interviews/`. When a task spans multiple companies, read all relevant hubs upfront. Treat the vault as an API: read before asking, write with schema discipline, cross-reference between files. Greg should never be the middleware between Claude and the vault.
+
+**Use Greg's browser when web access fails.** If WebFetch or WebSearch can't reach a site, use the Chrome MCP tools (navigate, get_page_text, read_page, etc.) to access it through Greg's browser. Never tell Greg a website is blocked. Just use the browser.
+
 ## Skills
 
 Project-level skills in `.claude/skills/`. In Claude Code CLI, invoke as `/analyze`, `/apply`, etc. In Cowork, skills load as background context — use natural language ("analyze this job posting", "help me apply").
