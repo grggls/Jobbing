@@ -365,6 +365,74 @@ def _scaffold_hub(app: Application) -> str:
     return "\n".join(lines)
 
 
+def _ensure_all_sections(path: Path) -> list[str]:
+    """Backfill any missing sections from _SECTION_ORDER into an existing hub.
+
+    Appends missing ``## SectionName`` headings at the end of the file,
+    preserving all existing content.  Returns the list of section names added.
+    """
+    text = path.read_text(encoding="utf-8")
+    existing_headings = {
+        line.strip()[3:] for line in text.splitlines() if line.strip().startswith("## ")
+    }
+
+    added: list[str] = []
+    lines = text.splitlines()
+    # Strip trailing blank lines before appending
+    while lines and not lines[-1].strip():
+        lines.pop()
+
+    for section in _SECTION_ORDER:
+        if section not in existing_headings:
+            lines.extend(["", f"## {section}", ""])
+            added.append(section)
+
+    if added:
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    return added
+
+
+REQUIRED_FRONTMATTER = [
+    "company",
+    "position",
+    "status",
+    "date",
+    "url",
+    "environment",
+    "salary",
+    "focus",
+    "vision",
+    "mission",
+    "score",
+    "conclusion",
+]
+
+
+def _ensure_all_frontmatter(path: Path) -> list[str]:
+    """Backfill any missing required frontmatter fields with empty defaults.
+
+    Returns the list of field names added.
+    """
+    text = path.read_text(encoding="utf-8")
+    fm = _parse_frontmatter(text)
+
+    missing: dict[str, object] = {}
+    for field in REQUIRED_FRONTMATTER:
+        if field not in fm:
+            if field in ("environment", "focus"):
+                missing[field] = []
+            elif field == "score":
+                missing[field] = 0
+            else:
+                missing[field] = ""
+
+    if missing:
+        _write_frontmatter(path, missing)
+
+    return list(missing.keys())
+
+
 # ---------------------------------------------------------------------------
 # ObsidianTracker
 # ---------------------------------------------------------------------------
@@ -427,6 +495,14 @@ class ObsidianTracker:
                 updates["score"] = app.scoring.score
             _write_frontmatter(path, updates)
             sections = ["frontmatter_updated"]
+
+            # Backfill any missing frontmatter fields and sections
+            added_fm = _ensure_all_frontmatter(path)
+            if added_fm:
+                sections.append(f"backfilled_frontmatter({','.join(added_fm)})")
+            added_sections = _ensure_all_sections(path)
+            if added_sections:
+                sections.append(f"backfilled_sections({','.join(added_sections)})")
 
         # Populate content sections if data present (only on new or explicit call)
         if app.highlights:

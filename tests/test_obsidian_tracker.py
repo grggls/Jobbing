@@ -10,6 +10,8 @@ from jobbing.models import Application, Contact, ScoringResult, Status
 from jobbing.tracker.obsidian import (
     ObsidianTracker,
     _card_lines,
+    _ensure_all_frontmatter,
+    _ensure_all_sections,
     _parse_frontmatter,
     _replace_section,
     _write_frontmatter,
@@ -797,3 +799,96 @@ def test_update_hub_documents_removes_obsidian_stubs(tmp_path):
 
     assert not cv_stub.exists(), "CV stub should have been removed"
     assert not cl_stub.exists(), "CL stub should have been removed"
+
+
+# ---------------------------------------------------------------------------
+# _ensure_all_sections / _ensure_all_frontmatter
+# ---------------------------------------------------------------------------
+
+
+def test_ensure_all_sections_adds_missing(tmp_path):
+    """Missing sections are appended to an existing hub file."""
+    f = tmp_path / "test.md"
+    f.write_text(
+        '---\ncompany: "X"\n---\n\n# X\n\n## Documents\n\n## Fit Assessment\n',
+        encoding="utf-8",
+    )
+    added = _ensure_all_sections(f)
+    text = f.read_text(encoding="utf-8")
+    # Documents and Fit Assessment already existed
+    assert "Documents" not in added
+    assert "Fit Assessment" not in added
+    # Conclusion and others should have been added
+    assert "Conclusion" in added
+    assert "## Conclusion" in text
+    assert "## Interviews" in text
+    # Existing content preserved
+    assert "## Documents" in text
+
+
+def test_ensure_all_sections_noop_when_complete(tmp_path):
+    """No changes when all sections already exist."""
+    tracker = _make_tracker(tmp_path)
+    tracker.create(_make_app())
+    path = tmp_path / "companies" / "Acme Corp" / "Acme Corp.md"
+    added = _ensure_all_sections(path)
+    assert added == []
+
+
+def test_ensure_all_frontmatter_adds_missing(tmp_path):
+    """Missing frontmatter fields are backfilled with defaults."""
+    f = tmp_path / "test.md"
+    f.write_text('---\ncompany: "X"\nstatus: "Targeted"\n---\n\n# X\n', encoding="utf-8")
+    added = _ensure_all_frontmatter(f)
+    fm = _parse_frontmatter(f.read_text(encoding="utf-8"))
+    assert "conclusion" in added
+    assert "vision" in added
+    assert "conclusion" in fm
+    assert "vision" in fm
+    # Existing fields preserved
+    assert fm["company"] == "X"
+    assert fm["status"] == "Targeted"
+
+
+def test_ensure_all_frontmatter_noop_when_complete(tmp_path):
+    """No changes when all frontmatter fields already exist."""
+    tracker = _make_tracker(tmp_path)
+    tracker.create(_make_app())
+    path = tmp_path / "companies" / "Acme Corp" / "Acme Corp.md"
+    added = _ensure_all_frontmatter(path)
+    assert added == []
+
+
+def test_create_backfills_existing_hub(tmp_path):
+    """create() on an existing hub with missing sections/fields backfills them."""
+    _make_board(tmp_path)
+    tracker = _make_tracker(tmp_path)
+
+    # Write a minimal hub manually (missing most sections and fields)
+    hub_dir = tmp_path / "companies" / "Sparse Co"
+    hub_dir.mkdir(parents=True)
+    hub = hub_dir / "Sparse Co.md"
+    hub.write_text(
+        '---\ncompany: "Sparse Co"\nstatus: "Targeted"\n---\n\n# Sparse Co\n\n## Documents\n',
+        encoding="utf-8",
+    )
+
+    # create() should backfill
+    app = _make_app(name="Sparse Co")
+    _, sections = tracker.create(app)
+
+    text = hub.read_text(encoding="utf-8")
+    fm = _parse_frontmatter(text)
+
+    # Frontmatter backfilled
+    assert "conclusion" in fm
+    assert "vision" in fm
+    assert "score" in fm
+
+    # Sections backfilled
+    assert "## Conclusion" in text
+    assert "## Interviews" in text
+    assert "## Fit Assessment" in text
+
+    # Sections report includes backfill info
+    assert any("backfilled" in s for s in sections)
