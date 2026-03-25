@@ -2,13 +2,16 @@
 name = "jobbing"
 version = "2.0.0"
 description = "AI-assisted job application workflow: tailored CVs, cover letters, and Notion tracking"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
+    "playwright>=1.50",
+    "playwright-stealth>=2.0",
     "reportlab>=4.0",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "ipykernel>=7.2.0",
     "mypy>=1.0",
     "pre-commit>=3.0",
     "pytest>=7.0",
@@ -30,7 +33,7 @@ where = ["src"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 extend-exclude = ["companies", ".claude/worktrees"]
 
 [tool.ruff.lint]
@@ -45,7 +48,7 @@ quote-style = "double"
 # -- Mypy (type checking) -----------------------------------------------------
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
