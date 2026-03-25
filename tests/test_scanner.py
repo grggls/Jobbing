@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
+from jobbing.browser import BrowseResult
 from jobbing.scanner import (
     Bookmark,
     FetchedBoard,
     FetchResult,
     _clean_html,
-    _fetch_one,
     fetch_boards,
     parse_bookmarks,
     save_fetch_results,
@@ -199,75 +199,22 @@ class TestCleanHtml:
 
 
 # ---------------------------------------------------------------------------
-# _fetch_one() — mock HTTP
+# fetch_boards() — mock browser.fetch_pages
 # ---------------------------------------------------------------------------
 
 
-class TestFetchOne:
-    def test_success(self) -> None:
-        bm = Bookmark(label="TestBoard", url="https://test.com/jobs", category="Tech")
-        fake_html = b"<html><body><h1>Jobs</h1><p>Engineer needed</p></body></html>"
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = fake_html
-        mock_resp.headers.get_content_charset.return_value = "utf-8"
-        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-        mock_resp.__exit__ = MagicMock(return_value=False)
-
-        with patch("jobbing.scanner.urllib.request.urlopen", return_value=mock_resp):
-            result = _fetch_one(bm, timeout=10)
-
-        assert result.error == ""
-        assert result.char_count > 0
-        assert "Jobs" in result.content
-        assert "Engineer needed" in result.content
-
-    def test_timeout_error(self) -> None:
-        bm = Bookmark(label="SlowBoard", url="https://slow.com", category="Cat")
-
-        with patch(
-            "jobbing.scanner.urllib.request.urlopen",
-            side_effect=TimeoutError("Connection timed out"),
-        ):
-            result = _fetch_one(bm, timeout=1)
-
-        assert result.error != ""
-        assert result.content == ""
-        assert result.char_count == 0
-
-    def test_http_error(self) -> None:
-        bm = Bookmark(label="BadBoard", url="https://404.com", category="Cat")
-
-        with patch(
-            "jobbing.scanner.urllib.request.urlopen",
-            side_effect=OSError("HTTP Error 404"),
-        ):
-            result = _fetch_one(bm, timeout=10)
-
-        assert "404" in result.error
-        assert result.char_count == 0
-
-    def test_charset_fallback(self) -> None:
-        """When charset is None, defaults to utf-8."""
-        bm = Bookmark(label="Board", url="https://b.com", category="Cat")
-        fake_html = b"<p>Content</p>"
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = fake_html
-        mock_resp.headers.get_content_charset.return_value = None
-        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-        mock_resp.__exit__ = MagicMock(return_value=False)
-
-        with patch("jobbing.scanner.urllib.request.urlopen", return_value=mock_resp):
-            result = _fetch_one(bm, timeout=10)
-
-        assert result.error == ""
-        assert "Content" in result.content
-
-
-# ---------------------------------------------------------------------------
-# fetch_boards() — mock concurrent fetching
-# ---------------------------------------------------------------------------
+def _make_browse_result(url: str, *, error: str = "") -> BrowseResult:
+    """Helper to create a BrowseResult for testing."""
+    if error:
+        return BrowseResult(
+            url=url, title="", company="", description="",
+            location="", raw_text="", char_count=0, error=error,
+        )
+    return BrowseResult(
+        url=url, title="Test Page", company="TestCo",
+        description="A job listing", location="Remote",
+        raw_text="Engineer needed at TestCo", char_count=25,
+    )
 
 
 class TestFetchBoards:
@@ -276,15 +223,10 @@ class TestFetchBoards:
             Bookmark(label="A", url="https://a.com", category="Cat"),
             Bookmark(label="B", url="https://b.com", category="Cat"),
         ]
-        fake_html = b"<p>Jobs here</p>"
 
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = fake_html
-        mock_resp.headers.get_content_charset.return_value = "utf-8"
-        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_results = [_make_browse_result(bm.url) for bm in bookmarks]
 
-        with patch("jobbing.scanner.urllib.request.urlopen", return_value=mock_resp):
+        with patch("jobbing.scanner.asyncio.run", return_value=mock_results):
             result = fetch_boards(bookmarks, timeout=10, workers=2)
 
         assert result.boards_requested == 2
@@ -299,21 +241,12 @@ class TestFetchBoards:
             Bookmark(label="Bad", url="https://bad.com", category="Cat"),
         ]
 
-        call_count = 0
+        mock_results = [
+            _make_browse_result("https://good.com"),
+            _make_browse_result("https://bad.com", error="Connection refused"),
+        ]
 
-        def side_effect(req, timeout=30, context=None):
-            nonlocal call_count
-            call_count += 1
-            if "bad" in req.full_url:
-                raise OSError("Connection refused")
-            mock_resp = MagicMock()
-            mock_resp.read.return_value = b"<p>Content</p>"
-            mock_resp.headers.get_content_charset.return_value = "utf-8"
-            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-            mock_resp.__exit__ = MagicMock(return_value=False)
-            return mock_resp
-
-        with patch("jobbing.scanner.urllib.request.urlopen", side_effect=side_effect):
+        with patch("jobbing.scanner.asyncio.run", return_value=mock_results):
             result = fetch_boards(bookmarks, timeout=10, workers=2)
 
         assert result.boards_requested == 2
@@ -329,20 +262,29 @@ class TestFetchBoards:
 
     def test_single_bookmark(self) -> None:
         bookmarks = [Bookmark(label="Only", url="https://only.com", category="Solo")]
-        fake_html = b"<p>Single board</p>"
+        mock_results = [_make_browse_result("https://only.com")]
 
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = fake_html
-        mock_resp.headers.get_content_charset.return_value = "utf-8"
-        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-        mock_resp.__exit__ = MagicMock(return_value=False)
-
-        with patch("jobbing.scanner.urllib.request.urlopen", return_value=mock_resp):
+        with patch("jobbing.scanner.asyncio.run", return_value=mock_results):
             result = fetch_boards(bookmarks, timeout=10, workers=1)
 
         assert result.boards_requested == 1
         assert result.boards_fetched == 1
         assert len(result.boards) == 1
+
+    def test_preserves_bookmark_order(self) -> None:
+        bookmarks = [
+            Bookmark(label="C", url="https://c.com", category="Cat"),
+            Bookmark(label="A", url="https://a.com", category="Cat"),
+            Bookmark(label="B", url="https://b.com", category="Cat"),
+        ]
+        # Return in reversed order to test re-sorting
+        mock_results = [_make_browse_result(bm.url) for bm in reversed(bookmarks)]
+
+        with patch("jobbing.scanner.asyncio.run", return_value=mock_results):
+            result = fetch_boards(bookmarks, timeout=10, workers=2)
+
+        labels = [fb.bookmark.label for fb in result.boards]
+        assert labels == ["C", "A", "B"]
 
 
 # ---------------------------------------------------------------------------

@@ -9,8 +9,7 @@ Scan bookmarked job boards for relevant postings. Python handles HTTP fetching, 
 
 ## Critical Rules
 
-- **Always use Greg's Chrome browser to read career pages and job postings.** LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, Ashby, and most job boards block web fetch/search tools. The Python fetcher also fails on JS-rendered career pages, Cloudflare challenges, and bot detection. Don't attempt web fetch first and then report "couldn't access" — go straight to Chrome MCP tools. This is the only reliable path.
-- **Never try web fetch/search on a job board URL.** If you need to read a posting, open it in Chrome. No exceptions.
+- **The Python fetcher uses headless Playwright+stealth.** `jobbing scan fetch` handles JS-rendered career pages, Cloudflare challenges, and bot detection automatically. For individual postings, use `jobbing browse <url>`. For complex multi-step interactions (login walls, paginated search), fall back to Chrome MCP.
 
 ## Instructions
 
@@ -95,7 +94,7 @@ For any posting Greg wants to pursue:
 - **Be scope-aware.** A "Senior DevOps Engineer" at a 20-person startup building from scratch is a different role than a "Senior DevOps Engineer" on a 50-person infra team. Read the posting text, not just the title.
 - **Be fast.** Skim page content for relevant titles first, only score those that look plausible.
 - **Be honest.** A board full of junior roles or frontend jobs is a "no matches" — say so.
-- **Skip JS-rendered boards.** If page content is mostly boilerplate with no job listings, note it and move on.
+- **Note empty boards.** If page content is mostly boilerplate with no job listings after Playwright rendering, note it and move on.
 - **Check for duplicates.** Same company+role across multiple boards = one result.
 ## Do Not
 
@@ -103,5 +102,5 @@ For any posting Greg wants to pursue:
 - Present roles for companies already in the tracker
 - Filter out roles solely because the title says "Senior" — read the scope first
 - Create hub files automatically — matches go through `/analyze` first
-- Attempt web fetch/search on job board URLs before using Chrome — Chrome is the default, not the fallback
-- Report "couldn't access" a career page without first trying Chrome MCP
+- Attempt WebFetch/WebSearch on job board URLs — use `jobbing browse <url>` or `jobbing scan fetch` instead
+- Report "couldn't access" a career page without first trying `jobbing browse`

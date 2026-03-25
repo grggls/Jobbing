@@ -53,7 +53,7 @@ Analyze a job posting for fit against Greg's profile. This is always the first s
 5. **Keep scoring data available for `/apply`.** When Greg says go, the scoring output (score, reasoning, green/red flags, gaps, keywords) must be ready for `/apply` to write into the hub file's `## Fit Assessment` section and `score:` frontmatter field.
 
 ## Critical Rules
-- **Use Greg's browser to fetch JDs.** LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, and most job boards are blocked from web fetch/search tools. The only reliable way to read job postings is via Greg's Chrome browser (Claude in Chrome MCP tools). Always use the browser — don't attempt web fetch and then report "couldn't find it." Go look.
+- **Use `jobbing browse <url>` to fetch JDs.** LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, and most job boards are blocked from WebFetch/WebSearch. Use `jobbing browse <url>` to fetch via headless Playwright+stealth. For complex multi-step interactions (login walls, paginated search), fall back to Chrome MCP.
 - **Chronology is sacred.** Solo Recon and Modern Electric are CURRENT roles (2024–present). Never lead with Mobimeo as most recent.
 - **People management started mid-2017.** That's 8+ years as of 2026. Never write "6+ years."
 - **No fake metrics.** Don't invent percentages or impact numbers not in CONTEXT.md.

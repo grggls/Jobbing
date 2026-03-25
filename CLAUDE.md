@@ -35,7 +35,7 @@ AI-assisted job application workflow. Greg pastes a job posting, Claude analyzes
 
 **Obsidian is your memory.** Before asking Greg ANY factual question about a company, contact, interview status, timeline, or process stage, read the relevant hub files in `kanban/companies/` and interview files in `kanban/interviews/`. When a task spans multiple companies, read all relevant hubs upfront. Treat the vault as an API: read before asking, write with schema discipline, cross-reference between files. Greg should never be the middleware between Claude and the vault.
 
-**Use Greg's browser when web access fails.** If WebFetch or WebSearch can't reach a site, use the Chrome MCP tools (navigate, get_page_text, read_page, etc.) to access it through Greg's browser. Never tell Greg a website is blocked. Just use the browser.
+**Use headless browsing when web access fails.** If WebFetch or WebSearch can't reach a site, use `jobbing browse <url>` to fetch it via headless Playwright+stealth. This handles JS rendering, bot detection, and Cloudflare without seizing Greg's browser. For complex multi-step interactions (login walls, form filling), use Chrome MCP as a fallback.
 
 ## Skills
 
@@ -259,6 +259,10 @@ jobbing get "{company}" --field status              # single frontmatter field
 jobbing get "{company}" --section "Fit Assessment"  # single section content
 jobbing set "{company}" --field status --value "Applied"
 jobbing set "{company}" --section "Fit Assessment" --content "..."
+jobbing browse <url>                                # fetch URL via headless browser, JSON output
+jobbing browse <url> --wait-until networkidle       # use networkidle wait strategy
+jobbing browse <url> --wait-seconds 4               # extra wait for JS rendering
+jobbing set "{company}" --section "Fit Assessment" --content "..."
 jobbing scan bookmarks                              # list all bookmarks by category
 jobbing scan bookmarks --categories "Climate / Impact"  # list one category
 jobbing scan existing                               # list companies already tracked
@@ -333,7 +337,7 @@ All track commands support `--dry-run` for previewing without writing.
 
 ### Job Postings and Research
 
-- Try to fetch job postings via web search/fetch tools — LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, and most job boards are blocked. **Always use Greg's Chrome browser** (Claude in Chrome MCP tools) to read job postings. This is the only reliable path.
+- Try to fetch job postings via WebFetch/WebSearch first — LinkedIn, Greenhouse, Lever, SmartRecruiters, Workable, and most job boards are blocked. **Use `jobbing browse <url>`** to fetch job postings via headless Playwright+stealth. For complex multi-step interactions (login walls, paginated search), fall back to Chrome MCP.
 - Score roles based on title and company name alone — always fetch and read the actual JD before scoring
 - Present unverified data as sourced facts — if a data point came from a search snippet or subagent and you didn't read the source page yourself, say so
 

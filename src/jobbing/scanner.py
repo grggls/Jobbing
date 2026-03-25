@@ -3,16 +3,17 @@
 The heavy lifting (posting extraction and scoring) happens in-conversation
 via Claude Code or Cowork — no API key needed. This module provides the
 Python plumbing that Claude calls via the CLI.
+
+Fetching uses headless Playwright via jobbing.browser — handles JS rendering,
+bot detection (via playwright-stealth), and concurrent page loading.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
-import ssl
-import urllib.request
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,8 +23,8 @@ logger = logging.getLogger(__name__)
 # Max chars to keep per page after cleaning
 MAX_PAGE_CHARS = 80_000
 
-# Max concurrent HTTP fetches
-MAX_FETCH_WORKERS = 10
+# Max concurrent browser pages
+MAX_FETCH_WORKERS = 8
 
 
 # ---------------------------------------------------------------------------
@@ -45,7 +46,7 @@ class FetchedBoard:
     """A fetched board page with its content."""
 
     bookmark: Bookmark
-    content: str  # cleaned HTML/text
+    content: str  # cleaned page text
     char_count: int
     error: str = ""
 
@@ -89,12 +90,16 @@ def parse_bookmarks(bookmarks_path: Path) -> list[Bookmark]:
 
 
 # ---------------------------------------------------------------------------
-# Board fetching
+# Board fetching (via headless Playwright)
 # ---------------------------------------------------------------------------
 
 
 def _clean_html(html: str) -> str:
-    """Strip scripts, styles, nav, footer, and comments. Keep job-relevant content."""
+    """Strip scripts, styles, nav, footer, and comments. Keep job-relevant content.
+
+    Retained for compatibility — Playwright's innerText is already clean,
+    but this is useful if raw HTML needs processing elsewhere.
+    """
     text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<nav[^>]*>.*?</nav>", "", text, flags=re.DOTALL | re.IGNORECASE)
@@ -107,50 +112,45 @@ def _clean_html(html: str) -> str:
     return text.strip()[:MAX_PAGE_CHARS]
 
 
-def _fetch_one(bookmark: Bookmark, timeout: int = 30) -> FetchedBoard:
-    """Fetch a single board URL. Returns FetchedBoard with content or error."""
-    try:
-        ctx = ssl.create_default_context()
-        req = urllib.request.Request(
-            bookmark.url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            },
-        )
-        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
-            charset = resp.headers.get_content_charset() or "utf-8"
-            raw = resp.read().decode(charset, errors="replace")
-            content = _clean_html(raw)
-            return FetchedBoard(bookmark=bookmark, content=content, char_count=len(content))
-    except Exception as e:
-        return FetchedBoard(bookmark=bookmark, content="", char_count=0, error=str(e))
-
-
 def fetch_boards(
     bookmarks: list[Bookmark],
     timeout: int = 30,
     workers: int = MAX_FETCH_WORKERS,
 ) -> FetchResult:
-    """Fetch multiple boards concurrently. Returns FetchResult."""
+    """Fetch multiple boards via headless Playwright+stealth. Returns FetchResult."""
+    from jobbing.browser import fetch_pages
+
+    if not bookmarks:
+        return FetchResult(
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            boards_requested=0,
+            boards_fetched=0,
+            boards_failed=0,
+        )
+
+    url_to_bookmark = {bm.url: bm for bm in bookmarks}
+    urls = [bm.url for bm in bookmarks]
+
+    browse_results = asyncio.run(
+        fetch_pages(urls, timeout_ms=timeout * 1000, concurrency=workers)
+    )
+
     fetched: list[FetchedBoard] = []
     failed = 0
 
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {executor.submit(_fetch_one, bm, timeout): bm for bm in bookmarks}
-        for future in as_completed(futures):
-            result = future.result()
-            if result.error:
-                failed += 1
-                logger.warning("Failed: %s — %s", result.bookmark.label, result.error)
-            else:
-                logger.info("Fetched: %s (%d chars)", result.bookmark.label, result.char_count)
-            fetched.append(result)
+    for br in browse_results:
+        bm = url_to_bookmark[br.url]
+        if br.error:
+            failed += 1
+            logger.warning("Failed: %s — %s", bm.label, br.error)
+            fetched.append(FetchedBoard(bookmark=bm, content="", char_count=0, error=br.error))
+        else:
+            logger.info("Fetched: %s (%d chars)", bm.label, br.char_count)
+            fetched.append(FetchedBoard(bookmark=bm, content=br.raw_text, char_count=br.char_count))
 
-    # Sort by original bookmark order
-    bookmark_order = {id(bm): i for i, bm in enumerate(bookmarks)}
-    fetched.sort(key=lambda fb: bookmark_order.get(id(fb.bookmark), 999))
+    # Restore original bookmark order
+    bookmark_order = {bm.url: i for i, bm in enumerate(bookmarks)}
+    fetched.sort(key=lambda fb: bookmark_order.get(fb.bookmark.url, 999))
 
     return FetchResult(
         timestamp=datetime.now(timezone.utc).isoformat(),

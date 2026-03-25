@@ -385,6 +385,40 @@ def _update_hub_documents(company_input: str, paths: list[Path], config: Config)
 
 
 # ---------------------------------------------------------------------------
+# Browse subcommand
+# ---------------------------------------------------------------------------
+
+
+def _cmd_browse(args: argparse.Namespace, _config: Config) -> None:
+    """Fetch a URL via headless Playwright+stealth and print structured JSON."""
+    import asyncio
+
+    from jobbing.browser import fetch_page
+
+    result = asyncio.run(
+        fetch_page(
+            args.url,
+            wait_until=args.wait_until,
+            extra_wait_s=args.wait_seconds,
+        )
+    )
+
+    output: dict[str, Any] = {
+        "url": result.url,
+        "title": result.title,
+        "company": result.company,
+        "description": result.description,
+        "location": result.location,
+        "raw_text": result.raw_text,
+        "char_count": result.char_count,
+    }
+    if result.error:
+        output["error"] = result.error
+
+    print(json.dumps(output, indent=2, ensure_ascii=False))
+
+
+# ---------------------------------------------------------------------------
 # Get / Set subcommands — structured API layer for Claude
 # ---------------------------------------------------------------------------
 
@@ -841,6 +875,22 @@ def _build_parser() -> argparse.ArgumentParser:
     # scan existing
     scan_subs.add_parser("existing", help="List companies already in tracker")
 
+    # --- browse ---
+    p_browse = subparsers.add_parser("browse", help="Fetch a URL via headless browser")
+    p_browse.add_argument("url", help="URL to fetch")
+    p_browse.add_argument(
+        "--wait-until",
+        default="domcontentloaded",
+        choices=["domcontentloaded", "networkidle", "load", "commit"],
+        help="Playwright wait strategy (default: domcontentloaded)",
+    )
+    p_browse.add_argument(
+        "--wait-seconds",
+        type=float,
+        default=2.0,
+        help="Extra seconds to wait after page load (default: 2.0)",
+    )
+
     # --- get ---
     p_get = subparsers.add_parser("get", help="Read company data as structured JSON")
     p_get.add_argument("company", help="Company name (fuzzy match)")
@@ -883,6 +933,9 @@ def main() -> None:
         }
         handler = dispatch[args.track_command]
         handler(args, config)
+
+    elif args.command == "browse":
+        _cmd_browse(args, config)
 
     elif args.command == "pdf":
         _cmd_pdf(args, config)
