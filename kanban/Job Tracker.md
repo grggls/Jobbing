@@ -13,12 +13,14 @@ kanban-plugin: board
 - [ ] [[PortPro|PortPro]] — Director of DevOps
 	  Score: 74 · 2026-03-09
 
+
 ## Applied
 
 - [ ] [[Finom|Finom]] — Head of Infrastructure & Reliability
 	  Score: 83 · 2026-03-21
 - [ ] [[Qdrant|Qdrant]] — VP of Cloud Engineering
 	  Score: 82 · 2026-03-21
+
 
 ## Followed-Up
 
@@ -28,17 +30,18 @@ kanban-plugin: board
 
 - [ ] [[ReflexAI|ReflexAI]] — Lead Platform Engineer
 	  Score: 88 · 2026-02-09
-- [ ] [[tem|tem]] — Senior Staff Engineer
-	  Score: 84 · 2026-03-20
-- [ ] [[Filevine|Filevine]] — VP of Engineering, Reliability
-	  Score: 78 · 2026-03-06
-- [ ] [[Bandcamp (Songtradr)|Bandcamp (Songtradr)]] — Lead Systems Engineer
-	  Score: — · 2026-02-26
 - [ ] [[Parloa|Parloa]] — Principal Software Engineer
 	  Score: — · 2026-02-19
+- [ ] [[Filevine|Filevine]] — VP of Engineering, Reliability
+	  Score: 78 · 2026-03-06
+
 
 ## Done
 
+- [ ] [[tem|tem]] — Senior Staff Engineer
+	  Score: 84 · Rejected after system design round. C... · 2026-03-20
+- [ ] [[Bandcamp (Songtradr)|Bandcamp (Songtradr)]] — Lead Systems Engineer
+	  Score: — · Withdrew — salary gap, stronger prospe... · 2026-02-26
 - [ ] [[Kevala|Kevala]] — Staff Site Reliability Engineer
 	  Score: 88 · Recruiter was difficult to work with.... · 2026-02-10
 - [ ] [[Chainloop|Chainloop]] — Founding Engineering Manager
@@ -147,6 +150,9 @@ kanban-plugin: board
 	  Score: — · 2026-02-25
 - [ ] [[trawa|trawa]] — Engineering Manager — Platform
 	  Score: — · turned down within 24 hours of applying · 2026-02-15
+
+
+
 
 %% kanban:settings
 ```
